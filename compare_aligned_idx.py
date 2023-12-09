@@ -495,6 +495,7 @@ WELCOME_UPLOAD = '''
    - Do not touch the interface while the analysis is running.
 
 Go to **"Alignment Results"** tab to see alignment results or **"Delete Files"** tab to delete your files!
+Example Matches are prepared in the Alignment Results!
 '''
 
 def update_ui_upload(results):
@@ -615,7 +616,7 @@ def result_tab():
                             allow_custom_value=False,
                             value="str")
                 database_video_name = gr.Dropdown(choices=["select route"], 
-                            label="Video",
+                            label="Database Video",
                             allow_custom_value=False, 
                             interactive=True,
                             value="str")
