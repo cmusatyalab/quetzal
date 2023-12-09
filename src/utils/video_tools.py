@@ -7,88 +7,88 @@ import numpy as np
 import cv2
 import os
 import copy
+import gradio as gr
 
-def extract_frames(video_path, output_dir, fps, max_size=-1):
-    """
-    Extract image frames from a video using OpenCV (cv2).
+# def extract_frames(video_path, output_dir, fps, max_size=-1):
+#     """
+#     Extract image frames from a video using OpenCV (cv2).
 
-    Args:
-        video_path (str): Path to the video file.
-        output_dir (str): Directory where extracted frames will be saved.
-        fps (int): Number of frames per second to extract.
-        max_size (int): Maximum size of the longest dimension of the frame. -1 for original size.
+#     Args:
+#         video_path (str): Path to the video file.
+#         output_dir (str): Directory where extracted frames will be saved.
+#         fps (int): Number of frames per second to extract.
+#         max_size (int): Maximum size of the longest dimension of the frame. -1 for original size.
 
-    Returns:
-        list: A list of file paths to the extracted frames.
-    """
-    # Open the video
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        raise IOError(f"Cannot open video file {video_path}")
+#     Returns:
+#         list: A list of file paths to the extracted frames.
+#     """
+#     # Open the video
+#     cap = cv2.VideoCapture(video_path)
+#     if not cap.isOpened():
+#         raise IOError(f"Cannot open video file {video_path}")
 
-    # Get original video FPS and total frame count
-    original_fps = cap.get(cv2.CAP_PROP_FPS)
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+#     # Get original video FPS and total frame count
+#     original_fps = cap.get(cv2.CAP_PROP_FPS)
+#     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # Calculate the frame interval to match the target FPS
-    frame_interval = int(round(original_fps / fps))
+#     # Calculate the frame interval to match the target FPS
+#     frame_interval = int(round(original_fps / fps))
 
-    # Read and save frames
-    saved_frames = []
-    frame_index = 0
-    save_idx = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+#     # Read and save frames
+#     saved_frames = []
+#     frame_index = 0
+#     save_idx = 0
+#     while True:
+#         ret, frame = cap.read()
+#         if not ret:
+#             break
 
-        if frame_index % frame_interval == 0:
-            # Resize frame if max_size is specified
-            if max_size > 0:
-                h, w = frame.shape[:2]
-                scaling_factor = max_size / max(h, w)
-                if scaling_factor < 1:
-                    frame = cv2.resize(frame, None, fx=scaling_factor, fy=scaling_factor, interpolation=cv2.INTER_AREA)
+#         if frame_index % frame_interval == 0:
+#             # Resize frame if max_size is specified
+#             if max_size > 0:
+#                 h, w = frame.shape[:2]
+#                 scaling_factor = max_size / max(h, w)
+#                 if scaling_factor < 1:
+#                     frame = cv2.resize(frame, None, fx=scaling_factor, fy=scaling_factor, interpolation=cv2.INTER_AREA)
 
-            # Save frame
-            frame_file = join(output_dir, f"frame{save_idx:05d}.jpg")
-            cv2.imwrite(frame_file, frame)
-            saved_frames.append(frame_file)
-            save_idx += 1
+#             # Save frame
+#             frame_file = join(output_dir, f"frame{save_idx:05d}.jpg")
+#             cv2.imwrite(frame_file, frame)
+#             saved_frames.append(frame_file)
+#             save_idx += 1
 
-        frame_index += 1
+#         frame_index += 1
 
-    cap.release()
-    return saved_frames
+#     cap.release()
+#     return saved_frames
 
 ### Video Frame Extract
-# def extract_frames(video_path, output_dir, fps, max_size = -1, interpolation='bicubic'):
-#     """
-#     Extract image frames from given video in 'video_path' into 'output_dir'. Calls ffmpeg as subprocess.
+def extract_frames(video_path, output_dir, fps, max_size = -1, interpolation='bicubic'):
+    """
+    Extract image frames from given video in 'video_path' into 'output_dir'. Calls ffmpeg as subprocess.
 
-#     Default fps is 2. 
-#     full-size image will be extracted unless the max_size is specificed. default is None
-#     interpolation can be 'lanczos', 'bicubic', or any ffmpeg scaler options. Default is bicubic
-#     """
+    Default fps is 2. 
+    full-size image will be extracted unless the max_size is specificed. default is None
+    interpolation can be 'lanczos', 'bicubic', or any ffmpeg scaler options. Default is bicubic
+    """
 
-#     if not max_size:
-#         max_size = -1
+    if not max_size:
+        max_size = -1
 
-#     # Use the 'scale' filter to set the width or height to 'max_size', while preserving the aspect ratio.
-#     scale_filter = f"scale='if(gt(iw,ih),{max_size},-1)':'if(gt(iw,ih),-1,{max_size})':flags={interpolation}"
+    # Use the 'scale' filter to set the width or height to 'max_size', while preserving the aspect ratio.
+    scale_filter = f"scale='if(gt(iw,ih),{max_size},-1)':'if(gt(iw,ih),-1,{max_size})':flags={interpolation}"
 
-#     # Construct the ffmpeg command with both the 'fps' and 'scale' filters.
-#     command = [
-#         "ffmpeg", 
-#         "-i", video_path, 
-#         "-qscale:v", "2",
-#         "-vf", f"{scale_filter},fps={fps}", 
-#         f"{output_dir}/frame%05d.jpg"
-#     ]
-    
-#     subprocess.run(command, capture_output=True)
+    # Construct the ffmpeg command with both the 'fps' and 'scale' filters.
+    command = [
+        "ffmpeg", 
+        "-i", video_path, 
+        "-qscale:v", "2",
+        "-vf", f"{scale_filter},fps={fps}", 
+        f"{output_dir}/frame%05d.jpg"
+    ]
+    subprocess.run(command, capture_output=True)
 
-#     return glob(join(output_dir, "*.jpg"))
+    return glob(join(output_dir, "*.jpg"))
 
 def dms_to_decimal(dms_str):
     """

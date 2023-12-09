@@ -10,6 +10,29 @@ def hash_password(plain_text_password):
 def check_password(hashed_password, user_password):
     return bcrypt.checkpw(user_password.encode('utf-8'), hashed_password)
 
+def is_directory_effectively_empty(directory):
+    """
+    Check if a directory is empty or all of its subdirectories are empty.
+
+    Args:
+    directory (str): Path to the directory to check.
+
+    Returns:
+    bool: True if the directory is effectively empty, False otherwise.
+    """
+
+    if not os.path.exists(directory) or not os.path.isdir(directory):
+        raise ValueError(f"The provided path '{directory}' is not a valid directory or does not exist.")
+
+    for entry in os.listdir(directory):
+        full_path = os.path.join(directory, entry)
+        if os.path.isfile(full_path):
+            return False  # Found a file, so the directory is not empty
+        if os.path.isdir(full_path) and not is_directory_effectively_empty(full_path):
+            return False  # Found a non-empty subdirectory
+
+    return True  # No files or non-empty subdirectories found
+
 def delete_directory(directory_path):
     try:
         shutil.rmtree(directory_path)
