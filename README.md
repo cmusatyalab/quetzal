@@ -55,6 +55,12 @@ python3 -m src.quetzal_frame_alignment --cuda --cuda_device 0
 python3 -m src.quetzal_frame_alignment
 ```
 
+**Setting custom Server Name and Port Number**
+```bash
+export GRADIO_SERVER_NAME="127.0.0.1"
+export GRADIO_SERVER_PORT="7860"
+```
+
 ## Setting up Data Folder and Pre-analyzing Your Videos
 
 The default root dataset folder is "../data". The structure should look like the following:
