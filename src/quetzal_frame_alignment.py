@@ -262,10 +262,7 @@ def analyze_tab():
                 gr.Markdown("# Analyze Videos")
             with gr.Row():
                 instruction = gr.Markdown(WELCOME_ANALYZE, label="Instructions")
-            with gr.Row():
-                progess_title = gr.Markdown("## Progress")
-            with gr.Row():
-                progress = gr.Markdown("\n\n\n\n\n\n\n", label="Progress")
+            
 
         with gr.Column(scale=4):
             with gr.Row():
@@ -293,6 +290,11 @@ def analyze_tab():
                 )
             with gr.Row():
                 analyze_btn = gr.Button("Analyze")
+
+    with gr.Row():
+        progess_title = gr.Markdown("## Progress")
+    with gr.Row():
+        progress = gr.Markdown("\n\n\n\n\n\n\n", label="Progress")
 
     route_name_input.change(
         get_video_files_for_route,
@@ -437,10 +439,6 @@ def upload_tab():
                 gr.Markdown("# Upload Videos")
             with gr.Row():
                 instruction = gr.Markdown(WELCOME_UPLOAD, label="Instructions")
-            with gr.Row():
-                progess_title = gr.Markdown("## Progress")
-            with gr.Row():
-                progress = gr.Markdown("\n\n\n\n\n\n\n", label="Progress")
 
         with gr.Column(scale=4):
             with gr.Row():
@@ -460,7 +458,12 @@ def upload_tab():
                     label="Upload Video", file_count="multiple", type="filepath"
                 )
             with gr.Row():
-                register_btn = gr.Button("Upload and Analyze")
+                register_btn = gr.Button("Upload")
+
+    with gr.Row():
+        progess_title = gr.Markdown("## Progress")
+    with gr.Row():
+        progress = gr.Markdown("\n\n\n\n\n\n\n", label="Progress")
 
     ui_updates = gr.State()
 
