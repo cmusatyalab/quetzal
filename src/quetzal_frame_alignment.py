@@ -316,12 +316,11 @@ To begin, please follow the steps below:
    - Note: Modification is restricted for the pre-defined 'example' routes*. 
 
 2. **Choose Your Video File(s):**
-   - You have the option to upload both database and query videos simultaneously.
-   - You can also upload just one video and leave the other.
+   - You have the option to upload multiple source videos.
+   - Do not touch the interface while the files are being uploaded.
 
-3. **Upload and Analyze:**
-   - Click on the **"Upload and Analyze"** button to upload your dataset and proceed the analysis.
-   - Do not touch the interface while the analysis is running.
+3. **Upload:**
+   - Click on the **"Upload"** button to fully upload your file into the system.
 
 **Next:** go to **"Analyze Video"** tab to run analysis on the uploaded videos or **"Delete Files"** tab to delete your files!
 
@@ -435,7 +434,7 @@ def upload_tab():
     with gr.Row():
         with gr.Column(scale=6):
             with gr.Row():
-                gr.Markdown("# Upload and Analyze Videos")
+                gr.Markdown("# Upload Videos")
             with gr.Row():
                 instruction = gr.Markdown(WELCOME_UPLOAD, label="Instructions")
             with gr.Row():
