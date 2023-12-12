@@ -5,7 +5,9 @@ import faiss
 from typing import List, Tuple, Optional
 
 
-def create_FAISS_indexes(db_vlad: np.ndarray, chunk_size: int = 1024, cuda: bool = True) -> List[faiss.IndexFlatIP]:
+def create_FAISS_indexes(
+    db_vlad: np.ndarray, chunk_size: int = 1024, cuda: bool = True
+) -> List[faiss.IndexFlatIP]:
     """
     Creates FAISS indexes from the given VLAD vectors of a database, optionally using GPU acceleration.
 
@@ -32,7 +34,9 @@ def create_FAISS_indexes(db_vlad: np.ndarray, chunk_size: int = 1024, cuda: bool
     return indexes
 
 
-def query_all_indexes(q_vec: np.ndarray, indexes: List[faiss.IndexFlatIP]) -> np.ndarray:
+def query_all_indexes(
+    q_vec: np.ndarray, indexes: List[faiss.IndexFlatIP]
+) -> np.ndarray:
     """
     Calculate distance between all FAISS indexes and a query vector and returns combined distances.
 
@@ -55,7 +59,12 @@ def query_all_indexes(q_vec: np.ndarray, indexes: List[faiss.IndexFlatIP]) -> np
     return combined_distances
 
 
-def dtw(query_vlad: np.ndarray, db_vlad: np.ndarray, db_indexes: List[faiss.IndexFlatIP], warp: int = 1) -> Tuple[float, np.ndarray, np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+def dtw(
+    query_vlad: np.ndarray,
+    db_vlad: np.ndarray,
+    db_indexes: List[faiss.IndexFlatIP],
+    warp: int = 1,
+) -> Tuple[float, np.ndarray, np.ndarray, Tuple[np.ndarray, np.ndarray]]:
     """
     Performs Dynamic Time Warping (DTW) between query VLAD vectors and database VLAD vectors.
     modified from https://github.com/pierre-rouanet/dtw
@@ -129,7 +138,9 @@ def _traceback(D: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return np.array(p), np.array(q)
 
 
-def extract_unique_dtw_pairs(path: Tuple[np.ndarray, np.ndarray], cost: Optional[np.ndarray] = None) -> List[Tuple[int, int]]:
+def extract_unique_dtw_pairs(
+    path: Tuple[np.ndarray, np.ndarray], cost: Optional[np.ndarray] = None
+) -> List[Tuple[int, int]]:
     """
     Extracts unique pairs from the DTW path.
 
@@ -164,7 +175,13 @@ def extract_unique_dtw_pairs(path: Tuple[np.ndarray, np.ndarray], cost: Optional
     return matches[1:]
 
 
-def smooth_frame_intervals(lst: List[Tuple[int, int]], mv_avg_diff: np.ndarray, query_fps: float, db_fps: float, k: int = 5) -> Tuple[List[Tuple[int, int]], float]:
+def smooth_frame_intervals(
+    lst: List[Tuple[int, int]],
+    mv_avg_diff: np.ndarray,
+    query_fps: float,
+    db_fps: float,
+    k: int = 5,
+) -> Tuple[List[Tuple[int, int]], float]:
     """
     Applies smoothing to frame intervals based on the moving average difference and frame rates.
 

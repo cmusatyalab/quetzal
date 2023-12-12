@@ -27,35 +27,44 @@ logging.basicConfig()
 logger = logging.getLogger("AnyLoc_Engine")
 logger.setLevel(logging.DEBUG)
 
+
 def generate_VLAD(database_video: Video, query_video: Video, torch_device):
     logger.info("Loading Videos")
-    anylocEngine = AnyLocEngine(database_video=database_video, query_video=query_video, device=torch_device, mode='lazy')
-    
+    anylocEngine = AnyLocEngine(
+        database_video=database_video,
+        query_video=query_video,
+        device=torch_device,
+        mode="lazy",
+    )
+
     db_vlad = anylocEngine.get_database_vlad()
     query_vlad = anylocEngine.get_query_vlad()
     del anylocEngine
-    
+
     return db_vlad, query_vlad
 
+
 class AnyLocEngine(AbstractEngine):
-    
-    def __init__(self, database_video: Video = None, # database_video may be None. Can later register using register_db_video() 
-                 query_video: Video = None, # query_video may be None. Can later register using register_query_video() 
-                 max_img_size: int=512, 
-                 device=torch.device("cuda:0"), 
-                 # The `domain` parameter in the `AnyLocEngine` class is used to specify the domain
-                 # type of the videos being processed. It is a literal type that can take one of three
-                 # values: "aerial", "indoor", or "urban". This parameter is used to determine the
-                 # location of the cluster centers file, which is required for VLAD feature
-                 # aggregation. The cluster centers file is stored in the cache directory, and the
-                 # path to the file is constructed based on the specified domain type.
-                 domain: Literal["aerial", "indoor", "urban"] = "aerial",
-                 #"vpr": This mode is optimized for retrieval of the closest database frames from a query image. It pre-computes both database and query VLAD features and prepares a database FAISS index for quick retrieval. 
-                 #"realtime": This mode is optimized for real-time frame retrieval and does not pre-computes the query VLAD features, assuming that not all of the frames are ready.  Suitable for scenarios where per frames based real-time processing is required
-                 #"lazy": This mode is optimized for computing entire VLAD features of each Video in a blocking manner. In this mode, VLAD features for both the query and database videos are not computed during initialization. Instead, the computation is deferred until the user explicitly calls the get_vlad_features() method. Calling process() method for VPR will be disabled
-                 mode: Literal["vpr", "realtime", "lazy"] = "realtime"):
+    def __init__(
+        self,
+        database_video: Video = None,  # database_video may be None. Can later register using register_db_video()
+        query_video: Video = None,  # query_video may be None. Can later register using register_query_video()
+        max_img_size: int = 512,
+        device=torch.device("cuda:0"),
+        # The `domain` parameter in the `AnyLocEngine` class is used to specify the domain
+        # type of the videos being processed. It is a literal type that can take one of three
+        # values: "aerial", "indoor", or "urban". This parameter is used to determine the
+        # location of the cluster centers file, which is required for VLAD feature
+        # aggregation. The cluster centers file is stored in the cache directory, and the
+        # path to the file is constructed based on the specified domain type.
+        domain: Literal["aerial", "indoor", "urban"] = "aerial",
+        # "vpr": This mode is optimized for retrieval of the closest database frames from a query image. It pre-computes both database and query VLAD features and prepares a database FAISS index for quick retrieval.
+        # "realtime": This mode is optimized for real-time frame retrieval and does not pre-computes the query VLAD features, assuming that not all of the frames are ready.  Suitable for scenarios where per frames based real-time processing is required
+        # "lazy": This mode is optimized for computing entire VLAD features of each Video in a blocking manner. In this mode, VLAD features for both the query and database videos are not computed during initialization. Instead, the computation is deferred until the user explicitly calls the get_vlad_features() method. Calling process() method for VPR will be disabled
+        mode: Literal["vpr", "realtime", "lazy"] = "realtime",
+    ):
         self.name = "Frame Matching - AnyLoc"
-        
+
         ## Video Frames ##
         self.db_video = None
         self.query_video = None
@@ -65,12 +74,14 @@ class AnyLocEngine(AbstractEngine):
             logger.info("Anyloc cache folder already exists!")
         else:
             self._download_cache()
-            
+
         ## DINOv2 Extractor ##
         self.max_img_size = max_img_size
         self.device = device
-        
-        vlad_ready = self._is_vlad_ready(database_video) and self._is_vlad_ready(query_video)
+
+        vlad_ready = self._is_vlad_ready(database_video) and self._is_vlad_ready(
+            query_video
+        )
 
         if not vlad_ready:
             desc_layer: int = 31
@@ -78,26 +89,32 @@ class AnyLocEngine(AbstractEngine):
             num_c: int = 32
             # Domain for use case (deployment environment)
             domain: Literal["aerial", "indoor", "urban"] = domain
-            
-            self.extractor = DinoV2ExtractFeatures("dinov2_vitg14", desc_layer,
-                                                desc_facet, device=device)
-            self.base_tf = tvf.Compose([
-                tvf.ToTensor(),
-                tvf.Normalize(mean=[0.485, 0.456, 0.406], 
-                                std=[0.229, 0.224, 0.225])
-            ])
-        
+
+            self.extractor = DinoV2ExtractFeatures(
+                "dinov2_vitg14", desc_layer, desc_facet, device=device
+            )
+            self.base_tf = tvf.Compose(
+                [
+                    tvf.ToTensor(),
+                    tvf.Normalize(
+                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                    ),
+                ]
+            )
+
         ## VLAD object ##
         if not vlad_ready:
             ext_specifier = f"dinov2_vitg14/l{desc_layer}_{desc_facet}_c{num_c}"
-            c_centers_file = os.path.join(cache_dir, "vocabulary", ext_specifier,
-                                        domain, "c_centers.pt")
+            c_centers_file = os.path.join(
+                cache_dir, "vocabulary", ext_specifier, domain, "c_centers.pt"
+            )
             assert os.path.isfile(c_centers_file), "Cluster centers not cached!"
             c_centers = torch.load(c_centers_file)
             assert c_centers.shape[0] == num_c, "Wrong number of clusters!"
-            
-            self.vlad = VLAD(num_c, desc_dim=None, 
-                    cache_dir=os.path.dirname(c_centers_file))
+
+            self.vlad = VLAD(
+                num_c, desc_dim=None, cache_dir=os.path.dirname(c_centers_file)
+            )
             # Fit (load) the cluster centers (this'll also load the desc_dim)
             self.vlad.fit(None)
 
@@ -109,21 +126,26 @@ class AnyLocEngine(AbstractEngine):
         ## Register Videos ##
         self.register_db_video(database_video, mode)
         self.register_query_video(query_video, mode)
-        
-        
-    def _is_vlad_ready(self, video: Video):
-        return os.path.isfile(f"{video.get_dataset_dir()}/vlads.npy") if video else False
 
-    def register_db_video(self, database_video: Video, mode: Literal["vpr", "realtime", "lazy"] = "vpr"):
+    def _is_vlad_ready(self, video: Video):
+        return (
+            os.path.isfile(f"{video.get_dataset_dir()}/vlads.npy") if video else False
+        )
+
+    def register_db_video(
+        self, database_video: Video, mode: Literal["vpr", "realtime", "lazy"] = "vpr"
+    ):
         if self.db_video:
             logger.info("Database Video Already Registered")
             return
-        
-        self.db_video = database_video
-        self.db_img_frames = database_video.get_frames(verbose=False) if database_video else []
 
-        ## Initialize Database VLAD Features ## 
-        if database_video and mode in ["vpr", "realtime"]: 
+        self.db_video = database_video
+        self.db_img_frames = (
+            database_video.get_frames(verbose=False) if database_video else []
+        )
+
+        ## Initialize Database VLAD Features ##
+        if database_video and mode in ["vpr", "realtime"]:
             db_vlad = self._get_vlad_set(self.db_video)
             db_vlad = F.normalize(db_vlad)
             D = db_vlad.shape[1]
@@ -132,28 +154,36 @@ class AnyLocEngine(AbstractEngine):
             self.db_index = faiss.index_cpu_to_gpu(res, 0, self.db_index)
             self.db_index.add(db_vlad.numpy())
 
-    def register_query_video(self, query_video: Video, mode: Literal["vpr", "realtime", "lazy"] = "vpr"):
+    def register_query_video(
+        self, query_video: Video, mode: Literal["vpr", "realtime", "lazy"] = "vpr"
+    ):
         if self.query_video:
             logger.info("Query Video Already Registered")
             return
-        
-        self.query_video = query_video
-        self.query_img_frames = query_video.get_frames(verbose=False) if query_video else []
 
-        ## Initialize Query VLAD Features ## 
+        self.query_video = query_video
+        self.query_img_frames = (
+            query_video.get_frames(verbose=False) if query_video else []
+        )
+
+        ## Initialize Query VLAD Features ##
         if query_video:
             if mode == "vpr":
                 self.query_vlad = self._get_vlad_set(self.query_video)
             elif mode == "realtime":
                 ## Load Cached query_vlad features if exist ##
-                if query_video and os.path.isfile(f"{query_video.get_dataset_dir()}/vlads.npy"):
-                    self.query_vlad = np.load(f"{query_video.get_dataset_dir()}/vlads.npy")
+                if query_video and os.path.isfile(
+                    f"{query_video.get_dataset_dir()}/vlads.npy"
+                ):
+                    self.query_vlad = np.load(
+                        f"{query_video.get_dataset_dir()}/vlads.npy"
+                    )
                 else:
                     self.query_vlad = None
-        
+
     def get_query_vlad(self):
         return self._get_vlad_set(self.query_video) if self.query_video else None
-    
+
     def get_database_vlad(self):
         return self._get_vlad_set(self.db_video) if self.db_video else None
 
@@ -166,11 +196,11 @@ class AnyLocEngine(AbstractEngine):
 
             patch_descs = []
             img_frames = video.get_frames(verbose=False)
-            
+
             for img_fname in tqdm(img_frames):
                 # DINO features
                 with torch.no_grad():
-                    pil_img = Image.open(img_fname).convert('RGB')
+                    pil_img = Image.open(img_fname).convert("RGB")
                     img_pt = self.base_tf(pil_img).to(self.device)
                     if max(img_pt.shape[-2:]) >= max_img_size:
                         c, h, w = img_pt.shape
@@ -181,23 +211,23 @@ class AnyLocEngine(AbstractEngine):
                         else:
                             h = int(h * max_img_size / w)
                             w = max_img_size
-                        img_pt = T.resize(img_pt, (h, w), 
-                                interpolation=T.InterpolationMode.BICUBIC)
+                        img_pt = T.resize(
+                            img_pt, (h, w), interpolation=T.InterpolationMode.BICUBIC
+                        )
                     # Make image patchable (14, 14 patches)
                     c, h, w = img_pt.shape
                     h_new, w_new = (h // 14) * 14, (w // 14) * 14
                     img_pt = tvf.CenterCrop((h_new, w_new))(img_pt)[None, ...]
-                    ret = self.extractor(img_pt) # [1, num_patches, desc_dim]
+                    ret = self.extractor(img_pt)  # [1, num_patches, desc_dim]
                     patch_descs.append(ret.cpu())
 
             with torch.no_grad():
                 patch_descs = torch.cat(patch_descs, dim=0)
                 img_names = [None] * len(img_frames)
-                vlads: torch.Tensor = self.vlad.generate_multi(patch_descs, 
-                                img_names)
+                vlads: torch.Tensor = self.vlad.generate_multi(patch_descs, img_names)
             del patch_descs
             np.save(f"{dataset_folder}/vlads.npy", vlads)
-        
+
         else:
             vlads = np.load(f"{dataset_folder}/vlads.npy")
             vlads = torch.from_numpy(vlads)
@@ -209,7 +239,7 @@ class AnyLocEngine(AbstractEngine):
 
         # DINO features
         with torch.no_grad():
-            pil_img = Image.open(frame).convert('RGB')
+            pil_img = Image.open(frame).convert("RGB")
             img_pt = self.base_tf(pil_img).to(self.device)
             if max(img_pt.shape[-2:]) > self.max_img_size:
                 c, h, w = img_pt.shape
@@ -220,20 +250,20 @@ class AnyLocEngine(AbstractEngine):
                 else:
                     h = int(h * max_img_size / w)
                     w = max_img_size
-                img_pt = T.resize(img_pt, (h, w), 
-                        interpolation=T.InterpolationMode.BICUBIC)
+                img_pt = T.resize(
+                    img_pt, (h, w), interpolation=T.InterpolationMode.BICUBIC
+                )
             # Make image patchable (14, 14 patches)
             c, h, w = img_pt.shape
             h_new, w_new = (h // 14) * 14, (w // 14) * 14
             img_pt = tvf.CenterCrop((h_new, w_new))(img_pt)[None, ...]
             # Extract descriptor
-            ret = self.extractor(img_pt) # [1, num_patches, desc_dim]
+            ret = self.extractor(img_pt)  # [1, num_patches, desc_dim]
         # VLAD global descriptor
-        gd = self.vlad.generate(ret.cpu().squeeze()) # VLAD: shape [agg_dim]
-        gd_np = gd.numpy()[np.newaxis, ...] # shape: [1, agg_dim]
+        gd = self.vlad.generate(ret.cpu().squeeze())  # VLAD: shape [agg_dim]
+        gd_np = gd.numpy()[np.newaxis, ...]  # shape: [1, agg_dim]
 
         return gd_np
-        
 
     def _download_cache(self):
         from external.AnyLoc.utilities import od_down_links
@@ -244,23 +274,25 @@ class AnyLocEngine(AbstractEngine):
 
         # Download and unzip
         logger.info("Downloading the cache folder")
-        download(ln, filename="cache.zip", unzip=True, unzip_path=_ex(anyloc_dir), clean=True)
+        download(
+            ln, filename="cache.zip", unzip=True, unzip_path=_ex(anyloc_dir), clean=True
+        )
         logger.info("Cache folder downloaded")
 
     @lru_cache(maxsize=None)
     def process(self, file_path: str):
-        '''Process list of files in file_path
+        """Process list of files in file_path
 
-        Return an resulting file.'''
+        Return an resulting file."""
         if self.query_vlad is not None:
             idx = self.query_video.get_frame_idx(file_path)
             query = self.query_vlad[idx]
             query = query[np.newaxis, ...]
-        
+
         else:
             query = self._get_vlad(file_path)
             self.query_vlad_cache.append(query)
-        
+
         _distances, indices = self.db_index.search(query, max([1]))
         match_image = self.db_img_frames[indices[0][0]]
 
@@ -268,7 +300,7 @@ class AnyLocEngine(AbstractEngine):
 
     def end(self):
         return None
-    
+
     def save_state(self, save_path):
         self._save_query_vlad()
 
@@ -279,5 +311,6 @@ class AnyLocEngine(AbstractEngine):
             np.save(f"{dataset_folder}/vlads.npy", query_vlad)
             self.query_vlad = query_vlad
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     engine = AnyLocEngine()

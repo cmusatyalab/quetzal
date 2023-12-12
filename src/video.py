@@ -15,6 +15,7 @@ from .utils.video_tools import extract_frames
 
 logging.basicConfig()
 
+
 def extract_fps_res(directory_name):
     """
     Extracts frames per second (fps) and resolution from a directory name.
@@ -25,9 +26,9 @@ def extract_fps_res(directory_name):
     Returns:
         tuple: A tuple (fps, resolution) if extraction is successful, otherwise (None, None).
     """
-    
+
     # Regular expression to match 'frames_{fps}_{resolution}'
-    pattern = re.compile(r'frames_(\d+)_(\d+)')
+    pattern = re.compile(r"frames_(\d+)_(\d+)")
     match = pattern.search(directory_name)
     if match:
         fps = int(match.group(1))
@@ -36,6 +37,7 @@ def extract_fps_res(directory_name):
     else:
         print(f"Invalid directory name: {directory_name}")
         return None, None
+
 
 def frame_count(fp):
     """
@@ -47,7 +49,8 @@ def frame_count(fp):
     Returns:
         int: The number of frames.
     """
-    return int(open(fp, 'r').read().strip())
+    return int(open(fp, "r").read().strip())
+
 
 class Video:
     """
@@ -62,14 +65,16 @@ class Video:
         resolution (int): The resolution for the processed frames.
         ...
     """
-    
-    def __init__(self,
-                 datasets_dir: str,
-                 route_name: str,
-                 video_name: str, 
-                 video_type: Literal["database", "query"],
-                 fps: int=2, resolution: int=1024
-                 ):
+
+    def __init__(
+        self,
+        datasets_dir: str,
+        route_name: str,
+        video_name: str,
+        video_type: Literal["database", "query"],
+        fps: int = 2,
+        resolution: int = 1024,
+    ):
         """
         Initialize the Video object with dataset directory, route, video name, type, fps, and resolution.
 
@@ -80,7 +85,7 @@ class Video:
             video_type (Literal["database", "query"]): The type of the video.
             fps (int): Frames per second for video processing.
             resolution (int): The resolution for the processed frames.
-        
+
             Dataset structure
             root_datsets_dir/
             |
@@ -107,16 +112,23 @@ class Video:
             |   └── ...
             └── ...
         """
-        
-        assert video_type in ["database", "query"], "video_type must be 'database' or 'query'"
+
+        assert video_type in [
+            "database",
+            "query",
+        ], "video_type must be 'database' or 'query'"
 
         self.root_datasets_dir = os.path.abspath(datasets_dir)
         self.route_name = route_name
         self.video_name = video_name
         self.video_type: Literal["database", "query"] = video_type
-        self.dataset_dir = join(self.root_datasets_dir, self.route_name, self.video_type, os.path.splitext(self.video_name)[0])
+        self.dataset_dir = join(
+            self.root_datasets_dir,
+            self.route_name,
+            self.video_type,
+            os.path.splitext(self.video_name)[0],
+        )
         os.makedirs(self.dataset_dir, exist_ok=True)
-        
 
         self.fps = fps
         self.resolution = resolution
@@ -136,13 +148,12 @@ class Video:
         self.cam = cv2.VideoCapture(raw_video_file)
         if not self.cam.isOpened():
             raise ValueError(f"Failed to open video file: {raw_video_file}")
-        
+
         self.native_fps = self.cam.get(cv2.CAP_PROP_FPS)
         self.orig_width, self.orig_height = int(self.cam.get(3)), int(self.cam.get(4))
 
         self.video_start = 0
         self.video_end = None
-        
 
     @staticmethod
     def get_frame_list(dir: str) -> List[str]:
@@ -154,11 +165,11 @@ class Video:
 
         Returns:
             List[str]: A list of file paths for each frame in the directory.
-        """     
+        """
         files = glob(join(dir, f"frame*.jpg"))
         pattern = re.compile(r"frame(\d{5})\.jpg")
         return [f for f in files if pattern.search(f)]
-    
+
     def get_frame_idx(self, frame_path: str) -> int:
         """
         Extracts the frame index from a frame file path.
@@ -169,10 +180,10 @@ class Video:
         Returns:
             int: The index of the frame.
         """
-    
+
         frame_number_str = frame_path[-9:-4]  # Assuming 5-digit frame number
         return int(frame_number_str) - 1
-    
+
     def get_frame_idx_at_time(self, frame_time: float) -> int:
         """
         Gets the frame index at a specific time in the video.
@@ -185,7 +196,7 @@ class Video:
         """
         return int(frame_time * self.fps + 0.5)
 
-    def get_frame_time(self, frame_index: int) -> float: 
+    def get_frame_time(self, frame_index: int) -> float:
         """
         Converts a frame index to a time point in the video.
 
@@ -196,7 +207,7 @@ class Video:
             float: Time in seconds where the frame is located in the video.
         """
         return frame_index / self.fps
-    
+
     def get_raw_frame_at(self, idx: int) -> np.ndarray:
         """
         Retrieves the raw frame at a given index from the video.
@@ -207,16 +218,16 @@ class Video:
         Returns:
             ndarray: The raw frame as a numpy array in RGB format, or None if retrieval fails.
         """
-        
+
         orig_frame_idx = int(idx / self.fps * self.native_fps + 0.5)
         self.cam.set(cv2.CAP_PROP_POS_FRAMES, orig_frame_idx)
         rv, frame = self.cam.read()
-        
+
         if rv:
             return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        else :
+        else:
             return None
-    
+
     def set_video_start(self, minute: int, sec: int):
         """
         Sets the start point of the video for processing.
@@ -225,12 +236,12 @@ class Video:
             minute (int): The start minute in the video.
             sec (int): The start second in the video.
         """
-        
+
         if not (minute >= 0 and sec >= 0):
             logging.error("Video-start should be positive time")
             return
-        
-        sec = 60*minute + sec
+
+        sec = 60 * minute + sec
         index = sec * self.fps
         self.video_start = index
 
@@ -242,19 +253,21 @@ class Video:
             minute (int): The end minute in the video.
             sec (int): The end second in the video.
         """
-        
+
         if not (minute >= 0 and sec >= 0):
             logging.error("Video-end should be positive time")
             return
-        
-        sec = 60*minute + sec
+
+        sec = 60 * minute + sec
         index = sec * self.fps
-        if (index > self.video_start):
+        if index > self.video_start:
             self.video_end = index
         else:
             minute = int(self.video_start / self.fps / 60)
             sec = int(self.video_start / self.fps) % 60
-            logging.error(f"Video-end Should be greator than video-start = {minute}:{sec}")
+            logging.error(
+                f"Video-end Should be greator than video-start = {minute}:{sec}"
+            )
             self.video_end = None
 
     def get_video_start_idx(self) -> int:
@@ -265,7 +278,7 @@ class Video:
             int: The starting frame index.
         """
         return self.video_start
-    
+
     def get_video_end_idx(self) -> int:
         """
         Gets the ending frame index of the video for processing.
@@ -275,7 +288,7 @@ class Video:
         """
         return self.video_end
 
-    def get_fps(self) -> int:    
+    def get_fps(self) -> int:
         """
         Retrieves the frames per second setting of the video.
 
@@ -283,7 +296,7 @@ class Video:
             int: The frames per second.
         """
         return self.fps
-    
+
     def get_resolution(self) -> int:
         """
         Retrieves the resolution setting of the video.
@@ -292,7 +305,7 @@ class Video:
             int: The resolution of the video.
         """
         return self.resolution
-    
+
     def set_fps(self, fps: int):
         """
         Sets the frames per second for video processing.
@@ -319,7 +332,7 @@ class Video:
             str: The path to the dataset directory.
         """
         return join(self.dataset_dir, f"frames_{self.fps}_{self.resolution}")
-    
+
     def get_raw_video_file(self) -> str:
         """
         Retrieves the file path of the raw video file.
@@ -327,8 +340,10 @@ class Video:
         Returns:
             str: The file path of the raw video.
         """
-        return join(self.root_datasets_dir, self.route_name, "raw_video", self.video_name)
-    
+        return join(
+            self.root_datasets_dir, self.route_name, "raw_video", self.video_name
+        )
+
     def get_avaliablity(self) -> List[tuple]:
         """
         Checks the availability of different combinations of fps and resolution for which the frames are extracted.
@@ -336,13 +351,21 @@ class Video:
         Returns:
             list[tuple]: A list of tuples (fps, resolution) available in the dataset.
         """
-        dir_list = [d for d in os.listdir(self.dataset_dir) if os.path.isdir(join(self.dataset_dir, d))]
+        dir_list = [
+            d
+            for d in os.listdir(self.dataset_dir)
+            if os.path.isdir(join(self.dataset_dir, d))
+        ]
 
         if len(dir_list) == 0:
             return []
-        
-        return [extract_fps_res(dir) for dir in dir_list if self.is_dir_valid(join(self.dataset_dir, dir))]
-    
+
+        return [
+            extract_fps_res(dir)
+            for dir in dir_list
+            if self.is_dir_valid(join(self.dataset_dir, dir))
+        ]
+
     def is_dir_valid(self, dir: str) -> bool:
         """
         Checks if a directory is a valid dataset directory with extracted frames
@@ -353,17 +376,17 @@ class Video:
         Returns:
             bool: True if the directory is valid, False otherwise.
         """
-        
+
         if not os.path.isdir(dir):
             return False
-        
-        frame_count_file = join(dir,"frame_counts.txt")
+
+        frame_count_file = join(dir, "frame_counts.txt")
         if os.path.exists(frame_count_file):
             if len(Video.get_frame_list(dir)) == frame_count(frame_count_file):
                 return True
         return False
-    
-    def get_frames(self, verbose: bool=True) -> List[str]:
+
+    def get_frames(self, verbose: bool = True) -> List[str]:
         """
         Retrieves or generates frames for the video at the current fps and resolution settings.
 
@@ -373,38 +396,46 @@ class Video:
         Returns:
             list: A list of frame file paths.
         """
-        
+
         fps = self.fps
         resolution = self.resolution
 
         target_dir = self.get_dataset_dir()
         frame_count_file = join(target_dir, "frame_counts.txt")
-        
+
         loaded = False
         with self._lock:
             if not self.is_dir_valid(target_dir):
                 if verbose:
-                    self.logger.info(f"Frames in fps={fps}, res={resolution} do not exist. Generating...")
+                    self.logger.info(
+                        f"Frames in fps={fps}, res={resolution} do not exist. Generating..."
+                    )
                 os.makedirs(target_dir, exist_ok=True)
-                input_frames = extract_frames(self.get_raw_video_file(), target_dir, max_size = resolution, fps = fps)
-                with open(frame_count_file, 'w') as f:
+                input_frames = extract_frames(
+                    self.get_raw_video_file(), target_dir, max_size=resolution, fps=fps
+                )
+                with open(frame_count_file, "w") as f:
                     f.write(str(len(input_frames)))
-                
+
                 loaded = True
 
         if not loaded:
             if verbose:
-                self.logger.info(f"Frames in fps={fps}, res={resolution} found in the dataset.")
+                self.logger.info(
+                    f"Frames in fps={fps}, res={resolution} found in the dataset."
+                )
             input_frames = Video.get_frame_list(target_dir)
-        
+
         self.frame_len = len(input_frames)
         idx_start = self.video_start
-        if self.video_end == None: 
-            idx_end = len(input_frames) 
-        else: 
+        if self.video_end == None:
+            idx_end = len(input_frames)
+        else:
             idx_end = self.video_end
-        return natsort.natsorted(input_frames)[idx_start:min(idx_end, len(input_frames))]
-    
+        return natsort.natsorted(input_frames)[
+            idx_start : min(idx_end, len(input_frames))
+        ]
+
     def get_frame_len(self) -> int:
         """
         Retrieves the total number of frames in the dataset directory.
@@ -412,15 +443,16 @@ class Video:
         Returns:
             int: The number of frames, or -1 if the frame count is not available.
         """
-        
+
         target_dir = self.get_dataset_dir()
         frame_count_file = join(target_dir, "frame_counts.txt")
-        
+
         with self._lock:
             if os.path.exists(frame_count_file):
                 return frame_count(frame_count_file)
             else:
                 return -1
+
 
 class DatabaseVideo(Video):
     """
@@ -428,10 +460,8 @@ class DatabaseVideo(Video):
 
     Inherits all attributes and methods from Video.
     """
-    
-    def __init__(self, datasets_dir: str,
-                 route_name: str,
-                 video_name: str):
+
+    def __init__(self, datasets_dir: str, route_name: str, video_name: str):
         """
         Initialize the DatabaseVideo object with dataset directory, route, and video name.
 
@@ -439,7 +469,7 @@ class DatabaseVideo(Video):
             datasets_dir (str): The root directory for datasets.
             route_name (str): The name of the specific route.
             video_name (str): The name of the video file.
-        
+
         Dataset structure
             root_datsets_dir/
             |
@@ -466,18 +496,20 @@ class DatabaseVideo(Video):
             |   └── ...
             └── ...
         """
-        
+
         # Override video_type to be "database"
-        super().__init__(datasets_dir=datasets_dir,
-                         route_name=route_name,
-                         video_name=video_name, 
-                         video_type="database",
-                         fps = 6,
-                         resolution = 1024
-                         )
-    
+        super().__init__(
+            datasets_dir=datasets_dir,
+            route_name=route_name,
+            video_name=video_name,
+            video_type="database",
+            fps=6,
+            resolution=1024,
+        )
+
     # def get_frames(self, fps = 6, resolution = 1024):
     #     return super().get_frames(fps, resolution)
+
 
 class QueryVideo(Video):
     """
@@ -485,10 +517,8 @@ class QueryVideo(Video):
 
     Inherits all attributes and methods from Video.
     """
-    
-    def __init__(self, datasets_dir: str,
-                 route_name: str,
-                 video_name: str):
+
+    def __init__(self, datasets_dir: str, route_name: str, video_name: str):
         """
         Initialize the QueryVideo object with dataset directory, route, and video name.
 
@@ -496,7 +526,7 @@ class QueryVideo(Video):
             datasets_dir (str): The root directory for datasets.
             route_name (str): The name of the specific route.
             video_name (str): The name of the video file.
-        
+
         dataset_dir: root datasets dir
         route_name: name of the specific route the drone video is taken
         video_name: video file name
@@ -527,20 +557,22 @@ class QueryVideo(Video):
             |   └── ...
             └── ...
         """
-                
-        # Override video_type to be "database"
-        super().__init__(datasets_dir=datasets_dir,
-                         route_name=route_name,
-                         video_name=video_name, 
-                         video_type="query",
-                         fps = 2,
-                         resolution = 1024
-                         )
 
-#TODO
+        # Override video_type to be "database"
+        super().__init__(
+            datasets_dir=datasets_dir,
+            route_name=route_name,
+            video_name=video_name,
+            video_type="query",
+            fps=2,
+            resolution=1024,
+        )
+
+
+# TODO
 class LiveQueryVideo(Video):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, video_type="query", **kwargs)
 
-    def get_frames(self, fps = 2, resolution = 1024):
+    def get_frames(self, fps=2, resolution=1024):
         super().get_frames(fps, resolution)

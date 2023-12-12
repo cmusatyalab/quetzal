@@ -13,8 +13,11 @@ import numpy as np
 import utm
 from tqdm import tqdm
 
+
 ### Video Frame Extract
-def extract_frames(video_path: str, output_dir: str, fps: int=2, max_size = -1, interpolation='bicubic') -> List[str]:
+def extract_frames(
+    video_path: str, output_dir: str, fps: int = 2, max_size=-1, interpolation="bicubic"
+) -> List[str]:
     """
     Extract frames from a video at a specified frame rate and scale them to a maximum size.
 
@@ -37,15 +40,19 @@ def extract_frames(video_path: str, output_dir: str, fps: int=2, max_size = -1, 
 
     # Construct the ffmpeg command with both the 'fps' and 'scale' filters.
     command = [
-        "ffmpeg", 
-        "-i", video_path, 
-        "-qscale:v", "2",
-        "-vf", f"{scale_filter},fps={fps}", 
-        f"{output_dir}/frame%05d.jpg"
+        "ffmpeg",
+        "-i",
+        video_path,
+        "-qscale:v",
+        "2",
+        "-vf",
+        f"{scale_filter},fps={fps}",
+        f"{output_dir}/frame%05d.jpg",
     ]
     subprocess.run(command, capture_output=True)
 
     return glob(join(output_dir, "*.jpg"))
+
 
 def dms_to_decimal(dms_str: str) -> str:
     """
@@ -58,15 +65,15 @@ def dms_to_decimal(dms_str: str) -> str:
     str: The converted coordinate in decimal format.
     """
     # Extract degrees, minutes, and seconds using regex
-    match = re.match(r'(-?\d+) deg (\d+)' + r"' " + r'([\d.]+)"', dms_str)
+    match = re.match(r"(-?\d+) deg (\d+)" + r"' " + r'([\d.]+)"', dms_str)
     if not match:
         raise ValueError(f"Invalid DMS format: {dms_str}")
-    
+
     degrees, minutes, seconds = map(float, match.groups())
     is_negative = degrees < 0 or "S" in dms_str or "W" in dms_str
     decimal_degrees = abs(degrees) + (minutes / 60) + (seconds / 3600)
     result = -decimal_degrees if is_negative else decimal_degrees
-    
+
     return f"{result:3.5f}"
 
 
@@ -87,18 +94,19 @@ def parse_exiftool_output(output: str) -> List[str]:
             frames.append(frame)
             frame = {}
             time = line.split(":")[1].strip()
-            frame['TimeStamp'] = time
+            frame["TimeStamp"] = time
         if "GPS Latitude" in line:
             lat_dms = line.split(":")[1].strip()
-            frame['Latitude'] = dms_to_decimal(lat_dms)
+            frame["Latitude"] = dms_to_decimal(lat_dms)
         if "GPS Longitude" in line:
             lon_dms = line.split(":")[1].strip()
-            frame['Longitude'] = dms_to_decimal(lon_dms)
+            frame["Longitude"] = dms_to_decimal(lon_dms)
         if "Elevation" in line:
-            frame['Elevation'] = line.split(":")[1].strip()
+            frame["Elevation"] = line.split(":")[1].strip()
     if frame:
         frames.append(frame)
     return frames
+
 
 def extract_gps_for_frames(video_path: str, output_directory: str) -> np.ndarray:
     """
@@ -124,26 +132,31 @@ def extract_gps_for_frames(video_path: str, output_directory: str) -> np.ndarray
 
     # Align the GPS index to the extracted frame's index
     step = int(len(gps_frames) / len(img_frames) + 0.5)
-    gps_frame_idx= list(range(0, len(gps_frames), step))
+    gps_frame_idx = list(range(0, len(gps_frames), step))
     diff = num_frames - len(gps_frame_idx)
     while diff > 0:
         gps_frame_idx.append(gps_frame_idx[-1])
         diff = diff - 1
-    
+
     db_gps = np.zeros((num_frames, 2))
     for index, img_frame in enumerate(img_frames):
-        latitude = gps_frames[gps_frame_idx[index]].get('Latitude')
-        longitude = gps_frames[gps_frame_idx[index]].get('Longitude')
-        easting, northing, _zone_number, _zone_letter = utm.from_latlon(float(latitude), float(longitude))
+        latitude = gps_frames[gps_frame_idx[index]].get("Latitude")
+        longitude = gps_frames[gps_frame_idx[index]].get("Longitude")
+        easting, northing, _zone_number, _zone_letter = utm.from_latlon(
+            float(latitude), float(longitude)
+        )
         db_gps[index] = [easting, northing]
 
     return db_gps
 
+
 def assert_absolute_path(file_path: str):
     assert os.path.isabs(file_path), f"'{file_path}' is not an absolute path"
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     from tqdm import tqdm
+
     max_size = 1024
     database_video = "P0190019.MP4"
     query_video = "P0200020.MP4"
@@ -173,6 +186,8 @@ if __name__=="__main__":
 
     for i in tqdm([1]):
         if len(glob(join(dst_database_folder, "*.jpg"))) == 0:
-            input_frames = extract_frames(db_video_path, dst_database_folder, max_size = 1024, fps = 6)
+            input_frames = extract_frames(
+                db_video_path, dst_database_folder, max_size=1024, fps=6
+            )
             db_gps = extract_gps_for_frames(db_video_path, dst_database_folder)
             np.save(f"{dataset_folder}/db_gps.npy", db_gps)
