@@ -1,75 +1,32 @@
+import copy
+import os
 import re
 import subprocess
-import utm
 from glob import glob
 from os.path import join
-import numpy as np
+from typing import List
+
+
 import cv2
-import os
-import copy
 import gradio as gr
-
-# def extract_frames(video_path, output_dir, fps, max_size=-1):
-#     """
-#     Extract image frames from a video using OpenCV (cv2).
-
-#     Args:
-#         video_path (str): Path to the video file.
-#         output_dir (str): Directory where extracted frames will be saved.
-#         fps (int): Number of frames per second to extract.
-#         max_size (int): Maximum size of the longest dimension of the frame. -1 for original size.
-
-#     Returns:
-#         list: A list of file paths to the extracted frames.
-#     """
-#     # Open the video
-#     cap = cv2.VideoCapture(video_path)
-#     if not cap.isOpened():
-#         raise IOError(f"Cannot open video file {video_path}")
-
-#     # Get original video FPS and total frame count
-#     original_fps = cap.get(cv2.CAP_PROP_FPS)
-#     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-#     # Calculate the frame interval to match the target FPS
-#     frame_interval = int(round(original_fps / fps))
-
-#     # Read and save frames
-#     saved_frames = []
-#     frame_index = 0
-#     save_idx = 0
-#     while True:
-#         ret, frame = cap.read()
-#         if not ret:
-#             break
-
-#         if frame_index % frame_interval == 0:
-#             # Resize frame if max_size is specified
-#             if max_size > 0:
-#                 h, w = frame.shape[:2]
-#                 scaling_factor = max_size / max(h, w)
-#                 if scaling_factor < 1:
-#                     frame = cv2.resize(frame, None, fx=scaling_factor, fy=scaling_factor, interpolation=cv2.INTER_AREA)
-
-#             # Save frame
-#             frame_file = join(output_dir, f"frame{save_idx:05d}.jpg")
-#             cv2.imwrite(frame_file, frame)
-#             saved_frames.append(frame_file)
-#             save_idx += 1
-
-#         frame_index += 1
-
-#     cap.release()
-#     return saved_frames
+import numpy as np
+import utm
+from tqdm import tqdm
 
 ### Video Frame Extract
-def extract_frames(video_path, output_dir, fps, max_size = -1, interpolation='bicubic'):
+def extract_frames(video_path: str, output_dir: str, fps: int=2, max_size = -1, interpolation='bicubic') -> List[str]:
     """
-    Extract image frames from given video in 'video_path' into 'output_dir'. Calls ffmpeg as subprocess.
+    Extract frames from a video at a specified frame rate and scale them to a maximum size.
 
-    Default fps is 2. 
-    full-size image will be extracted unless the max_size is specificed. default is None
-    interpolation can be 'lanczos', 'bicubic', or any ffmpeg scaler options. Default is bicubic
+    Args:
+    video_path (str): Path to the video file.
+    output_dir (str): Directory where the extracted frames will be saved.
+    fps (int): Frame rate for extraction. Default is 2.
+    max_size (int, optional): Maximum size (width or height) for the extracted frames. Default is -1 (no scaling).
+    interpolation (str, optional): Interpolation method used for scaling. Default is 'bicubic'. It can be 'lanczos', 'bicubic', or any ffmpeg scaler options.
+
+    Returns:
+    list: List of file paths for the extracted frames.
     """
 
     if not max_size:
@@ -90,9 +47,15 @@ def extract_frames(video_path, output_dir, fps, max_size = -1, interpolation='bi
 
     return glob(join(output_dir, "*.jpg"))
 
-def dms_to_decimal(dms_str):
+def dms_to_decimal(dms_str: str) -> str:
     """
-    Convert a string in DMS format (DDD° MM' SS.S") to Decimal Degrees.
+    Convert a string from DMS (Degrees, Minutes, Seconds) format to decimal format.
+
+    Args:
+    dms_str (str): A string representing coordinates in DMS format.
+
+    Returns:
+    str: The converted coordinate in decimal format.
     """
     # Extract degrees, minutes, and seconds using regex
     match = re.match(r'(-?\d+) deg (\d+)' + r"' " + r'([\d.]+)"', dms_str)
@@ -100,22 +63,22 @@ def dms_to_decimal(dms_str):
         raise ValueError(f"Invalid DMS format: {dms_str}")
     
     degrees, minutes, seconds = map(float, match.groups())
-    
-    # Check if degrees is negative to handle W/S coordinates
     is_negative = degrees < 0 or "S" in dms_str or "W" in dms_str
-    
-    # Convert to decimal format
     decimal_degrees = abs(degrees) + (minutes / 60) + (seconds / 3600)
-    
-    # Return negative value if it's a W/S coordinate
     result = -decimal_degrees if is_negative else decimal_degrees
+    
     return f"{result:3.5f}"
 
 
-def parse_exiftool_output(output):
+def parse_exiftool_output(output: str) -> List[str]:
     """
-    parse 'TimeStamp', 'Latitude', 'Longitude', and 'Elevation' from exiftool output from Anafi Ai Video footage
-    return list of ditionary for each frame
+    Parse 'TimeStamp', 'Latitude', 'Longitude', and 'Elevation' from exiftool output from Anafi Ai Video footage
+
+    Args:
+    output (str): The output string from exiftool.
+
+    Returns:
+    list: A list of dictionaries with frame information.
     """
     frames = []
     frame = {}
@@ -137,10 +100,16 @@ def parse_exiftool_output(output):
         frames.append(frame)
     return frames
 
-def extract_gps_for_frames(video_path, output_directory):
+def extract_gps_for_frames(video_path: str, output_directory: str) -> np.ndarray:
     """
-    Extract corresponding gpu informations for the frames in output_directory
-    use after "extract_frames"
+    Extract GPS information for frames in a given directory based on exiftool output from a video.
+
+    Args:
+    video_path (str): Path to the video file.
+    output_directory (str): Directory where the frames are stored.
+
+    Returns:
+    numpy.ndarray: An array containing GPS coordinates (UTM Easting and Northing) for each frame.
     """
 
     # Step 1: Extract exiftool output
@@ -170,7 +139,7 @@ def extract_gps_for_frames(video_path, output_directory):
 
     return db_gps
 
-def assert_absolute_path(file_path):
+def assert_absolute_path(file_path: str):
     assert os.path.isabs(file_path), f"'{file_path}' is not an absolute path"
 
 if __name__=="__main__":

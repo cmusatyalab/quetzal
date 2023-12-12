@@ -27,6 +27,16 @@ logging.basicConfig()
 logger = logging.getLogger("AnyLoc_Engine")
 logger.setLevel(logging.DEBUG)
 
+def generate_VLAD(database_video: Video, query_video: Video, torch_device):
+    logger.info("Loading Videos")
+    anylocEngine = AnyLocEngine(database_video=database_video, query_video=query_video, device=torch_device, mode='lazy')
+    
+    db_vlad = anylocEngine.get_database_vlad()
+    query_vlad = anylocEngine.get_query_vlad()
+    del anylocEngine
+    
+    return db_vlad, query_vlad
+
 class AnyLocEngine(AbstractEngine):
     
     def __init__(self, database_video: Video = None, # database_video may be None. Can later register using register_db_video() 

@@ -85,7 +85,7 @@ class Video:
             root_datsets_dir/
             |
             ├── route_name/
-            |   ├── raw_videos/
+            |   ├── raw_video/
             |   |   ├── video_name.mp4
             |   |   └── ...
             |   |
@@ -197,7 +197,7 @@ class Video:
         """
         return frame_index / self.fps
     
-    def get_raw_frame_at(self, idx: int):
+    def get_raw_frame_at(self, idx: int) -> np.ndarray:
         """
         Retrieves the raw frame at a given index from the video.
 
@@ -444,7 +444,7 @@ class DatabaseVideo(Video):
             root_datsets_dir/
             |
             ├── route_name/
-            |   ├── raw_videos/
+            |   ├── raw_video/
             |   |   ├── video_name.mp4
             |   |   └── ...
             |   |
@@ -505,7 +505,7 @@ class QueryVideo(Video):
             root_datsets_dir/
             |
             ├── route_name/
-            |   ├── raw_videos/
+            |   ├── raw_video/
             |   |   ├── video_name.mp4
             |   |   └── ...
             |   |
