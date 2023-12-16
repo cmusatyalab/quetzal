@@ -155,6 +155,9 @@ class Video:
         self.video_start = 0
         self.video_end = None
 
+    def get_video_name(self):
+        return os.path.splitext(self.video_name)[0]
+
     @staticmethod
     def get_frame_list(dir: str) -> List[str]:
         """

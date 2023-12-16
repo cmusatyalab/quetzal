@@ -4,8 +4,8 @@ import numpy as np
 import torch
 from torchvision import transforms as tvf
 from torchvision.transforms import functional as T
-from external.AnyLoc.utilities import DinoV2ExtractFeatures
-from external.AnyLoc.utilities import VLAD
+from src.external.AnyLoc.utilities import DinoV2ExtractFeatures
+from src.external.AnyLoc.utilities import VLAD
 from src.video import Video
 from typing import Literal, List
 from tqdm import tqdm
@@ -20,29 +20,12 @@ import faiss
 _ex = lambda x: os.path.realpath(os.path.expanduser(x))
 current_file_path = os.path.abspath(__file__)
 current_file_dir = os.path.dirname(current_file_path)
-anyloc_dir = join(current_file_dir, "../../../external/AnyLoc")
+anyloc_dir = join(current_file_dir, "../../external/AnyLoc")
 cache_dir: str = _ex(join(anyloc_dir, "cache"))
 
 logging.basicConfig()
 logger = logging.getLogger("AnyLoc_Engine")
 logger.setLevel(logging.DEBUG)
-
-
-def generate_VLAD(database_video: Video, query_video: Video, torch_device):
-    logger.info("Loading Videos")
-    anylocEngine = AnyLocEngine(
-        database_video=database_video,
-        query_video=query_video,
-        device=torch_device,
-        mode="lazy",
-    )
-
-    db_vlad = anylocEngine.get_database_vlad()
-    query_vlad = anylocEngine.get_query_vlad()
-    del anylocEngine
-
-    return db_vlad, query_vlad
-
 
 class AnyLocEngine(AbstractEngine):
     def __init__(
@@ -51,18 +34,35 @@ class AnyLocEngine(AbstractEngine):
         query_video: Video = None,  # query_video may be None. Can later register using register_query_video()
         max_img_size: int = 512,
         device=torch.device("cuda:0"),
-        # The `domain` parameter in the `AnyLocEngine` class is used to specify the domain
-        # type of the videos being processed. It is a literal type that can take one of three
-        # values: "aerial", "indoor", or "urban". This parameter is used to determine the
-        # location of the cluster centers file, which is required for VLAD feature
-        # aggregation. The cluster centers file is stored in the cache directory, and the
-        # path to the file is constructed based on the specified domain type.
+
         domain: Literal["aerial", "indoor", "urban"] = "aerial",
-        # "vpr": This mode is optimized for retrieval of the closest database frames from a query image. It pre-computes both database and query VLAD features and prepares a database FAISS index for quick retrieval.
-        # "realtime": This mode is optimized for real-time frame retrieval and does not pre-computes the query VLAD features, assuming that not all of the frames are ready.  Suitable for scenarios where per frames based real-time processing is required
-        # "lazy": This mode is optimized for computing entire VLAD features of each Video in a blocking manner. In this mode, VLAD features for both the query and database videos are not computed during initialization. Instead, the computation is deferred until the user explicitly calls the get_vlad_features() method. Calling process() method for VPR will be disabled
         mode: Literal["vpr", "realtime", "lazy"] = "realtime",
     ):
+        """
+        Initializes the AnyLocEngine with optional database and query videos.
+
+        Args:
+            database_video (Video, optional): The database video for analysis.
+            query_video (Video, optional): The query video for analysis.
+            max_img_size (int, optional): Maximum size of the images during processing.
+            device (torch.device, optional): The computational device (CPU/GPU).
+            domain (Literal["aerial", "indoor", "urban"], optional): The domain type of the videos.
+            mode (Literal["vpr", "realtime", "lazy"], optional): The operational mode of the engine.
+
+        Attributes:
+            name (str): Name of the engine.
+            db_video (Video): The database video.
+            query_video (Video): The query video.
+            db_index (faiss.IndexFlatIP): FAISS index for the database VLAD vectors.
+            query_vlad (np.ndarray): The VLAD vectors for the query video.
+
+        Notes:
+            "vpr": This mode is optimized for retrieval of the closest database frames from a query image. It pre-computes both database and query VLAD features and prepares a database FAISS index for quick retrieval.
+            "realtime": This mode is optimized for real-time frame retrieval and does not pre-computes the query VLAD features, assuming that not all of the frames are ready.  Suitable for scenarios where per frames based real-time processing is required
+            "lazy": This mode is optimized for computing entire VLAD features of each Video in a blocking manner. In this mode, VLAD features for both the query and database videos are not computed during initialization. Instead, the computation is deferred until the user explicitly calls the get_vlad_features() method. Calling process() method for VPR will be disabled.
+            
+            The `domain` parameter in the `AnyLocEngine` class is used to specify the domaintype of the videos being processed. It is a literal type that can take one of three values: "aerial", "indoor", or "urban". This parameter is used to determine the location of the cluster centers file, which is required for VLAD feature aggregation. The cluster centers file is stored in the cache directory, and the path to the file is constructed based on the specified domain type.
+        """
         self.name = "Frame Matching - AnyLoc"
 
         ## Video Frames ##
@@ -127,7 +127,16 @@ class AnyLocEngine(AbstractEngine):
         self.register_db_video(database_video, mode)
         self.register_query_video(query_video, mode)
 
-    def _is_vlad_ready(self, video: Video):
+    def _is_vlad_ready(self, video: Video) -> bool:
+        """
+        Checks if the VLAD features are already computed for a given video.
+
+        Args:
+            video (Video): The video object to check for precomputed VLAD features.
+
+        Returns:
+            bool: True if the VLAD features are precomputed, False otherwise.
+        """
         return (
             os.path.isfile(f"{video.get_dataset_dir()}/vlads.npy") if video else False
         )
@@ -135,6 +144,17 @@ class AnyLocEngine(AbstractEngine):
     def register_db_video(
         self, database_video: Video, mode: Literal["vpr", "realtime", "lazy"] = "vpr"
     ):
+        """
+        Registers a database video in the engine and initializes its VLAD features.
+
+        Args:
+            database_video (Video): The video to be registered as a database video.
+            mode (Literal["vpr", "realtime", "lazy"], optional): The mode of operation for VLAD feature computation.
+
+        Note:
+            This method initializes the FAISS index for the database VLAD vectors if the mode is "vpr" or "realtime".
+        """
+
         if self.db_video:
             logger.info("Database Video Already Registered")
             return
@@ -157,6 +177,17 @@ class AnyLocEngine(AbstractEngine):
     def register_query_video(
         self, query_video: Video, mode: Literal["vpr", "realtime", "lazy"] = "vpr"
     ):
+        """
+        Registers a query video in the engine.
+
+        Args:
+            query_video (Video): The video to be registered as a query video.
+            mode (Literal["vpr", "realtime", "lazy"], optional): The mode of operation for VLAD feature computation.
+
+        Note:
+            This method does not immediately compute VLAD features for the query video unless the mode is "vpr".
+        """
+
         if self.query_video:
             logger.info("Query Video Already Registered")
             return
@@ -181,13 +212,34 @@ class AnyLocEngine(AbstractEngine):
                 else:
                     self.query_vlad = None
 
-    def get_query_vlad(self):
+    def get_query_vlad(self) -> np.ndarray:
+        """
+        Retrieves the VLAD features for the registered query video.
+
+        Returns:
+            np.ndarray: The VLAD features of the query video.
+        """
         return self._get_vlad_set(self.query_video) if self.query_video else None
 
-    def get_database_vlad(self):
+    def get_database_vlad(self) -> np.ndarray:
+        """
+        Retrieves the VLAD features for the registered database video.
+
+        Returns:
+            np.ndarray: The VLAD features of the database video.
+        """
         return self._get_vlad_set(self.db_video) if self.db_video else None
 
-    def _get_vlad_set(self, video: Video):
+    def _get_vlad_set(self, video: Video) -> np.ndarray:
+        """
+        Computes and retrieves VLAD features for a given video.
+
+        Args:
+            video (Video): The video for which to compute VLAD features.
+
+        Returns:
+            np.ndarray: The computed VLAD features for the video.
+        """
         dataset_folder = video.get_dataset_dir()
         max_img_size = self.max_img_size
 
@@ -234,7 +286,16 @@ class AnyLocEngine(AbstractEngine):
 
         return vlads
 
-    def _get_vlad(self, frame):
+    def _get_vlad(self, frame: str) -> np.ndarray:
+        """
+        Computes the VLAD feature for a single frame.
+
+        Args:
+            frame (str): The path to the frame image file.
+
+        Returns:
+            np.ndarray: The computed VLAD feature for the frame.
+        """
         max_img_size = self.max_img_size
 
         # DINO features
@@ -266,6 +327,9 @@ class AnyLocEngine(AbstractEngine):
         return gd_np
 
     def _download_cache(self):
+        """
+        Downloads and sets up the cache folder necessary for the AnyLoc engine, including DINOv2 model and VLAD cluster centers.
+        """
         from external.AnyLoc.utilities import od_down_links
         from onedrivedownloader import download
 
@@ -281,9 +345,15 @@ class AnyLocEngine(AbstractEngine):
 
     @lru_cache(maxsize=None)
     def process(self, file_path: str):
-        """Process list of files in file_path
+        """
+        Processes a given file to find its matching frame in the database video.
 
-        Return an resulting file."""
+        Args:
+            file_path (str): The path to the query file.
+
+        Returns:
+            Tuple[str, str]: A tuple containing the file path and the path to its matching frame in the database.
+        """
         if self.query_vlad is not None:
             idx = self.query_video.get_frame_idx(file_path)
             query = self.query_vlad[idx]
@@ -299,9 +369,19 @@ class AnyLocEngine(AbstractEngine):
         return (file_path, match_image)
 
     def end(self):
+        """
+        Concludes the processing and performs necessary cleanup.
+        """
+        self.save_state()
         return None
 
-    def save_state(self, save_path):
+    def save_state(self, save_path: str):
+        """
+        Saves the current state of the engine, including cached VLAD features.
+
+        Args:
+            save_path (str): The path where the state should be saved.
+        """
         self._save_query_vlad()
 
     def _save_query_vlad(self):

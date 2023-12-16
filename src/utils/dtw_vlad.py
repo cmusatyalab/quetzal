@@ -4,7 +4,6 @@ from tqdm import tqdm
 import faiss
 from typing import List, Tuple, Optional
 
-
 def create_FAISS_indexes(
     db_vlad: np.ndarray, chunk_size: int = 1024, cuda: bool = True
 ) -> List[faiss.IndexFlatIP]:

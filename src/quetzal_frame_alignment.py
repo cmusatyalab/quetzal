@@ -2,8 +2,11 @@ import gradio as gr
 from src.video import *
 import logging
 from copy import deepcopy
-from src.engines.vpr_engine.anyloc_engine import generate_VLAD, AnyLocEngine
-from src.utils.dtw_vlad import *
+from src.engines.vpr_engine.anyloc_engine import AnyLocEngine
+from src.compute_vlad import generate_VLAD
+from src.align_frames import align_video_frames
+# from src.utils.dtw_vlad import *
+from tqdm import tqdm
 import faiss
 import numpy as np
 import torch
@@ -537,7 +540,7 @@ def right_click(idx, inputs):
     return *display_images(idx, inputs), idx
 
 
-def run_dtw(route_name, database_video_name, query_video_name, progress):
+def run_alignment(route_name, database_video_name, query_video_name, progress):
     database_video_name = glob(
         os.path.join(dataset_root, route_name, "raw_video", database_video_name + ".*")
     )
@@ -565,46 +568,9 @@ def run_dtw(route_name, database_video_name, query_video_name, progress):
     db_frame_list = database_video.get_frames()
     query_frame_list = query_video.get_frames()
 
-    matches = [
-        (query_frame_list[i], db_frame_list[i])
-        for i in tqdm(range(len(query_frame_list)))
-    ]
-    anylocEngine = AnyLocEngine(
-        database_video=database_video, query_video=query_video, device=torch_device
-    )
-
-    db_vlad = anylocEngine.get_database_vlad()
-    query_vlad = anylocEngine.get_query_vlad()
-
-    # Normalize and prepare x and y for FAISS
-    db_vlad = F.normalize(db_vlad)
-    query_vlad = F.normalize(query_vlad)
-    cuda = torch_device != torch.device("cpu")
-    try:
-        db_indexes = create_FAISS_indexes(db_vlad.numpy(), cuda=cuda)
-    except:
-        db_indexes = create_FAISS_indexes(db_vlad.numpy(), cuda=False)
-
-    ## Run DTW Algorithm using VLAD features ##
-    _, _, D1, path = dtw(query_vlad.numpy(), db_vlad, db_indexes)
-    matches = extract_unique_dtw_pairs(path, D1)
-
-    # Smooth the frame alignment Results
-    query_fps = query_video.get_fps()
-    db_fps = database_video.get_fps()
-
-    diff = 1
-    count = 0
-    k = 3
-    while diff and count < 100:
-        time_diff = [
-            database_video.get_frame_time(d) - query_video.get_frame_time(q)
-            for q, d in matches
-        ]
-        mv_avg = np.convolve(time_diff, np.ones(k) / k, mode="same")
-        mv_avg = {k[0]: v for k, v in zip(matches, mv_avg)}
-        matches, diff = smooth_frame_intervals(matches, mv_avg, query_fps, db_fps)
-        count += 1
+    matches = align_video_frames(database_video=database_video,
+                                        query_video=query_video,
+                                        torch_device=torch_device)
 
     return (
         matches,
@@ -626,7 +592,7 @@ def run_matching(route, query, db, progress=gr.Progress(track_tqdm=True)):
         msg = "**ERROR: Please Choose your db video!**"
         return ([], [], []), *update_ui_result(None), msg
 
-    result = run_dtw(route, query, db, progress)
+    result = run_alignment(route, query, db, progress)
     return result, *update_ui_result(result), "**Running**"
 
 

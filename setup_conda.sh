@@ -237,6 +237,7 @@ conda_raw_install -c conda-forge imageio==2.25.0
 conda_raw_install -c conda-forge seaborn==0.12.1
 # pip_install torch-tensorrt  # This replaces torch with '2.0.1+cu117'
 pip_install pytorchvideo==0.1.5
+pip install kornia==0.7.0
 conda_raw_install -c conda-forge transformers==4.28.0
 # conda_raw_install -c conda-forge googledrivedownloader==0.4
 conda_raw_install -c conda-forge distinctipy==1.2.2
@@ -248,12 +249,14 @@ conda_raw_install -c conda-forge scikit-image==0.19.3
 conda_raw_install -c conda-forge torchinfo==1.7.2
 conda_raw_install -c conda-forge graphviz
 conda_raw_install -c conda-forge gradio
-conda install pyrsistent
+conda_raw_install -c conda-forge pyrsistent
 pip_install torchviz=='0.0.2'
 pip_install torchscan
 pip_install onedrivedownloader
 pip_install utm
 pip_install bcrypt
+pip_install kornia==0.1.4.post2
+conda_raw_install -c kornia==0.7.0
 conda_raw_install -c conda-forge jupyter
 # Core packages using pip_install
 if [ $dev_tools == "true" ]; then 

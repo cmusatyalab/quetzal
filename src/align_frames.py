@@ -1,12 +1,17 @@
 from src.video import *
 import logging
+from src.engines.image_registration_engine.ransac_flow_engine import RansacFlowEngine
 from src.engines.vpr_engine.anyloc_engine import AnyLocEngine
+from src.engines.image_registration_engine.loftr_engine import LoFTREngine
+from src.utils.dtw_vlad import *
+import torch.nn.functional as F
+
 import torch
 import sys
 
-# Compute_vlad - For "Detection of Tunable and Explainable Salient Changes".
+# generate_aligned_images
 logging.basicConfig()
-logger = logging.getLogger("compute_vlad")
+logger = logging.getLogger("generate_aligned_images")
 logger.setLevel(logging.DEBUG)
 
 import argparse
@@ -42,33 +47,80 @@ Place your desired video files in dataset_root/route_name/raw_videos/
     └── ...
     """
 
-def generate_VLAD(database_video: Video, query_video: Video, torch_device):
-    """
-    Generates VLAD descriptors for the given database and query videos.
 
-    Args:
-        database_video (Video): The video object representing the database video.
-        query_video (Video): The video object representing the query video.
-        torch_device (torch.device): The PyTorch device to use for computations.
-
-    Returns:
-        Tuple[np.ndarray, np.ndarray]: A tuple containing the VLAD descriptors for the database and query videos.
-    """
-    
-    logger.info("Loading Videos")
+def align_video_frames(database_video: Video, query_video: Video, torch_device):
     anylocEngine = AnyLocEngine(
-        database_video=database_video,
-        query_video=query_video,
-        device=torch_device,
-        mode="lazy",
+        database_video=database_video, query_video=query_video, device=torch_device
     )
 
     db_vlad = anylocEngine.get_database_vlad()
     query_vlad = anylocEngine.get_query_vlad()
-    del anylocEngine
 
-    return db_vlad, query_vlad
+    # Normalize and prepare x and y for FAISS
+    db_vlad = F.normalize(db_vlad)
+    query_vlad = F.normalize(query_vlad)
+    cuda = torch_device != torch.device("cpu")
+    try:
+        db_indexes = create_FAISS_indexes(db_vlad.numpy(), cuda=cuda)
+    except:
+        db_indexes = create_FAISS_indexes(db_vlad.numpy(), cuda=False)
 
+    ## Run DTW Algorithm using VLAD features ##
+    _, _, D1, path = dtw(query_vlad.numpy(), db_vlad, db_indexes)
+    matches = extract_unique_dtw_pairs(path, D1)
+
+    # Smooth the frame alignment Results
+    query_fps = query_video.get_fps()
+    db_fps = database_video.get_fps()
+
+    diff = 1
+    count = 0
+    k = 3
+    while diff and count < 100:
+        time_diff = [
+            database_video.get_frame_time(d) - query_video.get_frame_time(q)
+            for q, d in matches
+        ]
+        mv_avg = np.convolve(time_diff, np.ones(k) / k, mode="same")
+        mv_avg = {k[0]: v for k, v in zip(matches, mv_avg)}
+        matches, diff = smooth_frame_intervals(matches, mv_avg, query_fps, db_fps)
+        count += 1
+    return matches
+
+
+def align_frame_pairs(database_video: Video, query_video: Video, torch_device, engine: Literal["ransac-flow", "loftr"] = "loftr"):
+    logger.info("Loading Videos")
+
+    if engine == "ransac-flow":
+        engine = RansacFlowEngine(
+            query_video,
+            max_img_size=1024,
+            fine_align=False,
+            device=torch_device,
+            db_name=database_video.get_video_name(),
+        )
+    elif engine == "loftr":
+        engine = LoFTREngine(
+            query_video,
+            device=torch_device,
+            db_name=database_video.get_video_name(),
+        )
+
+    matches = align_video_frames(database_video=database_video, 
+                                 query_video=query_video,
+                                 torch_device=torch_device)
+    query_frame_list = query_video.get_frames()
+    db_frame_list = database_video.get_frames()
+
+    new_frame_pair = list()
+    for query_idx, db_idx in tqdm(matches):
+        query_frame = query_frame_list[query_idx]
+        db_frame = db_frame_list[db_idx]
+        new_frame_pair.append(engine.process((query_frame, db_frame)))
+
+    del engine
+
+    return new_frame_pair
 
 def main():
     parser = argparse.ArgumentParser(
@@ -120,7 +172,7 @@ def main():
             video_name=args.query_video,
         )
 
-    generate_VLAD(database_video, query_video, device)
+    align_frame_pairs(database_video, query_video, device)
 
 
 if __name__ == "__main__":
