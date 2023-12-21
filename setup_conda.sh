@@ -260,9 +260,9 @@ conda_raw_install -c conda-forge kornia==0.7.0
 
 echo_info "----- Installing Grounding Dino -----"
 pip install --upgrade protobuf==4.21.12
-cd external/GroundingDINO
+cd src/external/GroundingDINO
 pip install -q -e .
-cd ../..
+cd ../../..
 
 echo_info "----- Installing Segment-Anything -----"
 pip install git+https://github.com/facebookresearch/segment-anything.git
