@@ -112,15 +112,15 @@ def align_frame_pairs(database_video: Video, query_video: Video, torch_device, e
     query_frame_list = query_video.get_frames()
     db_frame_list = database_video.get_frames()
 
-    new_frame_pair = list()
-    for query_idx, db_idx in tqdm(matches):
+    aligned_frame_list = list()
+    for query_idx, db_idx in tqdm(matches, desc="Generating Overlay frames"):
         query_frame = query_frame_list[query_idx]
         db_frame = db_frame_list[db_idx]
-        new_frame_pair.append(engine.process((query_frame, db_frame)))
+        aligned_frame_list.append(engine.process((query_frame, db_frame))[0])
 
     del engine
 
-    return new_frame_pair
+    return matches, aligned_frame_list
 
 def main():
     parser = argparse.ArgumentParser(

@@ -4,7 +4,10 @@ import logging
 from copy import deepcopy
 from src.engines.vpr_engine.anyloc_engine import AnyLocEngine
 from src.compute_vlad import generate_VLAD
-from src.align_frames import align_video_frames
+from src.align_frames import align_video_frames, align_frame_pairs
+from src.engines.detection_engine.grounding_sam_engine import GoundingSAMEngine
+import supervision as sv
+
 # from src.utils.dtw_vlad import *
 from tqdm import tqdm
 import faiss
@@ -19,6 +22,9 @@ import argparse
 logging.basicConfig()
 logger = logging.getLogger("Main Process")
 logger.setLevel(logging.DEBUG)
+
+icons_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
+
 
 verbose = True
 SELECT_ROUTE_MSG = "select route"
@@ -59,6 +65,7 @@ example_routes = [
     "example_hot_metal_bridge",
 ]
 footage_domains = ["aerial", "indoor", "urban"]
+grounding_sam = None
 
 
 ## Initialize System
@@ -121,6 +128,7 @@ def delete_videos(route, video, confirm: str):
 
     delete_dir = os.path.join(dataset_root, route)
     video_file = os.path.join(delete_dir, "raw_video", video)
+    video_meta = os.path.join(delete_dir, "raw_video", os.path.splitext(video)[0] + ".txt")
     database_folder = glob(
         os.path.join(delete_dir, "database", os.path.splitext(video)[0])
     )
@@ -128,6 +136,8 @@ def delete_videos(route, video, confirm: str):
 
     if os.path.isfile(video_file):
         os.remove(video_file)
+        if os.path.isfile(video_meta):
+            os.remove(video_file)
 
     if database_folder and os.path.isdir(database_folder[0]):
         ft.delete_directory(database_folder[0])
@@ -135,7 +145,7 @@ def delete_videos(route, video, confirm: str):
     if query_folder and os.path.isdir(query_folder[0]):
         ft.delete_directory(query_folder[0])
 
-    if ft.is_directory_effectively_empty(delete_dir):
+    if ft.is_directory_effectively_empty(os.path.join(delete_dir, "raw_video")):
         ft.delete_directory(delete_dir)
 
     msg += f"**Removed {video}!**"
@@ -152,6 +162,7 @@ def get_video_files_for_route(route):
             file_list = [
                 os.path.basename(file) for file in glob(os.path.join(target_dir, "*"))
             ]
+            file_list = [file for file in file_list if not file.endswith(".txt")]
             return gr.update(choices=file_list), gr.update(choices=non_example_routes())
 
     return gr.update(choices=[NO_CHOICE_MSG]), gr.update(choices=non_example_routes())
@@ -200,6 +211,7 @@ def delete_tab():
         get_video_files_for_route,
         inputs=route_name_input,
         outputs=[video_name, route_name_input],
+        show_progress=False,
     )
     delete_btn.click(
         delete_videos,
@@ -253,6 +265,10 @@ def analyze_video(
         if os.path.isfile(f"{db_video.get_dataset_dir()}/vlads.npy"):
             return 'The video has already been analyzed as "Database"'
 
+    global grounding_sam
+    if grounding_sam:
+        del grounding_sam
+        grounding_sam = None
     generate_VLAD(db_video, query_video, torch_device)
 
     return "**Success!**"
@@ -260,14 +276,13 @@ def analyze_video(
 
 def analyze_tab():
     with gr.Row():
-        with gr.Column(scale=6):
+        with gr.Column(scale=4):
             with gr.Row():
                 gr.Markdown("# Analyze Videos")
             with gr.Row():
                 instruction = gr.Markdown(WELCOME_ANALYZE, label="Instructions")
-            
 
-        with gr.Column(scale=4):
+        with gr.Column(scale=6):
             with gr.Row():
                 route_name_input = gr.Dropdown(
                     choices=non_example_routes(),
@@ -284,12 +299,22 @@ def analyze_tab():
                     value="str",
                 )
             with gr.Row():
-                video_type_input = gr.Dropdown(
+                route_info = gr.TextArea(
+                    label="Route Infomation",
+                    value="Choose Route",
+                    interactive=False
+                    )
+                video_info = gr.TextArea(
+                    label="Video information",
+                    value="Choose Video",
+                    interactive=False
+                )
+            with gr.Row():
+                video_type_input = gr.Radio(
                     choices=["database", "query"],
                     label="Video Type",
-                    value="str",
+                    value="database",
                     interactive=True,
-                    allow_custom_value=False,
                 )
             with gr.Row():
                 analyze_btn = gr.Button("Analyze")
@@ -303,13 +328,27 @@ def analyze_tab():
         get_video_files_for_route,
         inputs=route_name_input,
         outputs=[video_name, route_name_input],
+        show_progress=False,
     )
+
+    route_name_input.change(
+        read_route_meta,
+        inputs=route_name_input,
+        outputs=route_info,
+        show_progress=False
+    )
+
+    video_name.change(
+        read_video_meta,
+        inputs=[route_name_input, video_name],
+        outputs=video_info
+    )
+
     analyze_btn.click(
         analyze_video,
         inputs=[route_name_input, video_name, video_type_input],
         outputs=[progress],
     )
-
 
 WELCOME_UPLOAD = """
 **Welcome!** You can check pre-processed examples in **"Alignment Results"** Tab or analyze your own video footages.
@@ -323,6 +362,9 @@ To begin, please follow the steps below:
 2. **Choose Your Video File(s):**
    - You have the option to upload multiple source videos.
    - Do not touch the interface while the files are being uploaded.
+
+2. **Update/Enter Route and Video Information(s):**
+   - For future reference, add describtion for the route and the video you are uploading.
 
 3. **Upload:**
    - Click on the **"Upload"** button to fully upload your file into the system.
@@ -341,14 +383,63 @@ def is_valid_video(file_path):
     cap.release()
     return ret
 
+def write_route_meta(metadata, route_name):
+    route_dir = os.path.join(dataset_root, route_name)
+    meta_file = os.path.join(route_dir, "metadata.txt")
+    
+    if not os.path.exists(route_dir):
+        return 
+    
+    with open(meta_file, 'w') as file:
+        file.write(metadata)
 
-def upload_videos(videos, route_name, progress=gr.Progress(track_tqdm=True)):
-    ui_update = {"route_name": gr.update(), "video_file": videos, "progress": ""}
+def read_route_meta(route_name):
+    route_dir = os.path.join(dataset_root, route_name)
+    
+    if not os.path.exists(route_dir):
+        return ROUTE_META
 
+    meta_file = os.path.join(route_dir, "metadata.txt")
+    try:
+        with open(meta_file, 'r') as file:
+            return file.read()
+    except:
+        return ROUTE_META
+    
+def write_video_meta(metadata, route_name, video_name):
+    route_dir = os.path.join(dataset_root, route_name)
+    meta_file = os.path.join(route_dir, "raw_video", os.path.splitext(video_name)[0] + ".txt")
+    video_file = os.path.join(route_dir, "raw_video", video_name)
+    
+    if not os.path.exists(video_file):
+        return
+
+    with open(meta_file, 'w') as file:
+        file.write(metadata)
+    
+def read_video_meta(route_name, video_name):
+    route_dir = os.path.join(dataset_root, route_name)
+    meta_file = os.path.join(route_dir, "raw_video", os.path.splitext(video_name)[0] + ".txt")
+
+    if video_name == NO_CHOICE_MSG:
+        return ""
+
+    if not os.path.exists(route_dir):
+        return VIDEO_META
+
+    try:
+        with open(meta_file, 'r') as file:
+            return file.read()
+    except:
+        return VIDEO_META
+
+def upload_videos(videos, route_name, route_info, video_info, progress=gr.Progress(track_tqdm=True)):
+    ui_update = {"route_name": gr.update(), "video_file": videos, "progress": "", 
+                 "video_info": video_info, "route_info": route_info}
+    
     # Validate Input
     if not videos:
         ui_update["progress"] = "**ERROR: Please upload at least one video!**"
-        print(ui_update["progress"])
         return ui_update, "-"
 
     if not ft.is_valid_directory_name(route_name):
@@ -361,6 +452,7 @@ def upload_videos(videos, route_name, progress=gr.Progress(track_tqdm=True)):
         ui_update["progress"] = "**ERROR: Example Routes may not be modified!"
         return ui_update, "-"
 
+    videos = [videos]
     route_dir = os.path.join(dataset_root, route_name)
     video_route = os.path.join(route_dir, "raw_video")
 
@@ -414,6 +506,9 @@ def upload_videos(videos, route_name, progress=gr.Progress(track_tqdm=True)):
             return clean_transaction("**ERROR: Failed to upload Video!**")
         uploaded.append(video_name)
 
+    write_route_meta(route_info, route_name)
+    write_video_meta(video_info, route_name, os.path.basename(videos[0]))
+
     msg = ""
     if skipped:
         msg += "**Invalid file(s):** " + ", ".join(skipped)
@@ -422,8 +517,10 @@ def upload_videos(videos, route_name, progress=gr.Progress(track_tqdm=True)):
         msg += "**Successfully uploaded following video(s):** "
         msg += ", ".join(uploaded)
 
+
     ui_update["progress"] = msg
     ui_update["video_file"] = None
+    ui_update["video_info"] = VIDEO_META
     return ui_update, "-"
 
 
@@ -432,18 +529,33 @@ def update_non_example_routes():
 
 
 def update_upload_ui(ui_update):
-    return ui_update["video_file"], update_non_example_routes(), ui_update["progress"]
+    return ui_update["video_file"], update_non_example_routes(), ui_update["progress"], ui_update["video_info"]
 
+ROUTE_META = """Route Location:
+Last Update (MM/DD/YYYY):
+Last Edit by:
+Description:
+
+"""
+
+VIDEO_META = """Route:
+Uploader:
+Recorded Date (MM/DD/YYYY):
+Time-of-day: 
+Weather Condition:
+Description:
+
+"""
 
 def upload_tab():
     with gr.Row():
-        with gr.Column(scale=6):
+        with gr.Column(scale=4):
             with gr.Row():
                 gr.Markdown("# Upload Videos")
             with gr.Row():
                 instruction = gr.Markdown(WELCOME_UPLOAD, label="Instructions")
 
-        with gr.Column(scale=4):
+        with gr.Column(scale=6):
             with gr.Row():
                 route_name_input = gr.Dropdown(
                     choices=non_example_routes(),
@@ -452,13 +564,21 @@ def upload_tab():
                     allow_custom_value=True,
                     info="You can choose from the existing route or add a new route. \nMust be '_' separated alphabets + digits",
                 )
-            # with gr.Row():
-            #     db_video_upload = gr.File(label="Upload Database Video")
-            # with gr.Row():
-            #     query_video_upload = gr.File(label="Upload Query Video")
+            with gr.Row():
+                route_info = gr.TextArea(
+                    label="Enter Route Infomation",
+                    value=ROUTE_META,
+                    interactive=True
+                    )
+                video_info = gr.TextArea(
+                    label="Enter Video Infomation",
+                    value=VIDEO_META,
+                    interactive=True
+                )
+
             with gr.Row():
                 video_file = gr.File(
-                    label="Upload Video", file_count="multiple", type="filepath"
+                    label="Upload Video", file_count="single", type="filepath", file_types=["video"]
                 )
             with gr.Row():
                 register_btn = gr.Button("Upload")
@@ -472,29 +592,129 @@ def upload_tab():
 
     register_btn.click(
         upload_videos,
-        inputs=[video_file, route_name_input],
+        inputs=[video_file, route_name_input, route_info, video_info],
         outputs=[ui_updates, progress],
     )
     route_name_input.change(
-        update_non_example_routes, inputs=[], outputs=route_name_input
+        update_non_example_routes,
+        inputs=[],
+        outputs=route_name_input,
+        show_progress=False,
     )
+
+    route_name_input.change(
+        read_route_meta,
+        inputs=route_name_input,
+        outputs=route_info,
+        show_progress=False
+    )
+
     progress.change(
         update_upload_ui,
         inputs=ui_updates,
-        outputs=[video_file, route_name_input, progress],
+        outputs=[video_file, route_name_input, progress, video_info],
+    )
+
+WELCOME_FILE = """
+1. Choose a specific route to view detailed information about it.
+2. Select a video file to access and display its associated information.
+3. You can edit information then press "Save" button to modify the information.
+"""
+
+def files_tab():
+    with gr.Row():
+        gr.Markdown("# Check out current dataset")
+    with gr.Row():
+        instruction = gr.Markdown(WELCOME_FILE, label="Instructions")
+
+    with gr.Row():
+        route_name_input = gr.Dropdown(
+            choices=ft.get_directories(dataset_root),
+            label="Choose Route",
+            interactive=True,
+            allow_custom_value=False,
+            value="str",
+        )
+        video_name = gr.Dropdown(
+            choices=[SELECT_ROUTE_MSG],
+            label="Choose Videos",
+            allow_custom_value=False,
+            interactive=True,
+            value="str",
+        )
+    with gr.Row():
+        route_info = gr.TextArea(
+            label="Route Infomation",
+            value="Choose Route",
+            interactive=True
+            )
+        video_info = gr.TextArea(
+            label="Video information",
+            value="Choose Video",
+            interactive=True
+        )
+    with gr.Row():
+        save_btn = gr.Button(
+            "Save",
+            interactive=True
+        )
+
+    save_btn.click(
+        write_route_meta,
+        inputs=[route_info, route_name_input],
+        outputs=None
+    )
+
+    save_btn.click(
+        write_video_meta,
+        inputs=[video_info, route_name_input, video_name],
+        outputs=None
+    )
+
+    route_name_input.change(
+        get_video_files_for_route,
+        inputs=route_name_input,
+        outputs=[video_name, route_name_input],
+        show_progress=False,
+    )
+
+    route_name_input.change(
+        read_route_meta,
+        inputs=route_name_input,
+        outputs=route_info,
+        show_progress=False
+    )
+
+    video_name.change(
+        read_video_meta,
+        inputs=[route_name_input, video_name],
+        outputs=video_info
     )
 
 
-WELCOME_RESULT = """
-1. Select the Route
-2. Select Database and Query Videos
-3. Press **Run**
-4. Navigate using the slider and the Previous/Next buttons
+WELCOME_RESULT = """# Explore Results
+1. Select the Route, along with the Database and Query Videos.
+2. Enable the "Overlay" option to generate image pairs that align with each other. These can be viewed later in the "Overlay View."
+3. Click **Run** to begin processing.
+4. Use the "Playback Control" to navigate through the frames.
+5. Utilize the "Object Detection Control" to identify objects within the frames.
 """
 
+def load_overlay(idx, inputs):
+    matches, _, db_frame_list, aligned_query_frame_list = inputs
+    
+    query_idx_orig, database_index_aligned = matches[idx]
+
+    query_img = cv2.imread(aligned_query_frame_list[query_idx_orig])
+    query_img = cv2.cvtColor(query_img, cv2.COLOR_BGR2RGB)
+    db_img = cv2.imread(db_frame_list[database_index_aligned])
+    db_img = cv2.cvtColor(db_img, cv2.COLOR_BGR2RGB)
+
+    blended = blend_img(0.5, query_img, db_img)
+    return blended, blended, query_img, db_img
 
 def display_images(idx, inputs):
-    matches, query_frame_list, db_frame_list = inputs
+    matches, query_frame_list, db_frame_list, _ = inputs
 
     query_len = len(query_frame_list)
     db_len = len(db_frame_list)
@@ -508,39 +728,24 @@ def display_images(idx, inputs):
         query_len / 2, show_hours=False, final_time=True
     )
     q_curr_time, _ = format_time(query_idx_orig / 2, show_hours)
-    txt_query_idx = f"### ||| Frame Index: {query_idx_orig}/{query_len} |||"
-    txt_query_time = f"### ||| Playback Time: {q_curr_time}/{q_total_time} |||"
+    txt_query_idx = f"Frame Index: {query_idx_orig}/{query_len}"
+    txt_query_time = f"Playback Time: {q_curr_time}/{q_total_time}"
 
     db_total_time, show_hours = format_time(db_len / 6, final_time=True)
     db_curr_time, _ = format_time(database_index_aligned / 6, show_hours)
-    txt_db_idx = f"### ||| Frame Index: {database_index_aligned}/{db_len} |||"
-    txt_db_time = f"### ||| Playback Time: {db_curr_time}/{db_total_time} |||"
+    txt_db_idx = f"Frame Index: {database_index_aligned}/{db_len}"
+    txt_db_time = f"Playback Time: {db_curr_time}/{db_total_time}"
 
     return (
-        query_img_orig,
-        database_img_aligned,
         txt_query_idx,
         txt_query_time,
         txt_db_idx,
         txt_db_time,
+        query_img_orig,
+        database_img_aligned,
     )
 
-
-def left_click(idx, inputs):
-    if idx > 0:
-        idx = idx - 1
-    return *display_images(idx, inputs), idx
-
-
-def right_click(idx, inputs):
-    matches = inputs[0]
-    if idx < len(matches) - 1:
-        idx = idx + 1
-
-    return *display_images(idx, inputs), idx
-
-
-def run_alignment(route_name, database_video_name, query_video_name, progress):
+def _run_alignment(route_name, database_video_name, query_video_name, overlay):
     database_video_name = glob(
         os.path.join(dataset_root, route_name, "raw_video", database_video_name + ".*")
     )
@@ -567,20 +772,56 @@ def run_alignment(route_name, database_video_name, query_video_name, progress):
 
     db_frame_list = database_video.get_frames()
     query_frame_list = query_video.get_frames()
+    overlay_query_frame_list = query_frame_list
 
-    matches = align_video_frames(database_video=database_video,
-                                        query_video=query_video,
-                                        torch_device=torch_device)
+    global grounding_sam
+    if grounding_sam:
+        del grounding_sam
+        grounding_sam = None
 
-    return (
-        matches,
-        query_frame_list,
-        db_frame_list,
+    if not overlay:
+        matches = align_video_frames(
+            database_video=database_video,
+            query_video=query_video,
+            torch_device=torch_device,
+        )
+    else:
+        matches, overlay_query_frame_list = align_frame_pairs(
+            database_video=database_video,
+            query_video=query_video,
+            torch_device=torch_device,
+        )
+    return (matches, query_frame_list, db_frame_list, overlay_query_frame_list)
+
+
+def run_detection(idx, inputs, text_prompt, box_threshold, text_threshold):
+    matches, query_frame_list, db_frame_list, _ = inputs
+
+    query_idx_orig, database_index_aligned = matches[idx]
+
+    query_img_orig = query_frame_list[query_idx_orig]
+    database_img_aligned = db_frame_list[database_index_aligned]
+
+    query_annotate = "./tmp/annotated_query.jpg"
+    db_annotate = "./tmp/annotated_db.jpg"
+
+    global grounding_sam
+    if not grounding_sam:
+        grounding_sam = GoundingSAMEngine(torch.device("cuda:0"))
+
+    grounding_sam.generate_masked_images(
+        query_img_orig, text_prompt, query_annotate, box_threshold, text_threshold
+    )
+    grounding_sam.generate_masked_images(
+        database_img_aligned, text_prompt, db_annotate, box_threshold, text_threshold
     )
 
+    return (query_annotate, db_annotate)
 
-def run_matching(route, query, db, progress=gr.Progress(track_tqdm=True)):
-    msg = "**Running**"
+
+
+def run_alignment(route, query, db, overlay, progress=gr.Progress(track_tqdm=True)):
+    msg = ""
     # Validate Input
     if not route or route == "str":
         msg = "**ERROR: Please Choose your route and videos!**"
@@ -592,7 +833,7 @@ def run_matching(route, query, db, progress=gr.Progress(track_tqdm=True)):
         msg = "**ERROR: Please Choose your db video!**"
         return ([], [], []), *update_ui_result(None), msg
 
-    result = run_alignment(route, query, db, progress)
+    result = _run_alignment(route, query, db, overlay)
     return result, *update_ui_result(result), "**Running**"
 
 
@@ -603,13 +844,25 @@ def update_ui_result(matches):
         db = matches[2]
         return (
             gr.update(visible=True),
+            gr.update(visible=True),
+            gr.update(visible=True),
             gr.update(visible=True, maximum=len(idx), value=0),
+            gr.update(visible=True),
             gr.update(visible=True),
             query[idx[0][0]],
             db[idx[0][1]],
         )
     else:
-        return gr.update(), gr.update(), gr.update(), None, None
+        return (
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            gr.update(),
+            None,
+            None,
+        )
 
 
 def get_analyzed_video_for_route(route):
@@ -633,19 +886,27 @@ def get_analyzed_list(route, video_type: Literal["database", "query"]):
     target_dir = os.path.join(dataset_root, route, video_type)
     if os.path.exists(target_dir) and os.path.isdir(target_dir):
         return gr.update(choices=list(os.listdir(target_dir)))
-    return gr.update(choices=["No choice"])
+    return gr.update(choices=[NO_CHOICE_MSG])
 
+def blend_img(idx, query, db): 
+    return (query * idx + db * (1-idx)).astype(np.uint8)
 
-def result_tab():
+def result_tab(demo):
     matching_states = gr.State()
+    run_state = gr.State(False)
+    slider_idx = gr.Number(0, visible=False)
+    query_image_overlay = gr.Image(type="numpy", visible=False)
+    db_image_overlay = gr.Image(type="numpy", visible=False)
+    blended_overlay = gr.Image(type="numpy", visible=False)
+
 
     with gr.Row():
-        with gr.Column(scale=4):
-            with gr.Row():
-                gr.Markdown("# Explore Results")
-            with gr.Row():
-                gr.Markdown(WELCOME_RESULT, label="Instructions")
-        with gr.Column(scale=6):
+        with gr.Column(scale=5):
+            # with gr.Row():
+            #     gr.Markdown("### Explore Results")
+            # with gr.Row():
+            gr.Markdown(WELCOME_RESULT, label="Instructions")
+        with gr.Column(scale=5):
             with gr.Row():
                 route_name_input = gr.Dropdown(
                     choices=ft.get_directories(dataset_root),
@@ -668,88 +929,272 @@ def result_tab():
                     interactive=True,
                     value="str",
                 )
+                overlay = gr.Checkbox(
+                    label="Overlay", info="Check to compute frames for Overlay Alignment"
+                )
             with gr.Row():
                 run_btn = gr.Button("Run")
 
     with gr.Row():
-        query_img_orig = gr.Image(type="filepath", label="Query Image")
-        db_img_aligned = gr.Image(type="filepath", label="DataBase_aligned Image")
-    with gr.Row():
-        prev_btn = gr.Button("Previous Frame", scale=1, visible=False)
-        slider = gr.Slider(
-            0,
-            1,
-            value=1,
-            step=1,
-            label="Choose Query Frame Index",
-            scale=4,
-            visible=False,
+        query_img_orig = gr.Image(type="filepath", label="Query Frame", container=True)
+        db_img_aligned = gr.Image(
+            type="filepath", label="Database Match", container=True
         )
-        next_btn = gr.Button("Next Frame", scale=1, visible=False)
+        
+        padding1 = gr.Textbox("",container=False,visible=False,scale=1,interactive=False)
+        overlay_img = gr.Image(type="numpy", label="Overlay View", visible=False, scale=3)
+        padding2 = gr.Textbox("",container=False,visible=False,scale=1,interactive=False)
+
     with gr.Row():
-        query_index = gr.Markdown("## Frame Index & Playback Time")
-        query_playback_time = gr.Markdown("", rtl=True)
-        db_index = gr.Markdown("")
-        db_playback_time = gr.Markdown("", rtl=True)
+        query_index = gr.Textbox("", container=False, scale=1)
+        query_playback_time = gr.Textbox("", text_align="right", container=False, scale=1)
+        db_index = gr.Textbox("", container=False)
+        db_playback_time = gr.Textbox("", text_align="right", container=False, scale=1)
+    
+    def two_image_view():
+        return {query_img_orig: gr.update(visible=True),
+                db_img_aligned: gr.update(visible=True),
+                overlay_img: gr.update(visible=False),
+                padding1: gr.update(visible=False),
+                padding2: gr.update(visible=False),
+                query_index: gr.update(visible=True),
+                query_playback_time: gr.update(visible=True),
+                db_index: gr.update(visible=True),
+                db_playback_time: gr.update(visible=True)
+                }
+
+    def one_image_view():
+        return {query_img_orig: gr.update(visible=False),
+                db_img_aligned: gr.update(visible=False),
+                overlay_img: gr.update(visible=True),
+                padding1: gr.update(visible=True),
+                padding2: gr.update(visible=True),
+                query_index: gr.update(visible=False),
+                query_playback_time: gr.update(visible=False),
+                db_index: gr.update(visible=False),
+                db_playback_time: gr.update(visible=False)
+                }
+    
+    
+
+
+
+    with gr.Tab("Playback Control") as result_playback_tab:
+        result_playback_tab.select(two_image_view, 
+                                   inputs=None,
+                                   outputs=[
+                                       query_img_orig,
+                                       db_img_aligned,
+                                       overlay_img,
+                                       padding1,
+                                       padding2,
+                                       query_index,
+                                       query_playback_time,
+                                       db_index,
+                                       db_playback_time
+                                   ], show_progress=False)
+
+        with gr.Row():
+            play_btn = gr.Button("Start", visible=False, scale=1, icon=os.path.join(icons_dir,"play.png"))
+            slider = gr.Slider(
+                0,
+                1,
+                value=1,
+                step=1,
+                label="Choose Query Frame Index",
+                visible=False,
+                scale=8
+            )
+            
+        with gr.Row():
+            prev_5_btn = gr.Button("-5", visible=False, icon=os.path.join(icons_dir,"replay5.png"))
+            prev_1_btn = gr.Button("-1", visible=False, icon=os.path.join(icons_dir,"replay.png"))
+            next_1_btn = gr.Button("+1", visible=False, icon=os.path.join(icons_dir,"forward.png"))
+            next_5_btn = gr.Button("+5", visible=False, icon=os.path.join(icons_dir,"forward5.png"))
+    
+        
+    with gr.Tab("Object Detection Control") as result_detection_tab:
+        result_detection_tab.select(two_image_view, 
+                                   inputs=None,
+                                   outputs=[
+                                       query_img_orig,
+                                       db_img_aligned,
+                                       overlay_img,
+                                       padding1,
+                                       padding2,
+                                       query_index,
+                                       query_playback_time,
+                                       db_index,
+                                       db_playback_time
+                                   ], show_progress=False)
+        
+        with gr.Row():
+            text_prompt = gr.Textbox(
+                label="Detection Prompt[Seperate unique classes with '.', e.g: cat . dog . chair]",
+                placeholder="Cannot be empty",
+                value="objects",
+                scale=8
+            )
+            detect_button = gr.Button("Detect", visible=True, scale=2)
+        
+        with gr.Row():
+            box_threshold = gr.Slider(
+                    label="Box Threshold", minimum=0.0, maximum=1.0, value=0.30, step=0.01
+                )
+            text_threshold = gr.Slider(
+                label="Text Threshold", minimum=0.0, maximum=1.0, value=0.25, step=0.01
+            )
+
+    with gr.Tab("Overlay View") as result_overlay_tab:
+        result_overlay_tab.select(one_image_view, 
+                                   inputs=None,
+                                   outputs=[
+                                       query_img_orig,
+                                       db_img_aligned,
+                                       overlay_img,
+                                       padding1,
+                                       padding2,
+                                       query_index,
+                                       query_playback_time,
+                                       db_index,
+                                       db_playback_time
+                                   ], show_progress=True)
+        with gr.Row():
+            overlay_0 = gr.Button("Query Frame", scale=1)
+            overlay_half = gr.Button("Overlay Frame", scale=1)
+            overlay_1 = gr.Button("Database Frame", scale=1)
+
+        result_overlay_tab.select(load_overlay,
+                                  inputs=[slider, matching_states],
+                                  outputs=[
+                                      overlay_img,
+                                      blended_overlay,
+                                      query_image_overlay,
+                                      db_image_overlay,
+                                  ],
+                                  show_progress=False
+                                  )
+
 
     route_name_input.change(
         get_analyzed_video_for_route,
         inputs=route_name_input,
         outputs=[database_video_name, query_video_name, route_name_input],
+        show_progress=False,
     )
+
     run_btn.click(
-        run_matching,
-        inputs=[route_name_input, database_video_name, query_video_name],
+        run_alignment,
+        inputs=[route_name_input, database_video_name, query_video_name, overlay],
         outputs=[
             matching_states,
-            prev_btn,
+            prev_1_btn,
+            prev_5_btn,
+            play_btn,
             slider,
-            next_btn,
+            next_1_btn,
+            next_5_btn,
             query_img_orig,
             db_img_aligned,
             query_index,
         ],
         show_progress="full",
     )
-    slider.release(
+
+    def prev_click(input, step):
+        slider.value = slider.value - step
+        if slider.value <= 0:
+            slider.value = 0
+        return slider.value
+
+    def next_click(input, step):
+        slider.value = slider.value + step
+        if slider.value >= len(input[0]):
+            slider.value = len(input[0]) - 1
+        return slider.value
+
+    click_1 = prev_1_btn.click(
+        prev_click,
+        inputs=[matching_states, gr.State(1)],
+        outputs=[slider],
+        trigger_mode="always_last",
+        show_progress=False,
+    )
+
+    click_2 = prev_5_btn.click(
+        prev_click,
+        inputs=[matching_states, gr.State(5)],
+        outputs=[slider],
+        trigger_mode="always_last",
+        show_progress=False,
+    )
+
+    click_3 = next_1_btn.click(
+        next_click,
+        inputs=[matching_states, gr.State(1)],
+        outputs=[slider],
+        trigger_mode="always_last",
+        show_progress=False,
+    )
+
+    click_4 = next_5_btn.click(
+        next_click,
+        inputs=[matching_states, gr.State(5)],
+        outputs=[slider],
+        trigger_mode="always_last",
+        show_progress=False,
+    )
+
+
+    detect_button.click(
+        run_detection,
+        inputs=[slider, matching_states, text_prompt, box_threshold, text_threshold],
+        outputs=[query_img_orig, db_img_aligned],
+    )
+
+    def inc_local():
+        if run_state.value:
+            slider.value = slider.value + 1
+            return slider.value
+        return gr.update()
+    
+    def toggle_run(play_btn):
+        if play_btn == "Start":
+            run_state.value = True
+            return gr.update(icon=os.path.join(icons_dir,"pause.png"), value="Stop"), gr.update(interactive=False), gr.update(interactive=False)
+        else:
+            run_state.value = False
+            return gr.update(icon=os.path.join(icons_dir,"play.png"), value="Start"), gr.update(interactive=True), gr.update(interactive=False)
+
+    def set_slide(idx):
+        slider.value = idx
+
+    demo.load(inc_local, inputs=None, outputs=slider_idx, every=0.5)
+    slider.release(set_slide, inputs=slider, outputs=None, show_progress=False)
+    slider_idx.change(lambda x:x, inputs=slider_idx, outputs=slider, show_progress=False)
+    click_5 = play_btn.click(toggle_run, inputs=play_btn, outputs=[play_btn, slider, run_btn], show_progress=False)
+
+    slider.change(
         display_images,
         inputs=[slider, matching_states],
         outputs=[
-            query_img_orig,
-            db_img_aligned,
             query_index,
             query_playback_time,
             db_index,
             db_playback_time,
+            query_img_orig,
+            db_img_aligned,
         ],
+        show_progress=False,
+        trigger_mode="multiple",
+        cancels=[click_1, click_2, click_3, click_4, click_5]
     )
 
-    prev_btn.click(
-        left_click,
-        inputs=[slider, matching_states],
-        outputs=[
-            query_img_orig,
-            db_img_aligned,
-            query_index,
-            query_playback_time,
-            db_index,
-            db_playback_time,
-            slider,
-        ],
-    )
-    next_btn.click(
-        right_click,
-        inputs=[slider, matching_states],
-        outputs=[
-            query_img_orig,
-            db_img_aligned,
-            query_index,
-            query_playback_time,
-            db_index,
-            db_playback_time,
-            slider,
-        ],
-    )
+
+
+    overlay_0.click(lambda x:x, query_image_overlay, overlay_img, show_progress=False)
+    overlay_half.click(lambda x:x, blended_overlay, overlay_img, show_progress=False)
+    overlay_1.click(lambda x:x, db_image_overlay, overlay_img, show_progress=False)
 
 
 def main():
@@ -762,9 +1207,7 @@ def main():
     parser.add_argument(
         "--dataset-root", default="../data", help="Root directory of datasets"
     )
-    parser.add_argument(
-        "--cuda", action="store_true", help="Enable cuda", default=False
-    )
+    parser.add_argument("--cuda", action="store_true", help="Enable cuda", default=True)
     parser.add_argument("--cuda_device", help="Select cuda device", default=0, type=int)
     args = parser.parse_args()
 
@@ -773,20 +1216,25 @@ def main():
 
     global torch_device
     available_gpus = torch.cuda.device_count()
+    print(f"Avaliable GPU={available_gpus}")
     if args.cuda and available_gpus > 0:
         cuda_device = args.cuda_device if args.cuda_device < available_gpus else 0
         torch_device = torch.device("cuda:" + str(cuda_device))
     else:
         torch_device = torch.device("cpu")
 
+    print(torch_device)
+
     with gr.Blocks() as demo:
         gr.Markdown("# Quetzal: Drone Footages Frame Alignment")
+        with gr.Tab("File Explorer"):
+            files_tab()
         with gr.Tab("Upload Videos"):
             upload_tab()
         with gr.Tab("Analyze Videos"):
             analyze_tab()
         with gr.Tab("Alignment Results"):
-            result_tab()
+            result_tab(demo)
         with gr.Tab("Delete Files"):
             delete_tab()
 

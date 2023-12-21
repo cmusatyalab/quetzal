@@ -2,3 +2,5 @@ __pycache__/
 compare_aligned_idx_copy.py
 *.ipynb
 src/external/RANSAC_flow/model/pretrained/
+weights/
+tmp/

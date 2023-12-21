@@ -38,6 +38,8 @@ Set up the Conda environment:
 ```bash
 conda create -n quetzal python=3.8
 conda activate quetzal
+
+export CUDA_HOME=/path/to/cuda-11/
 bash ./setup_conda.sh
 ```
 

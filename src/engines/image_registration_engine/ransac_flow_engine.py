@@ -115,37 +115,28 @@ class RansacFlowEngine(AbstractEngine):
         import requests
         from zipfile import ZipFile
 
-        # Set the expected number of models
         EXPECT_NUM_MODELS = 8
         target_directory = os.path.pardir(resumePth)
 
-        # Create the target directory if it doesn't exist
         if not os.path.exists(target_directory):
             os.makedirs(target_directory)
 
-        # List all .pth files in the target directory
         models = [f for f in os.listdir(target_directory) if f.endswith(".pth")]
         NUM_DOWNLOADED_MODELS = len(models)
 
-        # Check if the number of models is less than expected
         if NUM_DOWNLOADED_MODELS < EXPECT_NUM_MODELS:
-            # Define the URL of the zip file
             url = "https://www.dropbox.com/s/uegv8aqq5sj3542/model.zip?dl=1"  # dl=1 for direct download
-            # Define the local filename to save the downloaded file
             local_filename = os.path.join(target_directory, "model.zip")
 
-            # Stream download the file to avoid loading it all into memory at once
             with requests.get(url, stream=True) as r:
                 r.raise_for_status()
                 with open(local_filename, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):
                         f.write(chunk)
 
-            # Unzip the file after download
             with ZipFile(local_filename, "r") as zip_ref:
                 zip_ref.extractall(target_directory)
 
-            # Remove the zip file after extraction
             os.remove(local_filename)
 
     def _generate_aligned_images(

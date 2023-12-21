@@ -255,8 +255,18 @@ pip_install torchscan
 pip_install onedrivedownloader
 pip_install utm
 pip_install bcrypt
-pip_install kornia==0.1.4.post2
-conda_raw_install -c kornia==0.7.0
+# pip_install kornia==0.1.4.post2
+conda_raw_install -c conda-forge kornia==0.7.0
+
+echo_info "----- Installing Grounding Dino -----"
+pip install --upgrade protobuf==4.21.12
+cd external/GroundingDINO
+pip install -q -e .
+cd ../..
+
+echo_info "----- Installing Segment-Anything -----"
+pip install git+https://github.com/facebookresearch/segment-anything.git
+
 conda_raw_install -c conda-forge jupyter
 # Core packages using pip_install
 if [ $dev_tools == "true" ]; then 
