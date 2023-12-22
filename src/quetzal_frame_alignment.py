@@ -163,10 +163,9 @@ def get_video_files_for_route(route):
                 os.path.basename(file) for file in glob(os.path.join(target_dir, "*"))
             ]
             file_list = [file for file in file_list if not file.endswith(".txt")]
-            return gr.update(choices=file_list), gr.update(choices=non_example_routes())
+            return gr.update(choices=file_list)
 
-    return gr.update(choices=[NO_CHOICE_MSG]), gr.update(choices=non_example_routes())
-
+    return gr.update(choices=[NO_CHOICE_MSG])
 
 def delete_tab():
     with gr.Row():
@@ -210,7 +209,14 @@ def delete_tab():
     route_name_input.change(
         get_video_files_for_route,
         inputs=route_name_input,
-        outputs=[video_name, route_name_input],
+        outputs=video_name,
+        show_progress=False,
+    )
+
+    route_name_input.change(
+        lambda x: gr.update(choices=non_example_routes()),
+        inputs = route_name_input,
+        outputs= route_name_input,
         show_progress=False,
     )
     delete_btn.click(
@@ -328,7 +334,14 @@ def analyze_tab():
     route_name_input.change(
         get_video_files_for_route,
         inputs=route_name_input,
-        outputs=[video_name, route_name_input],
+        outputs=[video_name],
+        show_progress=False,
+    )
+
+    route_name_input.change(
+        lambda x: gr.update(choices=non_example_routes()),
+        inputs = route_name_input,
+        outputs= route_name_input,
         show_progress=False,
     )
 
@@ -676,7 +689,14 @@ def files_tab():
     route_name_input.change(
         get_video_files_for_route,
         inputs=route_name_input,
-        outputs=[video_name, route_name_input],
+        outputs=[video_name],
+        show_progress=False,
+    )
+
+    route_name_input.change(
+        lambda x: gr.update(choices=ft.get_directories(dataset_root)),
+        inputs = route_name_input,
+        outputs= route_name_input,
         show_progress=False,
     )
 
@@ -890,19 +910,15 @@ def update_ui_result(matches):
 
 
 def get_analyzed_video_for_route(route):
-    all_routes = ft.get_directories(dataset_root)
-
     if route and route != "str":
         return (
             get_analyzed_list(route, "database"),
             get_analyzed_list(route, "query"),
-            gr.update(choices=all_routes),
         )
 
     return (
         gr.update(choices=[SELECT_ROUTE_MSG]),
         gr.update(choices=[SELECT_ROUTE_MSG]),
-        gr.update(choices=all_routes),
     )
 
 
@@ -1113,7 +1129,14 @@ def result_tab(demo):
     route_name_input.change(
         get_analyzed_video_for_route,
         inputs=route_name_input,
-        outputs=[database_video_name, query_video_name, route_name_input],
+        outputs=[database_video_name, query_video_name],
+        show_progress=False,
+    )
+
+    route_name_input.change(
+        lambda x: gr.update(choices=ft.get_directories(dataset_root)),
+        inputs = route_name_input,
+        outputs= route_name_input,
         show_progress=False,
     )
 
