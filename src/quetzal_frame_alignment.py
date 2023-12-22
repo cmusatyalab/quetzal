@@ -938,6 +938,7 @@ def result_tab(demo):
                     interactive=True,
                     allow_custom_value=False,
                     value="str",
+                    scale=1
                 )
                 database_video_name = gr.Dropdown(
                     choices=[SELECT_ROUTE_MSG],
@@ -945,6 +946,7 @@ def result_tab(demo):
                     allow_custom_value=False,
                     interactive=True,
                     value="str",
+                    scale=1
                 )
                 query_video_name = gr.Dropdown(
                     choices=[SELECT_ROUTE_MSG],
@@ -952,9 +954,11 @@ def result_tab(demo):
                     allow_custom_value=False,
                     interactive=True,
                     value="str",
+                    scale=1
                 )
                 overlay = gr.Checkbox(
-                    label="Overlay", info="Check to compute warped frames for Overlay View. The result can be viewed later in the 'Overlay View' or with 'Aligned Mode'."
+                    label="Overlay", info="Check to compute warped frames for Overlay View. The result can be viewed later in the 'Overlay View' or with 'Aligned Mode'.",
+                    scale=3
                 )
             with gr.Row():
                 run_btn = gr.Button("Run")
