@@ -56,6 +56,8 @@ def align_video_frames(database_video: Video, query_video: Video, torch_device):
     db_vlad = anylocEngine.get_database_vlad()
     query_vlad = anylocEngine.get_query_vlad()
 
+    del anylocEngine
+
     # Normalize and prepare x and y for FAISS
     db_vlad = F.normalize(db_vlad)
     query_vlad = F.normalize(query_vlad)

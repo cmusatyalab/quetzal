@@ -269,6 +269,7 @@ def analyze_video(
     if grounding_sam:
         del grounding_sam
         grounding_sam = None
+
     generate_VLAD(db_video, query_video, torch_device)
 
     return "**Success!**"
@@ -695,13 +696,15 @@ def files_tab():
 
 WELCOME_RESULT = """# Explore Results
 1. Select the Route, along with the Database and Query Videos.
-2. Enable the "Overlay" option to generate image pairs that align with each other. These can be viewed later in the "Overlay View."
-3. Click **Run** to begin processing.
-4. Use the "Playback Control" to navigate through the frames.
+2. (Optional) activate the "Overlay" feature to create aligned image pairs.
+4. Navigate through frames using the "Playback Control".
 5. Utilize the "Object Detection Control" to identify objects within the frames.
 """
 
 def load_overlay(idx, inputs):
+    if inputs == None:
+        return gr.update(), gr.update(), gr.update(), gr.update()
+    
     matches, _, db_frame_list, aligned_query_frame_list = inputs
     
     query_idx_orig, database_index_aligned = matches[idx]
@@ -714,15 +717,19 @@ def load_overlay(idx, inputs):
     blended = blend_img(0.5, query_img, db_img)
     return blended, blended, query_img, db_img
 
-def display_images(idx, inputs):
-    matches, query_frame_list, db_frame_list, _ = inputs
+def display_images(idx, inputs, overlay_mode):
+    matches, query_frame_list, db_frame_list, overlay_query_frame_list = inputs
+
 
     query_len = len(query_frame_list)
     db_len = len(db_frame_list)
 
     query_idx_orig, database_index_aligned = matches[idx]
+    if overlay_mode:
+        query_img_orig = overlay_query_frame_list[query_idx_orig]
+    else:
+        query_img_orig = query_frame_list[query_idx_orig]
 
-    query_img_orig = query_frame_list[query_idx_orig]
     database_img_aligned = db_frame_list[database_index_aligned]
 
     q_total_time, show_hours = format_time(
@@ -829,19 +836,20 @@ def run_detection(idx, inputs, text_prompt, box_threshold, text_threshold):
 
 def run_alignment(route, query, db, overlay, progress=gr.Progress(track_tqdm=True)):
     msg = ""
+    allow_overlay = gr.update(interactive=overlay, value=False)
     # Validate Input
     if not route or route == "str":
         msg = "**ERROR: Please Choose your route and videos!**"
-        return ([], [], []), *update_ui_result(None), msg
+        return ([], [], []), *update_ui_result(None), msg, allow_overlay
     elif query in [NO_CHOICE_MSG, SELECT_ROUTE_MSG, "str"]:
         msg = "**ERROR: Please Choose your query video!**"
-        return ([], [], []), *update_ui_result(None), msg
+        return ([], [], []), *update_ui_result(None), msg, allow_overlay
     elif db in [NO_CHOICE_MSG, SELECT_ROUTE_MSG, "str"]:
         msg = "**ERROR: Please Choose your db video!**"
-        return ([], [], []), *update_ui_result(None), msg
+        return ([], [], []), *update_ui_result(None), msg, allow_overlay
 
     result = _run_alignment(route, query, db, overlay)
-    return result, *update_ui_result(result), "**Running**"
+    return result, *update_ui_result(result), "**Running**", allow_overlay
 
 
 def update_ui_result(matches):
@@ -853,7 +861,16 @@ def update_ui_result(matches):
             gr.update(visible=True),
             gr.update(visible=True),
             gr.update(visible=True),
-            gr.update(visible=True, maximum=len(idx), value=0),
+            # gr.update(visible=True, maximum=len(idx), value=0),
+            gr.Slider(
+                0,
+                len(idx),
+                value=0,
+                step=1,
+                label="Choose Query Frame Index",
+                visible=True,
+                scale=8
+            ),
             gr.update(visible=True),
             gr.update(visible=True),
             query[idx[0][0]],
@@ -899,7 +916,7 @@ def blend_img(idx, query, db):
     return (query * idx + db * (1-idx)).astype(np.uint8)
 
 def result_tab(demo):
-    matching_states = gr.State()
+    matching_states = gr.State(None)
     run_state = gr.State(False)
     slider_idx = gr.Number(0, visible=False)
     query_image_overlay = gr.Image(type="numpy", visible=False)
@@ -937,7 +954,7 @@ def result_tab(demo):
                     value="str",
                 )
                 overlay = gr.Checkbox(
-                    label="Overlay", info="Check to compute frames for Overlay Alignment"
+                    label="Overlay", info="Check to compute warped frames for Overlay View. The result can be viewed later in the 'Overlay View' or with 'Aligned Mode'."
                 )
             with gr.Row():
                 run_btn = gr.Button("Run")
@@ -1012,6 +1029,10 @@ def result_tab(demo):
                 visible=False,
                 scale=8
             )
+            play_overlay_mode = gr.Checkbox(
+                label="Aligned Mode", info="Check to display warped version of the query frames",
+                interactive=False
+            )
             
         with gr.Row():
             prev_5_btn = gr.Button("-5", visible=False, icon=os.path.join(icons_dir,"replay5.png"))
@@ -1067,9 +1088,11 @@ def result_tab(demo):
                                        db_playback_time
                                    ], show_progress=True)
         with gr.Row():
+            gr.Textbox("",container=False,visible=False,scale=1,interactive=False)
             overlay_0 = gr.Button("Query Frame", scale=1)
             overlay_half = gr.Button("Overlay Frame", scale=1)
             overlay_1 = gr.Button("Database Frame", scale=1)
+            gr.Textbox("",container=False,visible=False,scale=1,interactive=False)
 
         result_overlay_tab.select(load_overlay,
                                   inputs=[slider, matching_states],
@@ -1104,8 +1127,17 @@ def result_tab(demo):
             query_img_orig,
             db_img_aligned,
             query_index,
+            play_overlay_mode,
         ],
         show_progress="full",
+    )
+
+    def reset_slider():
+        slider.value = 0
+
+    run_btn.click(
+        reset_slider,
+        show_progress=False
     )
 
     def prev_click(input, step):
@@ -1183,7 +1215,7 @@ def result_tab(demo):
 
     slider.change(
         display_images,
-        inputs=[slider, matching_states],
+        inputs=[slider, matching_states, play_overlay_mode],
         outputs=[
             query_index,
             query_playback_time,
@@ -1197,11 +1229,24 @@ def result_tab(demo):
         cancels=[click_1, click_2, click_3, click_4, click_5]
     )
 
-
-
     overlay_0.click(lambda x:x, query_image_overlay, overlay_img, show_progress=False)
     overlay_half.click(lambda x:x, blended_overlay, overlay_img, show_progress=False)
     overlay_1.click(lambda x:x, db_image_overlay, overlay_img, show_progress=False)
+
+    play_overlay_mode.select(
+        display_images,
+        inputs=[slider, matching_states, play_overlay_mode],
+        outputs=[
+            query_index,
+            query_playback_time,
+            db_index,
+            db_playback_time,
+            query_img_orig,
+            db_img_aligned,
+        ],
+        show_progress=False,
+        cancels=[click_1, click_2, click_3, click_4, click_5]
+    )
 
 
 def main():
