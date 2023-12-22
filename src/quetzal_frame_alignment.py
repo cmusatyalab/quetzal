@@ -356,11 +356,12 @@ WELCOME_UPLOAD = """
 To begin, please follow the steps below:
 
 1. **Select the Route:** 
-   - You can upload a new video for an existing route, or you can add a new route entirely.
+   - You can upload a new video for an existing route (Choose From the dropdown)
+   - Or you can add a new route entirely (type in new route-name)
    - Note: Modification is restricted for the pre-defined 'example' routes*. 
 
-2. **Choose Your Video File(s):**
-   - You have the option to upload multiple source videos.
+2. **Choose Your Video File:**
+   - Drag and drop or select click to upload your video (only one).
    - Do not touch the interface while the files are being uploaded.
 
 2. **Update/Enter Route and Video Information(s):**
