@@ -200,6 +200,17 @@ def delete_tab():
                     value="str",
                 )
             with gr.Row():
+                route_info = gr.TextArea(
+                    label="Route Infomation",
+                    value="Choose Route",
+                    interactive=False
+                    )
+                video_info = gr.TextArea(
+                    label="Video information",
+                    value="Choose Video",
+                    interactive=False
+                )
+            with gr.Row():
                 delete_confirm = gr.Textbox(
                     interactive=True, label="Type 'confirm deletion', case sensitive"
                 )
@@ -219,6 +230,20 @@ def delete_tab():
         outputs= route_name_input,
         show_progress=False,
     )
+
+    route_name_input.change(
+        read_route_meta,
+        inputs=route_name_input,
+        outputs=route_info,
+        show_progress=False
+    )
+
+    video_name.change(
+        read_video_meta,
+        inputs=[route_name_input, video_name],
+        outputs=video_info
+    )
+
     delete_btn.click(
         delete_videos,
         inputs=[route_name_input, video_name, delete_confirm],
