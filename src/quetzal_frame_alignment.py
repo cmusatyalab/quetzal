@@ -753,6 +753,9 @@ def _run_alignment(route_name, database_video_name, query_video_name, overlay):
     if not database_video_name:
         return [], [], []
     else:
+        database_video_name = [file for file in database_video_name if not file.endswith(".txt")]
+        if not database_video_name:
+            return [], [], []
         database_video_name = os.path.basename(database_video_name[0])
 
     query_video_name = glob(
@@ -761,6 +764,9 @@ def _run_alignment(route_name, database_video_name, query_video_name, overlay):
     if not query_video_name:
         return [], [], []
     else:
+        query_video_name = [file for file in query_video_name if not file.endswith(".txt")]
+        if not query_video_name:
+            return [], [], []
         query_video_name = os.path.basename(query_video_name[0])
 
     ## Load DTW and VLAD Features ##
@@ -1165,7 +1171,7 @@ def result_tab(demo):
             return gr.update(icon=os.path.join(icons_dir,"pause.png"), value="Stop"), gr.update(interactive=False), gr.update(interactive=False)
         else:
             run_state.value = False
-            return gr.update(icon=os.path.join(icons_dir,"play.png"), value="Start"), gr.update(interactive=True), gr.update(interactive=False)
+            return gr.update(icon=os.path.join(icons_dir,"play.png"), value="Start"), gr.update(interactive=True), gr.update(interactive=True)
 
     def set_slide(idx):
         slider.value = idx
