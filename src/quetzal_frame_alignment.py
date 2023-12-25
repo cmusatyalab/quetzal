@@ -163,9 +163,9 @@ def get_video_files_for_route(route):
                 os.path.basename(file) for file in glob(os.path.join(target_dir, "*"))
             ]
             file_list = [file for file in file_list if not file.endswith(".txt")]
-            return gr.update(choices=file_list)
+            return gr.update(choices=file_list, value="")
 
-    return gr.update(choices=[NO_CHOICE_MSG])
+    return gr.update(choices=[NO_CHOICE_MSG], value="")
 
 def delete_tab():
     with gr.Row():
@@ -942,16 +942,16 @@ def get_analyzed_video_for_route(route):
         )
 
     return (
-        gr.update(choices=[SELECT_ROUTE_MSG]),
-        gr.update(choices=[SELECT_ROUTE_MSG]),
+        gr.update(choices=[SELECT_ROUTE_MSG], value=""),
+        gr.update(choices=[SELECT_ROUTE_MSG], value=""),
     )
 
 
 def get_analyzed_list(route, video_type: Literal["database", "query"]):
     target_dir = os.path.join(dataset_root, route, video_type)
     if os.path.exists(target_dir) and os.path.isdir(target_dir):
-        return gr.update(choices=list(os.listdir(target_dir)))
-    return gr.update(choices=[NO_CHOICE_MSG])
+        return gr.update(choices=list(os.listdir(target_dir)), value="")
+    return gr.update(choices=[NO_CHOICE_MSG], value="")
 
 def blend_img(idx, query, db): 
     return (query * idx + db * (1-idx)).astype(np.uint8)
