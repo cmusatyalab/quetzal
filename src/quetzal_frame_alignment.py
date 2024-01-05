@@ -1301,6 +1301,19 @@ def result_tab(demo):
     )
 
 
+
+
+# hello_app = gr.Interface(lambda x: "Hello, " + x + "!", "textbox", "textbox")
+# goodbye_app = gr.Interface(lambda x: "Goodbye, " + x + "!", "textbox", "textbox")
+
+
+# app = gr.mount_gradio_app(app, hello_app, path=HELLO_ROUTE)
+# app = gr.mount_gradio_app(app, goodbye_app, path=GOODBYE_ROUTE)
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app)
+
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
@@ -1342,10 +1355,13 @@ def main():
         with gr.Tab("Delete Files"):
             delete_tab()
 
+    with gr.Blocks() as demo2:
+        with gr.Tab("Alignment Results"):
+            result_tab(demo)
+
     demo.queue()
     demo.launch()
-
-
+    
 if __name__ == "__main__":
     main()
 
