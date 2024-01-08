@@ -764,8 +764,6 @@ def load_overlay(idx, inputs):
 
 def display_images(idx, inputs, overlay_mode):
     matches, query_frame_list, db_frame_list, overlay_query_frame_list = inputs
-
-
     query_len = len(query_frame_list)
     db_len = len(db_frame_list)
 
@@ -956,10 +954,15 @@ def get_analyzed_list(route, video_type: Literal["database", "query"]):
 def blend_img(idx, query, db): 
     return (query * idx + db * (1-idx)).astype(np.uint8)
 
+
+import time
+import datetime
+
 def result_tab(demo):
     matching_states = gr.State(None)
     run_state = gr.State(False)
     slider_idx = gr.Number(0, visible=False)
+    wakeup_time = gr.State(datetime.datetime.now())
     query_image_overlay = gr.Image(type="numpy", visible=False)
     db_image_overlay = gr.Image(type="numpy", visible=False)
     blended_overlay = gr.Image(type="numpy", visible=False)
@@ -1165,6 +1168,18 @@ def result_tab(demo):
         show_progress=False,
     )
 
+    def print_request(request: gr.Request) :
+        headers = request.headers
+        host = request.client.host
+        user_agent = request.headers["user-agent"]
+        print({
+            "ip": host,
+            "user_agent": user_agent,
+            "headers": headers,
+        })
+    
+    run_btn.click(print_request)
+
     run_btn.click(
         run_alignment,
         inputs=[route_name_input, database_video_name, query_video_name, overlay],
@@ -1192,47 +1207,47 @@ def result_tab(demo):
         show_progress=False
     )
 
-    def prev_click(input, step):
-        slider.value = slider.value - step
-        if slider.value <= 0:
-            slider.value = 0
-        return slider.value
+    def prev_click(input, step, slider):
+        slider = slider - step
+        if slider <= 0:
+            slider = 0
+        return gr.update(value=slider, interactive=True)
 
-    def next_click(input, step):
-        slider.value = slider.value + step
-        if slider.value >= len(input[0]):
-            slider.value = len(input[0]) - 1
-        return slider.value
+    def next_click(input, step, slider):
+        slider = slider + step
+        if slider >= len(input[0]):
+            slider = len(input[0]) - 1
+        return gr.update(value=slider, interactive=True)
 
     click_1 = prev_1_btn.click(
         prev_click,
-        inputs=[matching_states, gr.State(1)],
+        inputs=[matching_states, gr.State(1), slider],
         outputs=[slider],
-        trigger_mode="always_last",
+        trigger_mode="multiple",
         show_progress=False,
     )
 
     click_2 = prev_5_btn.click(
         prev_click,
-        inputs=[matching_states, gr.State(5)],
+        inputs=[matching_states, gr.State(5), slider],
         outputs=[slider],
-        trigger_mode="always_last",
+        trigger_mode="multiple",
         show_progress=False,
     )
 
     click_3 = next_1_btn.click(
         next_click,
-        inputs=[matching_states, gr.State(1)],
+        inputs=[matching_states, gr.State(1), slider],
         outputs=[slider],
-        trigger_mode="always_last",
+        trigger_mode="multiple",
         show_progress=False,
     )
 
     click_4 = next_5_btn.click(
         next_click,
-        inputs=[matching_states, gr.State(5)],
+        inputs=[matching_states, gr.State(5), slider],
         outputs=[slider],
-        trigger_mode="always_last",
+        trigger_mode="multiple",
         show_progress=False,
     )
 
@@ -1243,27 +1258,57 @@ def result_tab(demo):
         outputs=[query_img_orig, db_img_aligned],
     )
 
-    def inc_local():
-        if run_state.value:
-            slider.value = slider.value + 1
-            return slider.value
-        return gr.update()
+    # def inc_local():
+    #     if run_state.value:
+    #         slider.value = slider.value + 1
+    #         return slider.value
+    #     return gr.update()
     
-    def toggle_run(play_btn):
-        if play_btn == "Start":
-            run_state.value = True
-            return gr.update(icon=os.path.join(icons_dir,"pause.png"), value="Stop"), gr.update(interactive=False), gr.update(interactive=False)
+    # def toggle_run(play_btn):
+    #     if play_btn == "Start":
+    #         run_state.value = True
+    #         return gr.update(icon=os.path.join(icons_dir,"pause.png"), value="Stop"), gr.update(interactive=False), gr.update(interactive=False)
+    #     else:
+    #         run_state.value = False
+    #         return gr.update(icon=os.path.join(icons_dir,"play.png"), value="Start"), gr.update(interactive=True), gr.update(interactive=True)
+    
+    def toggle_run(play_btn_val, slider_val):
+        if play_btn_val == "Start":
+            return [
+                        gr.update(icon=os.path.join(icons_dir,"pause.png"), value="Stop"),
+                        gr.update(value=slider_val+1, interactive=False),
+                        True,
+                        datetime.datetime.now() + datetime.timedelta(seconds=0.5)
+                    ]
         else:
-            run_state.value = False
-            return gr.update(icon=os.path.join(icons_dir,"play.png"), value="Start"), gr.update(interactive=True), gr.update(interactive=True)
+            return [
+                        gr.update(icon=os.path.join(icons_dir,"play.png"), value="Start"),
+                        gr.update(value=slider_val, interactive=True),
+                        False,
+                        datetime.datetime.now()
+                    ]
 
-    def set_slide(idx):
-        slider.value = idx
 
-    demo.load(inc_local, inputs=None, outputs=slider_idx, every=0.5)
-    slider.release(set_slide, inputs=slider, outputs=None, show_progress=False)
-    slider_idx.change(lambda x:x, inputs=slider_idx, outputs=slider, show_progress=False)
-    click_5 = play_btn.click(toggle_run, inputs=play_btn, outputs=[play_btn, slider, run_btn], show_progress=False)
+    def update_slider_idx(slider_idx, run_state_val, wakeup_time_val):
+        if run_state_val:
+            time_to_sleep = (wakeup_time_val - datetime.datetime.now()).total_seconds()
+            
+            time.sleep(max(time_to_sleep, 0))
+            next_wakeup = wakeup_time_val + datetime.timedelta(seconds=0.5)
+
+            val = {
+                    slider: slider_idx + 1,
+                    wakeup_time: next_wakeup
+                }
+        else:
+            val = {
+                    slider: slider_idx,
+                    wakeup_time: datetime.datetime.now()
+                }
+        return val
+
+    slider_idx.change(update_slider_idx, inputs=[slider_idx, run_state, wakeup_time], outputs=[slider, wakeup_time], show_progress=False, trigger_mode="multiple").then(lambda x:x, inputs=slider, outputs=slider_idx)
+    click_5 = play_btn.click(toggle_run, inputs=[play_btn, slider], outputs=[play_btn, slider, run_state, wakeup_time], show_progress=False).then(lambda x:x, inputs=slider, outputs=slider_idx)
 
     slider.change(
         display_images,
@@ -1278,7 +1323,7 @@ def result_tab(demo):
         ],
         show_progress=False,
         trigger_mode="multiple",
-        cancels=[click_1, click_2, click_3, click_4, click_5]
+        # cancels=[click_1, click_2, click_3, click_4, click_5]
     )
 
     overlay_0.click(lambda x:x, query_image_overlay, overlay_img, show_progress=False)
@@ -1297,7 +1342,7 @@ def result_tab(demo):
             db_img_aligned,
         ],
         show_progress=False,
-        cancels=[click_1, click_2, click_3, click_4, click_5]
+        # cancels=[click_1, click_2, click_3, click_4, click_5]
     )
 
 
@@ -1355,13 +1400,9 @@ def main():
         with gr.Tab("Delete Files"):
             delete_tab()
 
-    with gr.Blocks() as demo2:
-        with gr.Tab("Alignment Results"):
-            result_tab(demo)
-
     demo.queue()
     demo.launch()
-    
+
 if __name__ == "__main__":
     main()
 
