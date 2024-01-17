@@ -5,17 +5,17 @@ import numpy as np
 import torch
 from torch.nn import functional as F
 from torchvision import transforms
-from src.external.RANSAC_flow.utils import outil
-from src.external.RANSAC_flow.coarseAlignFeatMatch import CoarseAlign
-import src.external.RANSAC_flow.model.model as ransac_model
+from quetzal.external.RANSAC_flow.utils import outil
+from quetzal.external.RANSAC_flow.coarseAlignFeatMatch import CoarseAlign
+import quetzal.external.RANSAC_flow.model.model as ransac_model
 from tqdm import tqdm
 from PIL import Image
 import kornia.geometry as tgm
 
 from functools import lru_cache
 import logging
-from src.video import Video
-from src.engines.engine import AbstractEngine
+from quetzal.video import Video
+from quetzal.engines.engine import AbstractEngine
 
 
 logging.basicConfig()

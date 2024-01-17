@@ -255,6 +255,14 @@ pip_install torchscan
 pip_install onedrivedownloader
 pip_install utm
 pip_install bcrypt
+pip_install streamlit
+pip_install streamlit-extras
+pip_install streamlit-elements==0.1.*
+pip_install streamlit-antd-components
+pip_install streamlit-shadcn-ui
+pip_install streamlit-tags
+pip_install streamlit-image-comparison
+
 # pip_install kornia==0.1.4.post2
 conda_raw_install -c conda-forge kornia==0.7.0
 

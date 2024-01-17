@@ -4,16 +4,16 @@ import numpy as np
 import torch
 from torchvision import transforms as tvf
 from torchvision.transforms import functional as T
-from src.external.AnyLoc.utilities import DinoV2ExtractFeatures
-from src.external.AnyLoc.utilities import VLAD
-from src.video import Video
+from quetzal.external.AnyLoc.utilities import DinoV2ExtractFeatures
+from quetzal.external.AnyLoc.utilities import VLAD
+from quetzal.video import Video
 from typing import Literal, List
 from tqdm import tqdm
 from PIL import Image
 from functools import lru_cache
 import logging
 
-from src.engines.engine import AbstractEngine
+from quetzal.engines.engine import AbstractEngine
 from torch.nn import functional as F
 import faiss
 

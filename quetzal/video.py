@@ -11,7 +11,7 @@ import numpy as np
 import natsort
 from PIL import Image
 
-from .utils.video_tools import extract_frames
+from quetzal.utils.video_tools import extract_frames
 
 logging.basicConfig()
 
@@ -58,7 +58,7 @@ class Video:
 
     Attributes:
         root_datasets_dir (str): The root directory for datasets.
-        route_name (str): The name of the specific route the drone video was taken.
+        project_name (str): The name of the specific project the drone video was taken.
         video_name (str): The name of the video file.
         video_type (Literal["database", "query"]): The type of the video, either 'database' or 'query'.
         fps (int): The frames per second at which to process the video.
@@ -69,18 +69,18 @@ class Video:
     def __init__(
         self,
         datasets_dir: str,
-        route_name: str,
+        project_name: str,
         video_name: str,
         video_type: Literal["database", "query"],
         fps: int = 2,
         resolution: int = 1024,
     ):
         """
-        Initialize the Video object with dataset directory, route, video name, type, fps, and resolution.
+        Initialize the Video object with dataset directory, project, video name, type, fps, and resolution.
 
         Args:
             datasets_dir (str): The root directory for datasets.
-            route_name (str): The name of the specific route.
+            project_name (str): The name of the specific project.
             video_name (str): The name of the video file.
             video_type (Literal["database", "query"]): The type of the video.
             fps (int): Frames per second for video processing.
@@ -89,7 +89,7 @@ class Video:
             Dataset structure
             root_datsets_dir/
             |
-            ├── route_name/
+            ├── project_name/
             |   ├── raw_video/
             |   |   ├── video_name.mp4
             |   |   └── ...
@@ -119,12 +119,12 @@ class Video:
         ], "video_type must be 'database' or 'query'"
 
         self.root_datasets_dir = os.path.abspath(datasets_dir)
-        self.route_name = route_name
+        self.project_name = project_name
         self.video_name = video_name
         self.video_type: Literal["database", "query"] = video_type
         self.dataset_dir = join(
             self.root_datasets_dir,
-            self.route_name,
+            self.project_name,
             self.video_type,
             os.path.splitext(self.video_name)[0],
         )
@@ -344,7 +344,7 @@ class Video:
             str: The file path of the raw video.
         """
         return join(
-            self.root_datasets_dir, self.route_name, "raw_video", self.video_name
+            self.root_datasets_dir, self.project_name, "raw_video", self.video_name
         )
 
     def get_avaliablity(self) -> List[tuple]:
@@ -464,19 +464,19 @@ class DatabaseVideo(Video):
     Inherits all attributes and methods from Video.
     """
 
-    def __init__(self, datasets_dir: str, route_name: str, video_name: str):
+    def __init__(self, datasets_dir: str, project_name: str, video_name: str):
         """
-        Initialize the DatabaseVideo object with dataset directory, route, and video name.
+        Initialize the DatabaseVideo object with dataset directory, project, and video name.
 
         Args:
             datasets_dir (str): The root directory for datasets.
-            route_name (str): The name of the specific route.
+            project_name (str): The name of the specific project.
             video_name (str): The name of the video file.
 
         Dataset structure
             root_datsets_dir/
             |
-            ├── route_name/
+            ├── project_name/
             |   ├── raw_video/
             |   |   ├── video_name.mp4
             |   |   └── ...
@@ -503,7 +503,7 @@ class DatabaseVideo(Video):
         # Override video_type to be "database"
         super().__init__(
             datasets_dir=datasets_dir,
-            route_name=route_name,
+            project_name=project_name,
             video_name=video_name,
             video_type="database",
             fps=6,
@@ -521,23 +521,23 @@ class QueryVideo(Video):
     Inherits all attributes and methods from Video.
     """
 
-    def __init__(self, datasets_dir: str, route_name: str, video_name: str):
+    def __init__(self, datasets_dir: str, project_name: str, video_name: str):
         """
-        Initialize the QueryVideo object with dataset directory, route, and video name.
+        Initialize the QueryVideo object with dataset directory, project, and video name.
 
         Args:
             datasets_dir (str): The root directory for datasets.
-            route_name (str): The name of the specific route.
+            project_name (str): The name of the specific project.
             video_name (str): The name of the video file.
 
         dataset_dir: root datasets dir
-        route_name: name of the specific route the drone video is taken
+        project_name: name of the specific project the drone video is taken
         video_name: video file name
 
         Dataset structure
             root_datsets_dir/
             |
-            ├── route_name/
+            ├── project_name/
             |   ├── raw_video/
             |   |   ├── video_name.mp4
             |   |   └── ...
@@ -564,7 +564,7 @@ class QueryVideo(Video):
         # Override video_type to be "database"
         super().__init__(
             datasets_dir=datasets_dir,
-            route_name=route_name,
+            project_name=project_name,
             video_name=video_name,
             video_type="query",
             fps=2,

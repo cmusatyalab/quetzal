@@ -1,11 +1,11 @@
 import gradio as gr
-from src.video import *
+from quetzal.video import *
 import logging
 from copy import deepcopy
-from src.engines.vpr_engine.anyloc_engine import AnyLocEngine
-from src.compute_vlad import generate_VLAD
-from src.align_frames import align_video_frames, align_frame_pairs
-from src.engines.detection_engine.grounding_sam_engine import GoundingSAMEngine
+from quetzal.engines.vpr_engine.anyloc_engine import AnyLocEngine
+from quetzal.compute_vlad import generate_VLAD
+from quetzal.align_frames import align_video_frames, align_frame_pairs
+from quetzal.engines.detection_engine.grounding_sam_engine import GoundingSAMEngine
 import supervision as sv
 
 # from src.utils.dtw_vlad import *
@@ -15,7 +15,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 import shutil
-import src.utils.file_tools as ft
+import quetzal.utils.file_tools as ft
 from glob import glob
 import argparse
 
@@ -738,6 +738,146 @@ def files_tab():
         outputs=video_info
     )
 
+def project_view(public=False):
+    
+    gr.Markdown("Manage and explore your/public projects")
+    with gr.Row():
+        with gr.Column(scale=4):
+            with gr.Group():
+                with gr.Row():
+                    gr.Text("Select Project", interactive=False, container=False, scale=8)
+                    gr.Button("New",  icon=os.path.join(icons_dir,"add.svg"), scale=1, visible=not public)
+                with gr.Row():
+                    
+                    project_dropdown= gr.Dropdown(
+                        label="Select Project",
+                        choices=ft.get_directories(dataset_root),
+                        interactive=True,
+                        container=False,
+                        allow_custom_value=False,
+                        value="str",
+                        scale = 8,
+                    )
+
+                    
+                
+                # with gr.Row():
+                #     gr.Markdown("###")
+                
+            with gr.Row():
+                route_info = gr.TextArea(
+                    label="Project Infomation",
+                    value="Choose Route",
+                    interactive=True
+                )
+
+
+        with gr.Column(scale=4):
+            with gr.Row():
+                video_dropdown= gr.Dropdown(
+                    choices=ft.get_directories(dataset_root),
+                    label="Select Video",
+                    interactive=True,
+                    allow_custom_value=False,
+                    value="str",
+                    scale = 8,
+                )
+
+                gr.Button("New",  icon=os.path.join(icons_dir,"add.svg"), scale=1, visible=not public)
+
+        with gr.Column(scale=2):
+            gr.Dropdown(
+                choices=ft.get_directories(dataset_root),
+                label="Choose Route",
+                interactive=True,
+                allow_custom_value=False,
+                value="str",
+            )
+
+
+    with gr.Row():
+        gr.Markdown("# Project Explorer")
+        gr.Markdown("Manage and explore your/public projects")
+    with gr.Row():
+        instruction = gr.Markdown(WELCOME_FILE, label="Instructions")
+
+    with gr.Row():
+        route_name_input = gr.Dropdown(
+            choices=ft.get_directories(dataset_root),
+            label="Choose Route",
+            interactive=True,
+            allow_custom_value=False,
+            value="str",
+        )
+        video_name = gr.Dropdown(
+            choices=[SELECT_ROUTE_MSG],
+            label="Choose Videos",
+            allow_custom_value=False,
+            interactive=True,
+            value="str",
+        )
+    with gr.Row():
+        route_info = gr.TextArea(
+            label="Route Infomation",
+            value="Choose Route",
+            interactive=True
+            )
+        video_info = gr.TextArea(
+            label="Video information",
+            value="Choose Video",
+            interactive=True
+        )
+    with gr.Row():
+        save_btn = gr.Button(
+            "Save",
+            interactive=True
+        )
+
+    save_btn.click(
+        write_route_meta,
+        inputs=[route_info, route_name_input],
+        outputs=None
+    )
+
+    save_btn.click(
+        write_video_meta,
+        inputs=[video_info, route_name_input, video_name],
+        outputs=None
+    )
+
+    route_name_input.change(
+        get_video_files_for_route,
+        inputs=route_name_input,
+        outputs=[video_name],
+        show_progress=False,
+    )
+
+    route_name_input.change(
+        lambda x: gr.update(choices=ft.get_directories(dataset_root)),
+        inputs = route_name_input,
+        outputs= route_name_input,
+        show_progress=False,
+    )
+
+    route_name_input.change(
+        read_route_meta,
+        inputs=route_name_input,
+        outputs=route_info,
+        show_progress=False
+    )
+
+    video_name.change(
+        read_video_meta,
+        inputs=[route_name_input, video_name],
+        outputs=video_info
+    )
+
+def expolrer_tab():
+    gr.Markdown("## Manage and explore your/public projects")
+    with gr.Tab("My Projects"):
+        project_view()
+
+    
 
 WELCOME_RESULT = """# Explore Results
 1. Select the Route, along with the Database and Query Videos.
@@ -764,8 +904,6 @@ def load_overlay(idx, inputs):
 
 def display_images(idx, inputs, overlay_mode):
     matches, query_frame_list, db_frame_list, overlay_query_frame_list = inputs
-
-
     query_len = len(query_frame_list)
     db_len = len(db_frame_list)
 
@@ -956,13 +1094,20 @@ def get_analyzed_list(route, video_type: Literal["database", "query"]):
 def blend_img(idx, query, db): 
     return (query * idx + db * (1-idx)).astype(np.uint8)
 
+
+import time
+import datetime
+
 def result_tab(demo):
+    
     matching_states = gr.State(None)
     run_state = gr.State(False)
     slider_idx = gr.Number(0, visible=False)
+    wakeup_time = gr.State(datetime.datetime.now())
     query_image_overlay = gr.Image(type="numpy", visible=False)
     db_image_overlay = gr.Image(type="numpy", visible=False)
     blended_overlay = gr.Image(type="numpy", visible=False)
+    # session_info = gr.State(parse_headers)
 
 
     with gr.Row():
@@ -1165,6 +1310,22 @@ def result_tab(demo):
         show_progress=False,
     )
 
+    def parse_headers(headers=dict(), default_user='anonymous'):
+        x_forwarded_user = headers.get('x-forwarded-user', default_user)
+        x_forwarded_for = headers.get('x-forwarded-for', 'not available')
+        
+        return {
+            'x_forwarded_user': x_forwarded_user,
+            'x_forwarded_for': x_forwarded_for
+        }
+
+    def get_session_info(request: gr.Request):
+        headers = request.headers
+        return parse_headers(headers)
+
+    
+    # demo.load(get_session_info, outputs=session_info)
+
     run_btn.click(
         run_alignment,
         inputs=[route_name_input, database_video_name, query_video_name, overlay],
@@ -1192,47 +1353,47 @@ def result_tab(demo):
         show_progress=False
     )
 
-    def prev_click(input, step):
-        slider.value = slider.value - step
-        if slider.value <= 0:
-            slider.value = 0
-        return slider.value
+    def prev_click(input, step, slider):
+        slider = slider - step
+        if slider <= 0:
+            slider = 0
+        return gr.update(value=slider, interactive=True)
 
-    def next_click(input, step):
-        slider.value = slider.value + step
-        if slider.value >= len(input[0]):
-            slider.value = len(input[0]) - 1
-        return slider.value
+    def next_click(input, step, slider):
+        slider = slider + step
+        if slider >= len(input[0]):
+            slider = len(input[0]) - 1
+        return gr.update(value=slider, interactive=True)
 
     click_1 = prev_1_btn.click(
         prev_click,
-        inputs=[matching_states, gr.State(1)],
+        inputs=[matching_states, gr.State(1), slider],
         outputs=[slider],
-        trigger_mode="always_last",
+        trigger_mode="multiple",
         show_progress=False,
     )
 
     click_2 = prev_5_btn.click(
         prev_click,
-        inputs=[matching_states, gr.State(5)],
+        inputs=[matching_states, gr.State(5), slider],
         outputs=[slider],
-        trigger_mode="always_last",
+        trigger_mode="multiple",
         show_progress=False,
     )
 
     click_3 = next_1_btn.click(
         next_click,
-        inputs=[matching_states, gr.State(1)],
+        inputs=[matching_states, gr.State(1), slider],
         outputs=[slider],
-        trigger_mode="always_last",
+        trigger_mode="multiple",
         show_progress=False,
     )
 
     click_4 = next_5_btn.click(
         next_click,
-        inputs=[matching_states, gr.State(5)],
+        inputs=[matching_states, gr.State(5), slider],
         outputs=[slider],
-        trigger_mode="always_last",
+        trigger_mode="multiple",
         show_progress=False,
     )
 
@@ -1243,27 +1404,57 @@ def result_tab(demo):
         outputs=[query_img_orig, db_img_aligned],
     )
 
-    def inc_local():
-        if run_state.value:
-            slider.value = slider.value + 1
-            return slider.value
-        return gr.update()
+    # def inc_local():
+    #     if run_state.value:
+    #         slider.value = slider.value + 1
+    #         return slider.value
+    #     return gr.update()
     
-    def toggle_run(play_btn):
-        if play_btn == "Start":
-            run_state.value = True
-            return gr.update(icon=os.path.join(icons_dir,"pause.png"), value="Stop"), gr.update(interactive=False), gr.update(interactive=False)
+    # def toggle_run(play_btn):
+    #     if play_btn == "Start":
+    #         run_state.value = True
+    #         return gr.update(icon=os.path.join(icons_dir,"pause.png"), value="Stop"), gr.update(interactive=False), gr.update(interactive=False)
+    #     else:
+    #         run_state.value = False
+    #         return gr.update(icon=os.path.join(icons_dir,"play.png"), value="Start"), gr.update(interactive=True), gr.update(interactive=True)
+    
+    def toggle_run(play_btn_val, slider_val):
+        if play_btn_val == "Start":
+            return [
+                        gr.update(icon=os.path.join(icons_dir,"pause.png"), value="Stop"),
+                        gr.update(value=slider_val+1, interactive=False),
+                        True,
+                        datetime.datetime.now() + datetime.timedelta(seconds=0.5)
+                    ]
         else:
-            run_state.value = False
-            return gr.update(icon=os.path.join(icons_dir,"play.png"), value="Start"), gr.update(interactive=True), gr.update(interactive=True)
+            return [
+                        gr.update(icon=os.path.join(icons_dir,"play.png"), value="Start"),
+                        gr.update(value=slider_val, interactive=True),
+                        False,
+                        datetime.datetime.now()
+                    ]
 
-    def set_slide(idx):
-        slider.value = idx
 
-    demo.load(inc_local, inputs=None, outputs=slider_idx, every=0.5)
-    slider.release(set_slide, inputs=slider, outputs=None, show_progress=False)
-    slider_idx.change(lambda x:x, inputs=slider_idx, outputs=slider, show_progress=False)
-    click_5 = play_btn.click(toggle_run, inputs=play_btn, outputs=[play_btn, slider, run_btn], show_progress=False)
+    def update_slider_idx(slider_idx, run_state_val, wakeup_time_val):
+        if run_state_val:
+            time_to_sleep = (wakeup_time_val - datetime.datetime.now()).total_seconds()
+            
+            time.sleep(max(time_to_sleep, 0))
+            next_wakeup = wakeup_time_val + datetime.timedelta(seconds=0.5)
+
+            val = {
+                    slider: slider_idx + 1,
+                    wakeup_time: next_wakeup
+                }
+        else:
+            val = {
+                    slider: slider_idx,
+                    wakeup_time: datetime.datetime.now()
+                }
+        return val
+
+    slider_idx.change(update_slider_idx, inputs=[slider_idx, run_state, wakeup_time], outputs=[slider, wakeup_time], show_progress=False, trigger_mode="multiple").then(lambda x:x, inputs=slider, outputs=slider_idx)
+    click_5 = play_btn.click(toggle_run, inputs=[play_btn, slider], outputs=[play_btn, slider, run_state, wakeup_time], show_progress=False).then(lambda x:x, inputs=slider, outputs=slider_idx)
 
     slider.change(
         display_images,
@@ -1278,7 +1469,7 @@ def result_tab(demo):
         ],
         show_progress=False,
         trigger_mode="multiple",
-        cancels=[click_1, click_2, click_3, click_4, click_5]
+        # cancels=[click_1, click_2, click_3, click_4, click_5]
     )
 
     overlay_0.click(lambda x:x, query_image_overlay, overlay_img, show_progress=False)
@@ -1297,7 +1488,7 @@ def result_tab(demo):
             db_img_aligned,
         ],
         show_progress=False,
-        cancels=[click_1, click_2, click_3, click_4, click_5]
+        # cancels=[click_1, click_2, click_3, click_4, click_5]
     )
 
 
@@ -1344,24 +1535,22 @@ def main():
 
     with gr.Blocks() as demo:
         gr.Markdown("# Quetzal: Drone Footages Frame Alignment")
-        with gr.Tab("File Explorer"):
-            files_tab()
-        with gr.Tab("Upload Videos"):
-            upload_tab()
-        with gr.Tab("Analyze Videos"):
-            analyze_tab()
-        with gr.Tab("Alignment Results"):
-            result_tab(demo)
-        with gr.Tab("Delete Files"):
-            delete_tab()
-
-    with gr.Blocks() as demo2:
-        with gr.Tab("Alignment Results"):
-            result_tab(demo)
+        with gr.Tab("Project Explorer"):
+            expolrer_tab()
+        # with gr.Tab("File Explorer"):
+        #     files_tab()
+        # with gr.Tab("Upload Videos"):
+        #     upload_tab()
+        # with gr.Tab("Analyze Videos"):
+        #     analyze_tab()
+        # with gr.Tab("Alignment Results"):
+        #     result_tab(demo)
+        # with gr.Tab("Delete Files"):
+        #     delete_tab()
 
     demo.queue()
     demo.launch()
-    
+
 if __name__ == "__main__":
     main()
 

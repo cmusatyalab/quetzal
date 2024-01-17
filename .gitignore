@@ -1,7 +1,14 @@
 __pycache__/
 compare_aligned_idx_copy.py
 *.ipynb
-src/external/RANSAC_flow/model/pretrained/
+quetzal/external/RANSAC_flow/model/pretrained/
+# src/external/RANSAC_flow/model/pretrained/
 weights/
 tmp/
+quetzal_app/temp/
 gradio_test.py
+gradio_UX.py
+
+# Builds
+*.egg-info/
+build/

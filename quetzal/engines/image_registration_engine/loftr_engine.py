@@ -6,9 +6,9 @@ import cv2
 
 from functools import lru_cache
 import logging
-from src.video import Video
+from quetzal.video import Video
 from typing import Literal, List
-from src.engines.engine import AbstractEngine
+from quetzal.engines.engine import AbstractEngine
 
 
 logging.basicConfig()
