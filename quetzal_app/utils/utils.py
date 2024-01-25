@@ -1,4 +1,5 @@
 from base64 import b64encode
+import os
 
 def format_time(seconds, show_hours=True, final_time=False):
     hours = int(seconds // 3600)
@@ -24,3 +25,20 @@ def get_icon(file_path):
         encoded_svg = b64encode(svg_content.encode("utf-8")).decode("utf-8")
     svg_image = f'<img src="data:image/svg+xml;base64,{encoded_svg}" alt="Icon" style="width: 24px; height: 24px;">'
     return svg_image
+
+def get_directory_list(path):
+    directories = []
+    while True:
+        path, directory = os.path.split(path)
+
+        if directory != "":
+            directories.append(directory)
+        else:
+            # If the path has been completely reduced to its root, break the loop
+            if path != "":
+                directories.append(path)
+            break
+
+    # Reverse the list because os.path.split gives us the directories from the file up to the root
+    directories.reverse()
+    return directories
