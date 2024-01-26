@@ -9,15 +9,12 @@ from streamlit_float import *
 from quetzal_app.utils.utils import *
 from functools import partial
 import logging
-from threading import Lock
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 debug = lambda *args: logger.debug(" ".join([str(arg) for arg in args]))
 
 PRIMARY_COLOR = "#c9e6fd"
-
 
 class MuiOnFocusHandler:
     all_key = "all_scanners"
@@ -138,12 +135,6 @@ class MuiSideBarMenu:
 class MuiFileList:
     list_style = {
         "py": "0px",
-        # "& .MuiListItem-root": {
-        #     "py": "6px",
-        #     "&.Mui-selected": {
-        #         "bgcolor": "transparent",
-        #     },
-        # },
     }
 
     @property
@@ -354,13 +345,6 @@ class MuiFileListItem:
         AnalysisProgress.NONE: "NotInterestedOutlined",
     }
     
-    # item_style = {
-    #     "py": "6px",
-    #     "&.Mui-selected": {
-    #         "bgcolor": "transparent",
-    #     },
-    # }
-    
     more_icon_style = {
         False: {
             "margin":"0px 7px 0px 0px !important", 
@@ -383,6 +367,9 @@ class MuiFileListItem:
                 "&.Mui-selected": {
                     "bgcolor": "transparent",
                 },
+                "&:hover": {
+                    "bgcolor": "transparent"
+                },
             },
         },
         True: {
@@ -396,15 +383,12 @@ class MuiFileListItem:
                 "&.Mui-selected": {
                     "bgcolor": "transparent",
                 },
+                "&:hover": {
+                    "bgcolor": "transparent"
+                },
             },
         }, 
     }
-    
-    # "&:hover": {"backgroundColor": "grey.200"},
-            # "&.Mui-selected": {
-                # "bgcolor": PRIMARY_COLOR,
-                # "&:hover": {"bgcolor": PRIMARY_COLOR},
-            # },
         
     @staticmethod
     def listTextFormater(filename, owner):
@@ -423,7 +407,6 @@ class MuiFileListItem:
     
     def buildClickHandler(self, handler):
         def _handlerWithValue(event: dict):
-            # self.lock.acquire()
             debug("before Call", st.session_state.ActionMenuInput)
             debug("MuiFileListItem.valuedHandler: ", handler)
             event["target"] = event.setdefault("target", dict())
@@ -433,8 +416,6 @@ class MuiFileListItem:
                 debug("OnClickMOre!")
                 self.onClickMore(event)
             debug("after call", st.session_state.ActionMenuInput)
-            # self.lock.release()
-            # self.lock.
 
         return _handlerWithValue
 
@@ -500,16 +481,9 @@ class MuiFileListItem:
             direction="row",
             alignItems="center",
             justifyContent="center",
-            sx={"my": 0, "pr": "32px", "minWidth": "49px"},
+            sx={"my": 0, "pr": "32px", "minWidth": "58px"},
             children=state_icons,
         )
-
-        # secondary_action = mui.IconButton(
-        #     edge="end", 
-        #     children=[mui.icon.MoreVert()],
-        #     onClick=self.buildClickHandler(self.onClickMore),
-        #     sx={"p":0},
-        # )
             
         with mui.Stack(
             spacing=0.01,
@@ -519,8 +493,6 @@ class MuiFileListItem:
             sx=self.list_style[self.selected]
         ):
             mui.ListItem(
-                # secondaryAction=secondary_action,
-                # divider=True,
                 button=True,
                 selected=self.selected,
                 children=[list_item_icon, list_item_text, states],

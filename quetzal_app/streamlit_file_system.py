@@ -444,8 +444,6 @@ def click_away(event):
 
 on_focus_handler = MuiOnFocusHandler()
 
-
-
 menu_c, files_c, info_c = st.columns([2, 100, 2])
 with menu_c:
     with stylable_container(
@@ -514,6 +512,145 @@ with menu_c:
                 # )
 
 
+# with files_c:
+#     with stylable_container(
+#         key="slider",
+#         css_styles=f"""{{
+#                     display: block;
+#                     div {{
+#                         width: 100%;
+#                         height: auto;
+#                     }}
+#                     iframe {{
+#                         position: absolute;
+#                         right: calc({INFO_WIDTH}px - 2%) !important;
+#                         width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
+#                         height: calc({window_height}px - {padding});
+#                     }}
+#                     # position: absolute;
+#                     # right: calc({INFO_WIDTH}px - 2%) !important;
+#                     # width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;  
+#                     # .stSlider {{
+#                     #     position: absolute;
+#                     #     right: calc({INFO_WIDTH}px - 2%) !important;
+#                     #     width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;                   
+#                     # }}
+#                 }}
+#                 """,
+#     ):
+#         with elements("files"):
+#             with mui.Paper(
+#                 variant="outlined",
+#                 sx={
+#                     "borderRadius": "0px",
+#                     "border": "0px",
+#                     "width": "100%",
+#                     "height": f"calc({window_height}px - {padding})",
+#                     "bgcolor": BACKGROUND_COLOR,
+#                     "m": "0px",
+#                     "p": "0px",
+#                     "position": "absolute",
+#                     "left": "0px",
+#                     "top": "0px",
+#                 },
+#             ):
+#                 with mui.Paper(
+#                     variant="outlined",
+#                     sx={
+#                         "borderRadius": "1rem",
+#                         "border": "0px",
+#                         "height": f"calc({window_height}px - {padding} - {top_padding} - 0.5rem);",
+#                         "bgcolor": "white",
+#                         "padding": "0.5rem",
+#                         "margin-right": "1rem",
+#                         # "padding-right" : "2rem",
+#                     },
+#                 ):
+#                     ## Action Menu
+#                     action_menu = MuiActionMenu(
+#                         mode=["upload", "edit", "delete"],
+#                         key="full_menu",
+#                         onClick=FileActionDialog.buildDialogOpener(),
+#                     )
+#                     action_menu.render()
+                    
+#                     no_upload = MuiActionMenu(
+#                         mode=["edit", "delete"],
+#                         key="no_upload_menu",
+#                         onClick=FileActionDialog.buildDialogOpener(),
+#                     )
+#                     no_upload.render()
+
+#                     ## BreadCrumb
+#                     def breadCrumbClickHandler(event: dict):
+#                         clicked_path = event["target"]["value"]
+#                         if clicked_path == curr_file.path:
+#                             action_menu.buildMenuOpener(file=curr_file)(event)
+#                         else:
+#                             logger.info(clicked_path)
+
+#                     MuiFilePathBreadcrumbs(
+#                         file=curr_file,
+#                         key="curr_dir_breadcrumb",
+#                         onClick=breadCrumbClickHandler,
+#                     ).render()
+
+#                     ## File List
+#                     def fileListMoreHandler(event: dict):
+#                         file = event["target"]["value"]
+#                         if file != None:
+#                             logger.debug("Calling MenuOpener")
+#                             no_upload.buildMenuOpener(file=file)(event)
+                    
+#                     file_list = MuiFileList(
+#                         file_list=map(convert_to_quetzal_files, TEST_FILE_LIST), 
+#                         max_height="calc(100% - 48px)", 
+#                         key="main",
+#                         onClickMore=fileListMoreHandler,
+#                     )
+#                     file_list.render()
+
+#                     ## Click Focus Handler
+#                     on_focus_handler.setScanner(key="file_list")
+#                     on_focus_handler.registerHandler(keys="file_list", handler=lambda: MuiActionMenu.resetAnchor(
+#                                 exculde_keys=["full_menu", "no_upload_menu"]
+#                             ))
+#                     on_focus_handler.registerHandler(file_list.onFocusOut)
+
+def draw_background(px, bp):
+    mui.Paper(
+        variant="outlined",
+        sx={
+            "borderRadius": "0",
+            "border": "0px",
+            "width": "100%",
+            "height": f"calc({window_height}px - {padding} + 1rem)",
+            "bgcolor": BACKGROUND_COLOR,
+            "m": "0px",
+            "p": "0px",
+            "position": "absolute",
+            "left": "0px",
+            "top": "0px",
+            "zIndex": -2,
+        },
+    )
+    mui.Paper(
+        variant="outlined",
+        sx={
+            "borderRadius": "1rem",
+            "border": "0px",
+            "width": f"calc(100% - {px}rem)",
+            "height": f"calc({window_height}px - {padding} - {bp}rem)",
+            "bgcolor": "white",
+            "m": "0px",
+            "p": "0px",
+            "position": "absolute",
+            "left": "0px",
+            "top": "0px",
+            "zIndex": -1,
+        },
+    )
+
 with files_c:
     with stylable_container(
         key="slider",
@@ -524,48 +661,43 @@ with files_c:
                         height: auto;
                     }}
                     iframe {{
-                        position: absolute;
-                        right: calc({INFO_WIDTH}px - 2%) !important;
-                        width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
+                        width: calc(100%) !important;
                         height: calc({window_height}px - {padding});
                     }}
-                    # position: absolute;
-                    # right: calc({INFO_WIDTH}px - 2%) !important;
-                    # width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;  
-                    # .stSlider {{
-                    #     position: absolute;
-                    #     right: calc({INFO_WIDTH}px - 2%) !important;
-                    #     width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;                   
-                    # }}
                 }}
                 """,
     ):
-        with elements("files"):
-            with mui.Paper(
-                variant="outlined",
-                sx={
-                    "borderRadius": "0px",
-                    "border": "0px",
-                    "width": "100%",
-                    "height": f"calc({window_height}px - {padding})",
-                    "bgcolor": BACKGROUND_COLOR,
-                    "m": "0px",
-                    "p": "0px",
-                    "position": "absolute",
-                    "left": "0px",
-                    "top": "0px",
-                },
-            ):
+        buttom_padding = 0.5
+        inner_padding = 0.5
+        padding_right = 0 # additional padding
+        default_margin = 0.5
+        with stylable_container(
+            key="file2",
+            css_styles=f"""{{
+                display: block;
+                border-radius: 0;
+                height: calc({window_height}px - {padding} - {buttom_padding}rem + 1rem);
+                position: absolute;
+                right: calc({INFO_WIDTH}px - 2%) !important;
+                width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
+                background-color: {BACKGROUND_COLOR};
+            }}
+            """,
+        ):
+            with elements("files"):
+                # Set Background
+                draw_background(px=(inner_padding * 2 + padding_right), bp=buttom_padding)
                 with mui.Paper(
                     variant="outlined",
                     sx={
                         "borderRadius": "1rem",
                         "border": "0px",
-                        "height": f"calc({window_height}px - {padding} - {top_padding} - 0.5rem);",
+                        "width": f"calc(100% - {inner_padding * 2}rem - {padding_right}rem - {default_margin * 2}rem)",
+                        "height": f"calc({window_height}px - {padding} - {top_padding} - {inner_padding * 2}rem);",
                         "bgcolor": "white",
-                        "padding": "0.5rem",
-                        "margin-right": "1rem",
-                        # "padding-right" : "2rem",
+                        "padding": f"{inner_padding}rem",
+                        # "padding-right": f"{padding_right + inner_padding}rem",
+                        "zIndex": 2,
                     },
                 ):
                     ## Action Menu
@@ -618,143 +750,6 @@ with files_c:
                                 exculde_keys=["full_menu", "no_upload_menu"]
                             ))
                     on_focus_handler.registerHandler(file_list.onFocusOut)
-
-# with files_c:
-#     with stylable_container(
-#         key="slider",
-#         css_styles=f"""{{
-#                     display: block;
-#                     div {{
-#                         width: 100%;
-#                         height: auto;
-#                     }}
-#                     iframe {{
-#                         # position: absolute;
-#                         # right: calc({INFO_WIDTH}px - 2%) !important;
-#                         # width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
-#                         width: calc(100%) !important;
-#                         height: calc({window_height}px - {padding});
-#                     }}
-#                     # position: absolute;
-#                     # right: calc({INFO_WIDTH}px - 2%) !important;
-#                     # width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;  
-#                     # .stSlider {{
-#                     #     position: absolute;
-#                     #     right: calc({INFO_WIDTH}px - 2%) !important;
-#                     #     width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;                   
-#                     # }}
-#                 }}
-#                 """,
-#     ):
-#         with stylable_container(
-#             key="file2",
-#             css_styles=f"""{{
-#                 display: block;
-#                 border-radius: 1rem 1rem 1rem 1rem;
-#                 height: calc({window_height}px - {padding} - 0.5rem);
-#                 position: absolute;
-#                 right: calc({INFO_WIDTH}px - 2%) !important;
-#                 width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
-#                 background-color: white;
-#             }}
-#             """,
-#         ):
-#             with elements("files"):
-#                 mui.Paper(
-#                     variant="outlined",
-#                     sx={
-#                         "borderRadius": "0px",
-#                         "border": "0px",
-#                         "width": "100%",
-#                         "height": f"calc({window_height}px - {padding})",
-#                         "bgcolor": BACKGROUND_COLOR,
-#                         "m": "0px",
-#                         "p": "0px",
-#                         "position": "absolute",
-#                         "left": "0px",
-#                         "top": "0px",
-#                         "zIndex": -1,
-#                     },
-#                 )
-#                 with mui.Paper(
-#                     variant="outlined",
-#                     sx={
-#                         "borderRadius": "0px",
-#                         "border": "0px",
-#                         "width": "100%",
-#                         "height": f"calc({window_height}px - {padding})",
-#                         "bgcolor": BACKGROUND_COLOR,
-#                         "m": "0px",
-#                         "p": "0px",
-#                         # "position": "absolute",
-#                         "left": "0px",
-#                         "top": "0px",
-#                     },
-#                 ):
-#                     with mui.Paper(
-#                         variant="outlined",
-#                         sx={
-#                             "borderRadius": "1rem",
-#                             "border": "0px",
-#                             "width": "100%",
-#                             "height": f"calc({window_height}px - {padding} - {top_padding} - 0.5rem);",
-#                             "bgcolor": "white",
-#                             "margin": "0.5rem",
-#                             "margin-right": "1rem",
-#                             # "padding-right" : "2rem",
-#                             "zIndex": 10,
-#                         },
-#                     ):
-#                         ## Action Menu
-#                         action_menu = MuiActionMenu(
-#                             mode=["upload", "edit", "delete"],
-#                             key="full_menu",
-#                             onClick=FileActionDialog.buildDialogOpener(),
-#                         )
-#                         action_menu.render()
-                        
-#                         no_upload = MuiActionMenu(
-#                             mode=["edit", "delete"],
-#                             key="no_upload_menu",
-#                             onClick=FileActionDialog.buildDialogOpener(),
-#                         )
-#                         no_upload.render()
-
-#                         ## BreadCrumb
-#                         def breadCrumbClickHandler(event: dict):
-#                             clicked_path = event["target"]["value"]
-#                             if clicked_path == curr_file.path:
-#                                 action_menu.buildMenuOpener(file=curr_file)(event)
-#                             else:
-#                                 logger.info(clicked_path)
-
-#                         MuiFilePathBreadcrumbs(
-#                             file=curr_file,
-#                             key="curr_dir_breadcrumb",
-#                             onClick=breadCrumbClickHandler,
-#                         ).render()
-
-#                         ## File List
-#                         def fileListMoreHandler(event: dict):
-#                             file = event["target"]["value"]
-#                             if file != None:
-#                                 logger.debug("Calling MenuOpener")
-#                                 no_upload.buildMenuOpener(file=file)(event)
-                        
-#                         file_list = MuiFileList(
-#                             file_list=map(convert_to_quetzal_files, TEST_FILE_LIST), 
-#                             max_height="calc(100% - 48px)", 
-#                             key="main",
-#                             onClickMore=fileListMoreHandler,
-#                         )
-#                         file_list.render()
-
-#                         ## Click Focus Handler
-#                         on_focus_handler.setScanner(key="file_list")
-#                         on_focus_handler.registerHandler(keys="file_list", handler=lambda: MuiActionMenu.resetAnchor(
-#                                     exculde_keys=["full_menu", "no_upload_menu"]
-#                                 ))
-#                         on_focus_handler.registerHandler(file_list.onFocusOut)
 
 
 
