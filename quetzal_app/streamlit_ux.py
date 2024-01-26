@@ -237,7 +237,14 @@ if "anchorEl" not in st.session_state:
     
 if "class_prompts" not in st.session_state:
     st.session_state.class_prompts = ["objects"]
+    
+if "do_rerun" not in st.session_state:
+    st.session_state.do_rerun = False
 
+if st.session_state.do_rerun:
+    st.session_state.do_rerun = False
+    st.rerun()
+    
 # Load Variables
 query_frame_list = st.session_state.matches.get("query_frame_list")
 overlay_query_frame_list = st.session_state.matches.get("overlay_query_frame_list")

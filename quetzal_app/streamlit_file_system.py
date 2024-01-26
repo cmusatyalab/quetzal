@@ -42,7 +42,12 @@ from streamlit_js_eval import (
 )
 
 from collections import defaultdict
+import logging
 
+logger = logging.getLogger(__file__)
+logger.setLevel(logging.DEBUG)
+
+logger.info("Streamlit Rerunning")
 
 BORDER_RADIUS = "0.8rem"
 BACKGROUND_COLOR = "#f8fafd"
@@ -221,7 +226,7 @@ TEST_FILE_LIST = [
         },
     },
     {
-        "name": "Video Name 11",
+        "name": "Very Long Video Name 11",
         "type": FileType.FILE,
         "state": {
             "visibility": Visibility.SHARED,
@@ -230,7 +235,7 @@ TEST_FILE_LIST = [
         },
     },
     {
-        "name": "Project Name 10",
+        "name": "Very Very Long Project Name 10",
         "type": FileType.DIRECTORY,
         "state": {
             "visibility": Visibility.SHARED,
@@ -258,12 +263,36 @@ TEST_FILE_LIST = [
     },
 ]
 
+def convert_to_quetzal_files(file_info):
+    name = file_info["name"]
+    type = file_info["type"]
+    state = file_info["state"]
+    visibility = state["visibility"]
+    analysis_progress = state["analyzed"]
+    permission = state["permission"]
+    
+    # Assuming the owner is the same for all files, using a placeholder
+    owner = "jinho yi"
+    
+    quetzal_file = QuetzalFile(
+        path=name,  # Using 'name' as 'path' for simplicity
+        owner=owner,
+        type=type,
+        visibility=visibility,
+        analysis_progress=analysis_progress,
+        permission=permission
+    )
+    
+    return quetzal_file
+
+top_padding = "1rem"
+
 st.set_page_config(layout="wide")
 st.markdown(
     f"""
         <style>
                 .block-container {{ /* Removes streamlit default white spaces in the main window*/
-                    padding-top: 1rem;
+                    padding-top: {top_padding};
                     padding-bottom: 0rem;
                     padding-left: 0rem;
                     padding-right: 0rem;
@@ -282,6 +311,7 @@ st.markdown(
         """,
     unsafe_allow_html=True,
 )
+
 float_init()
 
 
@@ -360,13 +390,19 @@ INFO_WIDTH = 320
 window_height = streamlit_js_eval(
     js_expressions="screen.height", want_output=True, key="WIND_H"
 )
-padding = "11rem"
+padding = "11.5rem"
 
 options = ["option1"] * 10
 ITEM_HEIGHT = 24
 
-curr_file = QuetzalFile(EXAMPLE_LINK, "jinhoy", FileType.DIRECTORY, Visibility.SHARED, AnalysisProgress.NONE, Permission.POST_ONLY)
-
+curr_file = QuetzalFile(
+    path=EXAMPLE_LINK,
+    type=FileType.DIRECTORY,
+    visibility=Visibility.SHARED,
+    analysis_progress=AnalysisProgress.NONE,
+    permission=Permission.FULL_WRITE,
+    owner="jinhoy",
+)
 
 if "dialogOpen" not in st.session_state:
     st.session_state.dialogOpen = False
@@ -394,28 +430,26 @@ def handleClickOpen():
     print("Im Called Here")
     st.session_state.show = True
     st.session_state.MuiDialogState["main"]["open"] = True
-    
+
+
 def handleClose(event, action):
     print("Dialog closed with action:", event, action)
     # st.session_state.dialogOpen = False
+
 
 def click_away(event):
     print("Main Page: Clicked Menu Area\n")
     # print(st.session_state.MuiDialogState["main"]["open"])
 
-# StreamlitDialogItem("input", "Rename", onSubmit=lambda x:print(x)).render()
-# StreamlitDialogItem("input", "New Project", submit_txt="Create", onSubmit=lambda x:print(x)).render()
 
-# StreamlitDialogItem("info", "Delete forever?", submit_txt="Delete Forever", info_txt="This will be deleted and won't be restored", onSubmit=lambda x: print("deleted")).render()
+on_focus_handler = MuiOnFocusHandler()
 
-# StreamlitDialogItem("share", "Share", submit_txt="Save", info_txt="Sharing directory will also apply the same settings to all its subdirectories and files.", onSubmit=lambda x: print(x)).render()
-# StreamlitDialogItem("upload").render()
 
-                    
+
 menu_c, files_c, info_c = st.columns([2, 100, 2])
 with menu_c:
     with stylable_container(
-        key="playback_controller",
+        key="menu_container",
         css_styles=f"""{{
                 display: block;
                 div {{
@@ -444,32 +478,40 @@ with menu_c:
                     "top": "0px",
                 },
             ):
-                with mui.ClickAwayListener(
-                    mouseEvent="onMouseDown",
-                    touchEvent="onTouchStart",
-                    onClickAway=click_away,
-                ):
-                    mui.Typography(
-                        "Quetzal",
-                        sx={
-                            "fontSize": "h4.fontSize",
-                            "mx": "1rem",
-                            # "mb": "1rem"
-                        },
-                    )
+                ## Title
+                mui.Typography(
+                    "Quetzal",
+                    sx={"fontSize": "h4.fontSize", "mx": "1rem"},
+                )
 
+                ## Action Menu
+                upload_menu = MuiActionMenu(
+                    mode=["upload"],
+                    key="upload_action_menu",
+                    onClick=FileActionDialog.buildDialogOpener(),
+                ).render()
+                # upload_menu.render()
+
+                ## Upload Button
                 UploadButton(
-                    file=curr_file,
-                    key="upload_button",
+                    key="upload_button", onClick=upload_menu.buildMenuOpener(curr_file)
                 ).render()
 
+                ## Side bar Menu
                 toggle_buttons = [
                     MuiToggleButton("user", "Home", "My Projects"),
                     MuiToggleButton("shared", "FolderShared", "Shared by Others"),
-                    # MuiToggleButton("public", "FolderShared", "Shared with Others"),
                 ]
                 MuiSideBarMenu(toggle_buttons=toggle_buttons, key="main_menu").render()
-                # st.write(f"window width is _{streamlit_js_eval(js_expressions='window.innerWidth', want_output = True, key = 'wifd')}_")
+
+                on_focus_handler.setScanner(key="menu")
+                on_focus_handler.registerHandler(keys=["menu"], handler=lambda: MuiActionMenu.resetAnchor("upload_action_menu"))
+                # ## Click Focus Handler
+                # focus_handler = MuiFocusHandler(element_key).render()
+                # # focus_handler.render()
+                # focus_handler.register(
+                #     lambda x: MuiActionMenu.resetAnchor("upload_action_menu")
+                # )
 
 
 with files_c:
@@ -519,112 +561,291 @@ with files_c:
                     sx={
                         "borderRadius": "1rem",
                         "border": "0px",
-                        # "width": "100%",
-                        "height": f"calc({window_height}px - {padding});",
+                        "height": f"calc({window_height}px - {padding} - {top_padding} - 0.5rem);",
                         "bgcolor": "white",
                         "padding": "0.5rem",
+                        "margin-right": "1rem",
+                        # "padding-right" : "2rem",
                     },
                 ):
-                    shared = False
+                    ## Action Menu
+                    action_menu = MuiActionMenu(
+                        mode=["upload", "edit", "delete"],
+                        key="full_menu",
+                        onClick=FileActionDialog.buildDialogOpener(),
+                    )
+                    action_menu.render()
+                    
+                    no_upload = MuiActionMenu(
+                        mode=["edit", "delete"],
+                        key="no_upload_menu",
+                        onClick=FileActionDialog.buildDialogOpener(),
+                    )
+                    no_upload.render()
+
+                    ## BreadCrumb
+                    def breadCrumbClickHandler(event: dict):
+                        clicked_path = event["target"]["value"]
+                        if clicked_path == curr_file.path:
+                            action_menu.buildMenuOpener(file=curr_file)(event)
+                        else:
+                            logger.info(clicked_path)
+
                     MuiFilePathBreadcrumbs(
                         file=curr_file,
-                        key="curr_dir",
-                    ).render()
-                    MuiFileList(
-                        file_list=TEST_FILE_LIST, max_height="80%", key="main"
+                        key="curr_dir_breadcrumb",
+                        onClick=breadCrumbClickHandler,
                     ).render()
 
-                    # def surrogate():
-                    #     print("Form Dialog button")
-                    #     handleClickOpen()
+                    ## File List
+                    def fileListMoreHandler(event: dict):
+                        file = event["target"]["value"]
+                        if file != None:
+                            logger.debug("Calling MenuOpener")
+                            no_upload.buildMenuOpener(file=file)(event)
+                    
+                    file_list = MuiFileList(
+                        file_list=map(convert_to_quetzal_files, TEST_FILE_LIST), 
+                        max_height="calc(100% - 48px)", 
+                        key="main",
+                        onClickMore=fileListMoreHandler,
+                    )
+                    file_list.render()
+
+                    ## Click Focus Handler
+                    on_focus_handler.setScanner(key="file_list")
+                    on_focus_handler.registerHandler(keys="file_list", handler=lambda: MuiActionMenu.resetAnchor(
+                                exculde_keys=["full_menu", "no_upload_menu"]
+                            ))
+                    on_focus_handler.registerHandler(file_list.onFocusOut)
+
+# with files_c:
+#     with stylable_container(
+#         key="slider",
+#         css_styles=f"""{{
+#                     display: block;
+#                     div {{
+#                         width: 100%;
+#                         height: auto;
+#                     }}
+#                     iframe {{
+#                         # position: absolute;
+#                         # right: calc({INFO_WIDTH}px - 2%) !important;
+#                         # width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
+#                         width: calc(100%) !important;
+#                         height: calc({window_height}px - {padding});
+#                     }}
+#                     # position: absolute;
+#                     # right: calc({INFO_WIDTH}px - 2%) !important;
+#                     # width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;  
+#                     # .stSlider {{
+#                     #     position: absolute;
+#                     #     right: calc({INFO_WIDTH}px - 2%) !important;
+#                     #     width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;                   
+#                     # }}
+#                 }}
+#                 """,
+#     ):
+#         with stylable_container(
+#             key="file2",
+#             css_styles=f"""{{
+#                 display: block;
+#                 border-radius: 1rem 1rem 1rem 1rem;
+#                 height: calc({window_height}px - {padding} - 0.5rem);
+#                 position: absolute;
+#                 right: calc({INFO_WIDTH}px - 2%) !important;
+#                 width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
+#                 background-color: white;
+#             }}
+#             """,
+#         ):
+#             with elements("files"):
+#                 mui.Paper(
+#                     variant="outlined",
+#                     sx={
+#                         "borderRadius": "0px",
+#                         "border": "0px",
+#                         "width": "100%",
+#                         "height": f"calc({window_height}px - {padding})",
+#                         "bgcolor": BACKGROUND_COLOR,
+#                         "m": "0px",
+#                         "p": "0px",
+#                         "position": "absolute",
+#                         "left": "0px",
+#                         "top": "0px",
+#                         "zIndex": -1,
+#                     },
+#                 )
+#                 with mui.Paper(
+#                     variant="outlined",
+#                     sx={
+#                         "borderRadius": "0px",
+#                         "border": "0px",
+#                         "width": "100%",
+#                         "height": f"calc({window_height}px - {padding})",
+#                         "bgcolor": BACKGROUND_COLOR,
+#                         "m": "0px",
+#                         "p": "0px",
+#                         # "position": "absolute",
+#                         "left": "0px",
+#                         "top": "0px",
+#                     },
+#                 ):
+#                     with mui.Paper(
+#                         variant="outlined",
+#                         sx={
+#                             "borderRadius": "1rem",
+#                             "border": "0px",
+#                             "width": "100%",
+#                             "height": f"calc({window_height}px - {padding} - {top_padding} - 0.5rem);",
+#                             "bgcolor": "white",
+#                             "margin": "0.5rem",
+#                             "margin-right": "1rem",
+#                             # "padding-right" : "2rem",
+#                             "zIndex": 10,
+#                         },
+#                     ):
+#                         ## Action Menu
+#                         action_menu = MuiActionMenu(
+#                             mode=["upload", "edit", "delete"],
+#                             key="full_menu",
+#                             onClick=FileActionDialog.buildDialogOpener(),
+#                         )
+#                         action_menu.render()
                         
-                    # mui.Button(
-                    #     children=["Open form idalog"],
-                    #     variant="outlined",
-                    #     onClick=lambda x: surrogate(),
-                    # )
+#                         no_upload = MuiActionMenu(
+#                             mode=["edit", "delete"],
+#                             key="no_upload_menu",
+#                             onClick=FileActionDialog.buildDialogOpener(),
+#                         )
+#                         no_upload.render()
 
-                    # def handle_form_submit(event, action):
-                    #     # Prevent the default form submission behavior
-                    #     # Extract form data
-                    #     handleClose(event, action)
-                    #     print(st.session_state.email_form)
+#                         ## BreadCrumb
+#                         def breadCrumbClickHandler(event: dict):
+#                             clicked_path = event["target"]["value"]
+#                             if clicked_path == curr_file.path:
+#                                 action_menu.buildMenuOpener(file=curr_file)(event)
+#                             else:
+#                                 logger.info(clicked_path)
 
-                    # def set_email(event):
-                    #     print("set_email called")
-                    #     st.session_state.email_form = event["target"]["value"]
+#                         MuiFilePathBreadcrumbs(
+#                             file=curr_file,
+#                             key="curr_dir_breadcrumb",
+#                             onClick=breadCrumbClickHandler,
+#                         ).render()
 
-                    # with mui.Dialog(
-                    #     open=st.session_state.dialogOpen,
-                    #     onClose=handleClose,
-                    #     PaperProps={
-                    #         "component": "form",
-                    #         "onSubmit": handle_form_submit,
-                    #     },
-                    # ):
-                    #     mui.DialogTitle(children=["Rename"])
+#                         ## File List
+#                         def fileListMoreHandler(event: dict):
+#                             file = event["target"]["value"]
+#                             if file != None:
+#                                 logger.debug("Calling MenuOpener")
+#                                 no_upload.buildMenuOpener(file=file)(event)
+                        
+#                         file_list = MuiFileList(
+#                             file_list=map(convert_to_quetzal_files, TEST_FILE_LIST), 
+#                             max_height="calc(100% - 48px)", 
+#                             key="main",
+#                             onClickMore=fileListMoreHandler,
+#                         )
+#                         file_list.render()
 
-                    #     with mui.DialogContent():
-                    #         mui.TextField(
-                    #             autoFocus=True,
-                    #             required=True,
-                    #             margin="dense",
-                    #             id="email",
-                    #             name="email",
-                    #             label="Email Address",
-                    #             type="email",
-                    #             fullWidth=True,
-                    #             variant="standard",
-                    #             onChange=lazy(lambda value: set_email(value)),
-                    #         )
+#                         ## Click Focus Handler
+#                         on_focus_handler.setScanner(key="file_list")
+#                         on_focus_handler.registerHandler(keys="file_list", handler=lambda: MuiActionMenu.resetAnchor(
+#                                     exculde_keys=["full_menu", "no_upload_menu"]
+#                                 ))
+#                         on_focus_handler.registerHandler(file_list.onFocusOut)
 
-                    #     with mui.DialogActions():
-                    #         with mui.Button(onClick=handleClose, sx={}):
-                    #             mui.Typography(
-                    #                 "Cancel",
-                    #                 sx={"textTransform": "none", "fontSize": 14},
-                    #             )
-                    #         with mui.Button(
-                    #             type="submit",
-                    #             onClick=lambda event: handle_form_submit(
-                    #                 event, "submit"
-                    #             ),
-                    #         ):
-                    #             mui.Typography(
-                    #                 "Subscribe",
-                    #                 sx={"textTransform": "none", "fontSize": 14},
-                    #             )
-
-        # # Button that opens the dialog
-        # if st.button("Contact us"):
-        #     st.session_state.show = True
-        #     st.rerun()
 
 
 with info_c:
     with stylable_container(
-        key="slider_value",
+        key="file_info",
         css_styles=f"""{{
-                    display: block;
-                    # position: absolute;
-                    # right: 0px !important;
-                    # width: {INFO_WIDTH}px !important;
-                    .stSlider {{
-                        position: absolute;
-                        right: 0px !important;
-                        width: {INFO_WIDTH}px !important;
-                    }}
-                }}
-                """,
+            display: block;
+            # position: absolute;
+            # right: 0px !important;
+            # width: {INFO_WIDTH}px !important;
+            div {{
+                width: 100%;
+                height: auto;
+            }}
+            iframe {{
+                # position: absolute;
+                # right: 0px !important;
+                width: {INFO_WIDTH}px !important;
+                height: 100px;
+            }}
+            
+            .stSlider {{
+                position: absolute;
+                right: 0px !important;
+                width: {INFO_WIDTH}px !important;
+            }}
+        }}
+        """,
     ):
-        st.slider(
-            value=0,
-            label="Info!",
-            min_value=0,
-            max_value=100,
-            step=1,
-            format=f"%d",
-        )
+        
+        with stylable_container(
+            key="file_info2",
+            css_styles=f"""{{
+                display: block;
+                border-radius: 1rem 1rem 1rem 1rem;
+                height: calc({window_height}px - {padding} - 0.5rem);
+                position: absolute;
+                right: 0px !important;
+                width: {INFO_WIDTH}px !important;
+                background-color: white;
+            }}
+            """,
+        ):
+            st.header("quetzal")
+            st.slider(
+                value=0,
+                label="Info!",
+                min_value=0,
+                max_value=100,
+                step=1,
+                format=f"%d",
+            )
+            with elements("info_1"):
+                with mui.Paper(
+                    variant="outlined",
+                    sx={
+                        "borderRadius": 0,
+                        "border": "0px",
+                        "width": "100%",
+                        "height": "5rem",
+                        "bgcolor": BACKGROUND_COLOR,
+                        "m": "0px",
+                        "padding": "0",
+                        # "position": "absolute",
+                        "left": "0px",
+                        "top": "0px",
+                    },
+                ):
+                    with mui.Paper(
+                        variant="outlined",
+                        sx={
+                            "borderRadius": "1rem",
+                            "border": "0px",
+                            "height": "5rem",
+                            "bgcolor": "white",
+                            "padding": "1rem",
+                            # "margin-right": "1rem",
+                            # "padding-right" : "2rem",
+                        },
+                    ):
+                    
+                        mui.Typography(
+                            variant="h5",
+                            component="div",
+                            children=["Info"],
+                            sx={"margin-bottom": "0.5rem"},
+                        )
+                
+            st.title("WHAT")
+            st.selectbox("hello", options=["what", "is","this"])
 
 # with st.container(border=True):
 #     if st.session_state.controller == "playback":
@@ -688,6 +909,6 @@ with info_c:
 #         st.session_state.wakeup_time += datetime.timedelta(seconds=0.5)
 #         st.session_state.next_frame = True
 #         st.rerun()
-StreamlitDialog().render()
+FileActionDialog().render()
 
-MuiActionMenu.resetAnchor()
+# MuiActionMenu.resetAnchor()

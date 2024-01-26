@@ -8,9 +8,54 @@ from streamlit_extras.stylable_container import stylable_container
 from streamlit_float import *
 from quetzal_app.utils.utils import *
 from functools import partial
+import logging
+from threading import Lock
 
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+debug = lambda *args: logger.debug(" ".join([str(arg) for arg in args]))
 
 PRIMARY_COLOR = "#c9e6fd"
+
+
+class MuiOnFocusHandler:
+    all_key = "all_scanners"
+
+    def __init__(self):
+        self.clickAwayHandlers = {self.all_key: []}
+
+    def clickAwayHandler(self, key):
+        if key in self.clickAwayHandlers:
+            for handler in self.clickAwayHandlers[key]:
+                handler()
+        for handler in self.clickAwayHandlers[self.all_key]:
+            handler()
+
+    def registerHandler(self, handler, keys=None):
+        # if key is missing, it register handlers to all existing scanner
+        if keys == None:
+            keys = [self.all_key]
+        elif not isinstance(keys, list):
+            keys = [keys]
+
+        if isinstance(handler, list):
+            for key in keys:
+                self.clickAwayHandlers[key].extend(handler)
+        else:
+            assert callable(handler)
+            for key in keys:
+                self.clickAwayHandlers[key].append(handler)
+
+    def setScanner(self, key):
+        self.clickAwayHandlers[key] = self.clickAwayHandlers.setdefault(key, [])
+
+        with mui.ClickAwayListener(
+            mouseEvent="onMouseDown",
+            touchEvent="onTouchStart",
+            onClickAway=lambda: self.clickAwayHandler(key),
+        ):
+            mui.Typography(" ")
 
 
 class MuiToggleButton:
@@ -31,10 +76,11 @@ class MuiToggleButton:
                 },
             )
 
+        return self
+
 
 class MuiSideBarMenu:
     toggle_buttons_style = {
-        # "gap": "1rem",
         "width": "100%",
         "& .MuiToggleButtonGroup-grouped": {
             "border": 0,
@@ -53,7 +99,6 @@ class MuiSideBarMenu:
         },
         "& .MuiToggleButton-root": {
             "&.Mui-selected": {
-                # "color": "#c9e6fd",
                 "bgcolor": PRIMARY_COLOR,
                 "&:hover": {"bgcolor": PRIMARY_COLOR},
             },
@@ -87,46 +132,44 @@ class MuiSideBarMenu:
             for button in self.toggle_buttons:
                 button.render()
 
+        return self
+
 
 class MuiFileList:
     list_style = {
         "py": "0px",
-        "& .MuiListItem-root": {
-            "py": "6px",
-            "&:hover": {"backgroundColor": "grey.200"},
-            "&.Mui-selected": {
-                "bgcolor": PRIMARY_COLOR,
-                "&:hover": {"bgcolor": PRIMARY_COLOR},
-            },
-        },
+        # "& .MuiListItem-root": {
+        #     "py": "6px",
+        #     "&.Mui-selected": {
+        #         "bgcolor": "transparent",
+        #     },
+        # },
     }
 
-    sub_header_style = {
-        "&:hover": {"backgroundColor": "white !important"},
-    }
+    @property
+    def selected_item(self) -> QuetzalFile:
+        return st.session_state.MuiFileListState[self.key]["item"]
 
-    @staticmethod
-    def handleClickAway(self):
-        st.session_state.MuiFileListState[self.key]["item"] = -1
-        print(st.session_state.MuiFileListState)
+    @selected_item.setter
+    def selected_item(self, value: QuetzalFile):
+        st.session_state.MuiFileListState[self.key]["item"] = value
 
-    @staticmethod
-    def openSymbolHelp(self, event):
-        st.session_state.MuiFileListState[self.key]["help_anchor"] = {
-            "top": event["clientY"],
-            "left": event["clientX"],
-        }
-        print(st.session_state.MuiFileListState)
-
-    @staticmethod
-    def closeSymbolHelp(self, event):
-        st.session_state.MuiFileListState[self.key]["help_anchor"] = None
-        print(st.session_state.MuiFileListState)
-
-    def __init__(self, file_list, max_height="50%", key="main"):
+    def __init__(
+        self, 
+        file_list, 
+        max_height="50%", 
+        key="main",
+        onClick=None,
+        onDoubleClick=None,
+        onClickMore=None,
+        
+    ):
         self.file_list = file_list
         self.max_height = max_height
         self.key = key
+        self.onClick = onClick
+        self.onDoubleClick = onDoubleClick
+        self.onClickMore = onClickMore
 
         if "MuiFileListState" not in st.session_state:
             st.session_state.MuiFileListState = {key: {"item": -1, "help_anchor": None}}
@@ -137,6 +180,33 @@ class MuiFileList:
                     "help_anchor": None,
                 }
 
+    def openSymbolHelp(self, event):
+        st.session_state.MuiFileListState[self.key]["help_anchor"] = {
+            "top": event["clientY"],
+            "left": event["clientX"],
+        }
+        debug(
+            "MuiFileList.openSymbolHelp: state =",
+            st.session_state.MuiFileListState,
+            "\n",
+        )
+
+    def closeSymbolHelp(self, event):
+        st.session_state.MuiFileListState[self.key]["help_anchor"] = None
+        debug(
+            "MuiFileList.closeSymbolHelp: state =",
+            st.session_state.MuiFileListState,
+            "\n",
+        )
+
+    def onFocusOut(self):
+        st.session_state.MuiFileListState[self.key]["item"] = -1
+        debug(
+            "MuiFileList.handleClickAway: state =",
+            st.session_state.MuiFileListState,
+            "\n",
+        )
+        
     def symbolHelper(self):
         anchor = st.session_state.MuiFileListState[self.key]["help_anchor"]
         icon_style = {"fontSize": 14}
@@ -200,7 +270,6 @@ class MuiFileList:
                     direction="row",
                     alignItems="center",
                     justifyContent="center",
-                    # sx={"py": "1px"},
                 ):
                     getattr(
                         mui.icon, MuiFileListItem.progress_icon[AnalysisProgress.HALF]
@@ -212,6 +281,12 @@ class MuiFileList:
                     mui.Typography("Full Analysis for the Database Done", sx=text_style)
 
     def render(self):
+        def buildItemClickHandler(id):
+            def _onClick(event):
+                self.selected_item = id
+                if self.onClick: self.onClick(event)
+            return _onClick
+
         with mui.Paper(
             variant="outlined",
             sx={
@@ -223,44 +298,39 @@ class MuiFileList:
                 "padding": "0px",
             },
         ):
-            # assert st.session_state.has_key("MuiFileListState")
-
             with mui.ListSubheader(
                 component="div",
                 sx={"px": "0px"},
             ):
-                with mui.ListItem(
-                    divider=False,
-                    sx=MuiFileList.sub_header_style,
-                ):
+                with mui.ListItem(divider=False):
                     mui.ListItemIcon(mui.icon.NoIcon())
-                    mui.ListItemText(primary="Name")
+                    MuiFileListItem.listTextFormater(filename="Name", owner="Created by")
                     mui.Typography(
                         "State",
                         sx={"px": "8px"},
-                        onMouseEnter=lambda event: MuiFileList.openSymbolHelp(
-                            self, event
-                        ),
-                        onMouseLeave=lambda event: MuiFileList.closeSymbolHelp(
-                            self, event
-                        ),
+                        onMouseEnter=self.openSymbolHelp,
+                        onMouseLeave=self.closeSymbolHelp,
                     )
                     mui.ListItemIcon(mui.icon.NoIcon())
                 mui.Divider()
 
-            with mui.ClickAwayListener(
-                mouseEvent="onMouseDown",
-                touchEvent="onTouchStart",
-                onClickAway=lambda: MuiFileList.handleClickAway(self),
+            with mui.List(
+                dense=True,
+                sx=MuiFileList.list_style,
             ):
-                with mui.List(
-                    dense=True,
-                    sx=MuiFileList.list_style,
-                ):
+                mui.Divider()
+                for i, file in enumerate(self.file_list):
+                    MuiFileListItem(
+                        key=self.key,
+                        onClick=buildItemClickHandler(i),
+                        onClickMore=self.onClickMore,
+                        file=file,
+                        selected=(self.selected_item == i),
+                    ).render()
                     mui.Divider()
-                    for i, items in enumerate(self.file_list):
-                        MuiFileListItem(idx=i, key=self.key, **items).render()
+
             self.symbolHelper()
+        return self
 
 
 class MuiFileListItem:
@@ -283,86 +353,190 @@ class MuiFileListItem:
         AnalysisProgress.HALF: "CheckCircleOutline",
         AnalysisProgress.NONE: "NotInterestedOutlined",
     }
-
+    
+    # item_style = {
+    #     "py": "6px",
+    #     "&.Mui-selected": {
+    #         "bgcolor": "transparent",
+    #     },
+    # }
+    
+    more_icon_style = {
+        False: {
+            "margin":"0px 7px 0px 0px !important", 
+            "padding":0, 
+        },
+        True: {
+            "margin":"0px 7px 0px 0px !important", 
+            "padding":0, 
+        }, 
+    }
+    
+    list_style = {
+        False: {
+            "&:hover": {
+                "bgcolor": "grey.200"
+            },
+            "& .MuiListItem-root": {
+                "py": "6px",
+                "pr": "0.7rem",
+                "&.Mui-selected": {
+                    "bgcolor": "transparent",
+                },
+            },
+        },
+        True: {
+            "bgcolor": PRIMARY_COLOR,
+            "&:hover": {
+                "bgcolor": PRIMARY_COLOR
+            },
+            "& .MuiListItem-root": {
+                "py": "6px",
+                "pr": "0.7rem",
+                "&.Mui-selected": {
+                    "bgcolor": "transparent",
+                },
+            },
+        }, 
+    }
+    
+    # "&:hover": {"backgroundColor": "grey.200"},
+            # "&.Mui-selected": {
+                # "bgcolor": PRIMARY_COLOR,
+                # "&:hover": {"bgcolor": PRIMARY_COLOR},
+            # },
+        
     @staticmethod
-    def handleItemSelect(self):
-        st.session_state.MuiFileListState[self.key]["item"] = self.idx
-        print(st.session_state.MuiFileListState)
-        if self.onClick:
-            self.onClick()
+    def listTextFormater(filename, owner):
+        grid = mui.Grid(
+            container=True,
+            children=[
+                mui.Grid(mui.ListItemText(primary=filename), item=True, xs=8),
+                mui.Grid(
+                    mui.ListItemText(primary=owner),
+                    item=True,
+                    xs=4,
+                ),
+            ],
+        )
+        return grid
+    
+    def buildClickHandler(self, handler):
+        def _handlerWithValue(event: dict):
+            # self.lock.acquire()
+            debug("before Call", st.session_state.ActionMenuInput)
+            debug("MuiFileListItem.valuedHandler: ", handler)
+            event["target"] = event.setdefault("target", dict())
+            event["target"]["value"] = self.file
+            if handler: handler(event)
+            if self.moreClicked and self.onClickMore:
+                debug("OnClickMOre!")
+                self.onClickMore(event)
+            debug("after call", st.session_state.ActionMenuInput)
+            # self.lock.release()
+            # self.lock.
+
+        return _handlerWithValue
 
     def __init__(
         self,
-        name: str,
-        type: FileType,
-        state: Dict[str, Union[Visibility, AnalysisProgress, Permission]],
-        idx,
+        file: QuetzalFile,
+        selected,
         key,
         onClick=None,
+        onClickMore=None,
+        onDoubleClick=lambda x: debug("DOUBLECLICKED"),
     ):
-        # assert st.session_state.has_key("MuiFileListState")
-
-        self.name = name
-        self.type = type
-        self.visibility = state["visibility"]
-        self.analysis_process = state["analyzed"]
-        self.permission = state["permission"]
-        self.idx = idx
+        self.file = file
+        self.selected = selected
         self.key = key
         self.onClick = onClick
+        self.onClickMore= onClickMore
+        self.onDoubleClick = onDoubleClick
+        self.moreClicked = False
+        self.lock = Lock()
+        
+    def _signalMoreClicked(self):
+        self.moreClicked = True
 
     def render(self):
-        secondary_action = mui.IconButton(edge="end", children=[mui.icon.MoreVert()])
+        file = self.file
+        
 
-        color_style = {"color": "#EA4335"} if self.type == FileType.FILE else {}
+        color_style = {"color": "#EA4335"} if file.type == FileType.FILE else {}
         list_item_icon = mui.ListItemIcon(
             getattr(
-                mui.icon, MuiFileListItem.file_type_icon[self.type][self.visibility]
+                mui.icon, MuiFileListItem.file_type_icon[file.type][file.visibility]
             )(sx=color_style)
         )
 
-        list_item_text = mui.ListItemText(primary=self.name)
+        list_item_text = MuiFileListItem.listTextFormater(
+            filename=file.get_name(), owner=file.owner if file.owner else " "
+        )
 
         state_icons = []
         state_icons.append(
-            getattr(mui.icon, MuiFileListItem.visibility_icon[self.visibility])(
+            getattr(mui.icon, MuiFileListItem.visibility_icon[file.visibility])(
                 sx=MuiFileListItem.STATE_ICON_STYLE
             )
         )
-        if self.type == FileType.FILE:
-            if self.analysis_process != AnalysisProgress.NONE:
+        if file.type == FileType.FILE:
+            if file.analysis_progress != AnalysisProgress.NONE:
                 state_icons.append(
                     getattr(
-                        mui.icon, MuiFileListItem.progress_icon[self.analysis_process]
+                        mui.icon, MuiFileListItem.progress_icon[file.analysis_progress]
                     )(sx=MuiFileListItem.STATE_ICON_STYLE)
                 )
-        elif self.type == FileType.DIRECTORY:
-            if self.visibility == Visibility.SHARED:
-                state_icons.append(
-                    getattr(mui.icon, MuiFileListItem.permission_icon[self.permission])(
-                        sx=MuiFileListItem.STATE_ICON_STYLE
-                    )
+        # elif file.type == FileType.DIRECTORY:
+        if file.visibility == Visibility.SHARED:
+            state_icons.append(
+                getattr(mui.icon, MuiFileListItem.permission_icon[file.permission])(
+                    sx=MuiFileListItem.STATE_ICON_STYLE
                 )
+            )
 
         states = mui.Stack(
             spacing=1,
             direction="row",
             alignItems="center",
             justifyContent="center",
-            sx={"my": 0, "pr": "32px", "minWidth": "40px"},
+            sx={"my": 0, "pr": "32px", "minWidth": "49px"},
             children=state_icons,
         )
 
-        return mui.ListItem(
-            secondaryAction=secondary_action,
-            divider=True,
-            button=True,
-            selected=(self.idx == st.session_state.MuiFileListState[self.key]["item"]),
-            children=[list_item_icon, list_item_text, states],
-            onDoubleClick=lambda: print("DOUBLE CLICKED"),
-            onClick=lambda: MuiFileListItem.handleItemSelect(self),
-            disableRipple=True,
-        )
+        # secondary_action = mui.IconButton(
+        #     edge="end", 
+        #     children=[mui.icon.MoreVert()],
+        #     onClick=self.buildClickHandler(self.onClickMore),
+        #     sx={"p":0},
+        # )
+            
+        with mui.Stack(
+            spacing=0.01,
+            direction="row",
+            alignItems="center",
+            justifyContent="center",
+            sx=self.list_style[self.selected]
+        ):
+            mui.ListItem(
+                # secondaryAction=secondary_action,
+                # divider=True,
+                button=True,
+                selected=self.selected,
+                children=[list_item_icon, list_item_text, states],
+                onDoubleClick=self.buildClickHandler(self.onDoubleClick),
+                onClick=self.buildClickHandler(self.onClick),
+                disableRipple=True,
+            )
+            mui.IconButton(
+                edge="end", 
+                children=[mui.icon.MoreVert()],
+                onClick=self.buildClickHandler(self.onClickMore),
+                sx={
+                    "margin":"0px 7px 0px 0px !important", 
+                    "padding":0, 
+                }, 
+            )
 
 
 class MuiActionMenu:
@@ -383,27 +557,32 @@ class MuiActionMenu:
         },
     }
 
-    # @property
-    # def file(self) -> QuetzalFile:
-    #     return st.session_state.ActionMenuInput[self.key]["file"]
+    @property
+    def file(self) -> QuetzalFile:
+        return st.session_state.ActionMenuInput[self.key]["file"]
 
-    # @file.setter
-    # def file(self, value: QuetzalFile):
-    #     st.session_state.ActionMenuInput[self.key]["file"] = value
+    @file.setter
+    def file(self, value: QuetzalFile):
+        st.session_state.ActionMenuInput[self.key]["file"] = value
 
-    # @property
-    # def anchor(self) -> Dict[str, int]:
-    #     return st.session_state.ActionMenuInput[self.key]["anchor"]
+    @property
+    def anchor(self) -> Dict[str, int]:
+        return st.session_state.ActionMenuInput[self.key]["anchor"]
 
-    # @anchor.setter
-    # def anchor(self, value: Dict[str, int]):
-    #     st.session_state.ActionMenuInput[self.key]["anchor"] = value
+    @anchor.setter
+    def anchor(self, value: Dict[str, int]):
+        st.session_state.ActionMenuInput[self.key]["anchor"] = value
 
     @staticmethod
-    def resetAnchor():
+    def resetAnchor(exculde_keys=[]):
+        if not isinstance(exculde_keys, list):
+            exculde_keys = [exculde_keys]
         # call this at the end
         for k, v in st.session_state.ActionMenuInput.items():
-            st.session_state.ActionMenuInput[k]["anchor"] = None
+            if k not in exculde_keys:
+                st.session_state.ActionMenuInput[k]["anchor"] = None
+
+        debug("MuiActionMenu.resetAnchor: Resetting")
 
     @staticmethod
     def initActionMenuState(key):
@@ -413,46 +592,46 @@ class MuiActionMenu:
             if key not in st.session_state.ActionMenuInput:
                 st.session_state.ActionMenuInput[key] = {"anchor": None, "file": None}
 
-    # @staticmethod
-    # def setFile(key, value: QuetzalFile):
-    #     st.session_state.ActionMenuInput[key]["file"] = value
-
-    # @staticmethod
-    # def getFile(key) -> QuetzalFile:
-    #     return st.session_state.ActionMenuInput[key]["file"]
-
-    # @staticmethod
-    # def setAnchor(key, value: Dict[str, int]):
-    #     st.session_state.ActionMenuInput[key]["anchor"] = value
-
-    # @staticmethod
-    # def getAnchor(key) -> Dict[str, int]:
-    #     return st.session_state.ActionMenuInput[key]["anchor"]
-
     def __init__(
         self,
         mode: List[Literal["upload", "edit", "delete", "download"]] = ["upload"],
         key="main",
-        action_handler: callable = None
+        onClick=None,
     ):
-        self.onClick = action_handler
+        self.onClick = onClick
         self.key = key
         self.mode = mode
 
         self.initActionMenuState(key)
 
     def handleClose(self, event, action: Action):
-        print("MuiActionMenu.handleClose: ", action)
-        st.session_state.ActionMenuInput[self.key]["anchor"] = None
-        # self.anchor = None
+        debug("MuiActionMenu.handleClose: Action =", action, event, "\n")
+        self.anchor = None
         if action != "backdropClick" and self.onClick != None:
-            self.onClick(st.session_state.ActionMenuInput[self.key]["file"], action)
-        print()
+            event["target"] = event.setdefault("target", dict())
+            event["target"]["value"] = {"file": self.file, "action": action}
+            self.onClick(event)
+
+    def buildMenuOpener(self, file: QuetzalFile):
+        def _openMenu(event):
+            self.openMenu(
+                file=file,
+                anchor={
+                    "top": event["clientY"],
+                    "left": event["clientX"],
+                },
+            )
+
+
+        return _openMenu
+
+    def openMenu(self, file: QuetzalFile, anchor: Dict[str, int]):
+        debug("ActionHandler.OpenMenu: ", file, anchor)
+        self.file = file
+        self.anchor = anchor
 
     def render(self):
-        # anchor = self.anchor
-        anchor = st.session_state.ActionMenuInput[self.key]["anchor"]
-
+        anchor = self.anchor
         with mui.Menu(
             anchorOrigin={
                 "vertical": "top",
@@ -468,14 +647,13 @@ class MuiActionMenu:
             onClose=self.handleClose,
             sx=MuiActionMenu.menu_style,
         ):
-            targetFile: QuetzalFile = st.session_state.ActionMenuInput[self.key]["file"]
-            # targetFile: QuetzalFile = self.file
+            targetFile: QuetzalFile = self.file
             if not targetFile:
-                return
-            
+                return self
+
             with mui.MenuList():
                 ### PUT/UPLOAD SECTION
-                if "upload" in self.mode:
+                if "upload" in self.mode and targetFile.type != FileType.FILE:
                     with mui.MenuItem(
                         onClick=lambda event: self.handleClose(event, Action.NEW_DIR),
                         disabled=(targetFile.permission == Permission.READ_ONLY),
@@ -523,7 +701,8 @@ class MuiActionMenu:
                         mui.ListItemText("Rename")
 
                     with mui.MenuItem(
-                        onClick=lambda event: self.handleClose(event, Action.SHARE)
+                        onClick=lambda event: self.handleClose(event, Action.SHARE),
+                        disabled=(targetFile.permission != Permission.FULL_WRITE),
                     ):
                         with mui.ListItemIcon():
                             mui.icon.Share(fontSize="small")
@@ -544,59 +723,40 @@ class MuiActionMenu:
                         mui.ListItemText("Delete")
                     self.mode.remove("delete")
 
+        return self
+
 
 class MuiFilePathBreadcrumbs:
     visibility_icon = {Visibility.SHARED: "GroupOutlined", Visibility.PRIVATE: "Lock"}
 
-    # def rename():
-    #     # call backend rename
+    chip_style = {
+        "border": "0px",
+        "& .MuiChip-label": {
+            "fontSize": 18,
+        },
+    }
 
-    #     st.page
+    broadcrumb_style = {
+        "py": "0.5rem",
+        "& .MuiBreadcrumbs-separator": {"mx": "0rem"},
+    }
 
     def __init__(self, file: QuetzalFile, key="main", onClick=None):
         self.file = file
         self.link_path = get_directory_list(file.path)
         self.onClick = onClick
         self.key = key
-        self.action_menu = MuiActionMenu(
-            mode=["upload", "edit", "delete"],
-            key=self.key,
-            action_handler=StreamlitDialog.initializeActionPrompt
-        )
 
     def render(self):
-        def handle_more(event, key):
-            st.session_state.ActionMenuInput[self.key]["anchor"] = {
-                "top": event["clientY"],
-                "left": event["clientX"],
-            }
-            # self.action_menu.anchor = {
-            #     "top": event["clientY"],
-            #     "left": event["clientX"],
-            # }
-            st.session_state.ActionMenuInput[self.key]["file"] = self.file
-            # self.action_menu.file = self.file
-            print("You clicked a breadcrumb more")
+        def buildClickHandler(clicked_path):
+            def handleClick(event: dict):
+                debug("MuiFilePathBreadcrumbs.handleClick: ", clicked_path)
+                event["target"] = event.setdefault("target", dict())
+                event["target"]["value"] = clicked_path
+                if self.onClick:
+                    self.onClick(event)
 
-        def make_click_handler(index):
-            def click_handler(event):
-                print("You clicked a breadcrumb")
-                print("Index:", index)
-
-            return click_handler
-
-        chip_style = {
-            "border": "0px",
-            "& .MuiChip-label": {
-                "fontSize": 18,
-            },
-        }
-
-        broadcrumb_style = {
-            # "px": "0.5rem",
-            "py": "0.5rem",
-            "& .MuiBreadcrumbs-separator": {"mx": "0rem"},
-        }
+            return handleClick
 
         state_icon_style = {"padding": "0.5rem", "fontSize": 18}
 
@@ -607,70 +767,56 @@ class MuiFilePathBreadcrumbs:
             justifyContent="start",
             sx={"my": 0},
         ):
+            clip_common_attr = {
+                "variant": "outlined",
+                "clickable": True,
+                "disableRipple": True,
+                "sx": MuiFilePathBreadcrumbs.chip_style,
+            }
+
             with mui.Breadcrumbs(
                 separator=mui.icon.NavigateNext(fontSize="medium"),
-                sx=broadcrumb_style,
+                sx=MuiFilePathBreadcrumbs.broadcrumb_style,
             ):
-                for i, label in enumerate(
-                    self.link_path[:-1]
-                ):  # Ensure you're using enumerate() here
+                for i, label in enumerate(self.link_path[:-1]):
                     mui.Chip(
                         label=label,
-                        onClick=make_click_handler(
-                            i
-                        ),  # Use the inner function as the event handler
-                        variant="outlined",
-                        clickable=True,
-                        disableRipple=True,
-                        sx=chip_style,
+                        onClick=buildClickHandler(
+                            os.path.join(*self.link_path[: i + 1])
+                        ),
+                        **clip_common_attr,
                     )
                 mui.Chip(
                     label=self.link_path[-1],
-                    onClick=lambda event: handle_more(event, len(self.link_path) - 1),
-                    onDelete=lambda event: handle_more(event, len(self.link_path) - 1),
+                    onClick=buildClickHandler(self.file.path),
+                    onDelete=buildClickHandler(self.file.path),
                     deleteIcon=mui.icon.ExpandMore(),
-                    variant="outlined",
-                    clickable=True,
-                    disableRipple=True,
-                    sx=chip_style,
+                    **clip_common_attr,
                 )
 
             getattr(
                 mui.icon, MuiFilePathBreadcrumbs.visibility_icon[self.file.visibility]
             )(sx=state_icon_style)
-            self.action_menu.render()
+
+        return self
 
 
 class UploadButton:
-    def __init__(self, file: QuetzalFile, key="main", onClick=None):
-        self.file = file
+    def __init__(self, key="main", onClick=None):
         self.onClick = onClick
         self.key = key
-        self.action_menu = MuiActionMenu(
-            mode=["upload"],
-            key=self.key,
-            action_handler=StreamlitDialog.initializeActionPrompt
-        )
 
     def render(self):
-        def handle_click(event):
-            st.session_state.ActionMenuInput[self.key]["anchor"] = {
-                "top": event["clientY"],
-                "left": event["clientX"],
-            }
-            # self.action_menu.anchor = {
-            #     "top": event["clientY"],
-            #     "left": event["clientX"],
-            # }
-            st.session_state.ActionMenuInput[self.key]["file"] = self.file
-            # self.action_menu.file = self.file
-            print("UploadButton.handle_click\n")
+        def handleClick(event):
+            debug("UploadButton.handleClick: Clicked\n")
+            if self.onClick:
+                self.onClick(event)
 
         with mui.Button(
             variant="contained",
             startIcon=mui.icon.Add(),
             disableRipple=True,
-            onClick=lambda event: handle_click(event),
+            onClick=lambda event: handleClick(event),
             sx={
                 "my": "1rem",
                 "mx": "1rem",
@@ -684,139 +830,148 @@ class UploadButton:
         ):
             mui.Typography("New", sx={"textTransform": "none", "fontSize": 14})
 
-        self.action_menu.render()
+        return self
 
 
 ## Action Handler
-class StreamlitDialog:
+class FileActionDialog:
     DIRECTORY_SHARE_INFO = "Sharing this directory will also apply the same settings to all its subdirectories and files."
     FILE_SHARE_INFO = "All other system users will have access to this file based on the assigned permissions."
     DELETE_INFO = " will be deleted forever and you won't be able to restore it."
 
-    @staticmethod
-    def initializeActionPrompt(file: QuetzalFile, action: Action):
-        print("initializeActionPrompt:", file, action)
-        # StreamlitDialog.file = file
-        # StreamlitDialog.action = action
-        st.session_state.MuiDialogState = {"file": file, "action": action}
-        
-    # @property
-    # def file(self) -> QuetzalFile:
-    #     return st.session_state.MuiDialogState["file"]
+    @property
+    def file(self) -> QuetzalFile:
+        return st.session_state.DialogState["file"]
 
-    # @file.setter
-    # def file(self, value: QuetzalFile):
-    #     st.session_state.MuiDialogState["file"] = value
-        
-    # @property
-    # def action(self) -> Action:
-    #     return st.session_state.MuiDialogState["action"]
+    @file.setter
+    def file(self, value: QuetzalFile):
+        st.session_state.DialogState["file"] = value
 
-    # @action.setter
-    # def action(self, value: Action):
-    #     st.session_state.MuiDialogState["action"] = value
-        
+    @property
+    def action(self) -> Action:
+        return st.session_state.DialogState["action"]
+
+    @action.setter
+    def action(self, value: Action):
+        st.session_state.DialogState["action"] = value
+
     @staticmethod
     def initDialogState():
-        if "MuiDialogState" not in st.session_state:
-            st.session_state.MuiDialogState = {"action": None, "file": None}
-    
-    # @staticmethod
-    # def setFile(value: QuetzalFile):
-    #     st.session_state.MuiDialogState["file"] = value
+        if "DialogState" not in st.session_state:
+            st.session_state.DialogState = {"action": None, "file": None}
 
-    # @staticmethod
-    # def getFile() -> QuetzalFile:
-    #     return st.session_state.MuiDialogState["file"]
-
-    # @staticmethod
-    # def setAction(value: Action):
-    #     st.session_state.MuiDialogState["action"] = value
-
-    # @staticmethod
-    # def getAction() -> Action:
-    #     return st.session_state.MuiDialogState["action"]
-    
     @staticmethod
-    def resetDialog():
-        print("RESET!")
-        st.session_state.MuiDialogState = {"action": None, "file": None}
-        # print(StreamlitDialog.file, StreamlitDialog.action)
-        print(st.session_state.MuiDialogState)
-        print(st.session_state.MuiDialogState["action"], st.session_state.MuiDialogState["file"])
-        # StreamlitDialog.file = None
-        # StreamlitDialog.action = None
-        
-    
-    def __init__(
-        self,
-        action_handler: callable = None
-    ):
-        self.action_handler = action_handler
-        
+    def buildDialogOpener():
+        def _openDialog(event):
+            debug("FileActionDialog.openDialog:", event["target"], "\n")
+            st.session_state.DialogState = event["target"]["value"]
+
+        return _openDialog
+
+    @staticmethod
+    def closeDialog():
+        debug("FileActionDialog.closeDialog\n")
+        st.session_state.DialogState = {"action": None, "file": None}
+        st.session_state.do_rerun = True
+
+    def _postProcessResult(self, value, action):
+        debug("FileActionDialog._postProcessResult\n")
+        print(value, action)
+        if action == Action.NEW_DIR:
+            value = {"dir_name": value}
+        if action == Action.UPLOAD_FILE:
+            value = {}
+        if action == Action.RENAME:
+            value = {"file_name": value}
+        if action == Action.SHARE:
+            value = {
+                "permission": getattr(Permission, value["permission"]),
+                "shared": Visibility.SHARED if value["shared"] else Visibility.PRIVATE,
+            }
+        if action == Action.DELETE:
+            value = {}
+        if action == Action.DOWNLOAD:
+            value = {}
+
+        return value
+
+    def handleClose(self, event):
+        print(event)
+        value = event["target"].get("value", None)
+        if value != None:
+            value = self._postProcessResult(value, self.action)
+            self.file.perform(self.action, value)
+        self.closeDialog()
+
+    def __init__(self, key="main", onSubmit=None):
+        self.onSubmit = onSubmit
+
         self.initDialogState()
 
         share_info = lambda file: (
-            StreamlitDialog.FILE_SHARE_INFO
+            FileActionDialog.FILE_SHARE_INFO
             if file.type == FileType.FILE
-            else StreamlitDialog.DIRECTORY_SHARE_INFO
+            else FileActionDialog.DIRECTORY_SHARE_INFO
         )
-        
+
         dialog_dict = dict()
-        dialog_dict[Action.NEW_DIR] = lambda file: StreamlitDialogItem(
+        dialog_dict[Action.NEW_DIR] = lambda file: MuiDialogItem(
             mode="input",
+            init_value="",
             title="New Project",
             submit_txt="Create",
-            onSubmit=partial(file.perform, action=Action.NEW_DIR),
+            onSubmit=self.handleClose,
         )
-        
-        dialog_dict[Action.UPLOAD_FILE] = lambda file: StreamlitDialogItem("upload")
-        
-        dialog_dict[Action.RENAME] = lambda file: StreamlitDialogItem(
+        dialog_dict[Action.UPLOAD_FILE] = lambda file: MuiDialogItem(
+            mode="upload",
+            submit_txt="Done",
+            onSubmit=self.handleClose, 
+        )
+        dialog_dict[Action.RENAME] = lambda file: MuiDialogItem(
             mode="input",
+            init_value=file.get_name(),
             title="Rename",
             submit_txt="OK",
-            onSubmit=partial(file.perform, action=Action.RENAME),
+            onSubmit=self.handleClose,
         )
-        
-        dialog_dict[Action.SHARE] = lambda file: StreamlitDialogItem(
+        dialog_dict[Action.SHARE] = lambda file: MuiDialogItem(
             mode="share",
+            init_value={
+                "shared": file.visibility == Visibility.SHARED,
+                "permission": file.permission.name,
+            },
             title="Share: " + file.get_name(),
             submit_txt="Save",
             info_txt=share_info(file),
-            onSubmit=partial(file.perform, action=Action.SHARE),
+            onSubmit=self.handleClose,
         )
-        
-        dialog_dict[Action.DELETE] = lambda file: StreamlitDialogItem(
-            "info",
-            "Delete forever?",
+        dialog_dict[Action.DELETE] = lambda file: MuiDialogItem(
+            mode="info",
+            title="Delete forever?",
             submit_txt="Delete Forever",
-            info_txt=file.get_name() + StreamlitDialog.DELETE_INFO,
-            onSubmit=partial(file.perform, action=Action.DELETE),
+            info_txt= f'"{file.get_name()}"' + FileActionDialog.DELETE_INFO,
+            onSubmit=self.handleClose,
         )
-        
-        
         dialog_dict[Action.DOWNLOAD] = None
-        
-        self.dialogs = dialog_dict
-            
-    def render(self):
-        # file: QuetzalFile = self.file
-        # action: Action = self.action
-        file: QuetzalFile = st.session_state.MuiDialogState["file"]
-        action: Action = st.session_state.MuiDialogState["action"]
-        
-        # print(action, action)
-        if not file:
-            return
-        
-        print("there is file")
-        # print(self.dialogs)
-        print(file)
-        self.dialogs[action](file).render()
-        
 
-class StreamlitDialogItem:
+        self.dialogs = dialog_dict
+
+    def openDialog(self, file: QuetzalFile, action: Action):
+        self.file = file
+        self.action = action
+
+    def render(self):
+        debug("FileActionDialog.render: file =", self.file, "\n")
+
+        if not self.file:
+            return self
+
+        self.dialogs[self.action](self.file).render()
+
+        return self
+
+
+class MuiDialogItem:
     font_style = {"textTransform": "none", "fontSize": 14, "fontWeight": 500}
     cancel_button_style = {
         "height": "32px",
@@ -866,16 +1021,14 @@ class StreamlitDialogItem:
         },
     }
     toggle_buttons_style = {
-        # "gap": "1rem",
         "width": "100%",
         "& .MuiToggleButtonGroup-grouped": {
             "border": 0,
-            "mx": "1rem",
-            "px": "1.0rem",
-            "py": "0.2rem",
+            "mx": "0.3rem",
+            "py": "0.5rem",
             "justifyContent": "start",
             "justifyItem": "start",
-            "gap": "0.8rem",
+            "gap": "0.3rem",
             "&:not(:last-of-type)": {
                 "borderRadius": "1rem",
             },
@@ -885,7 +1038,6 @@ class StreamlitDialogItem:
         },
         "& .MuiToggleButton-root": {
             "&.Mui-selected": {
-                # "color": "#c9e6fd",
                 "bgcolor": PRIMARY_COLOR,
                 "&:hover": {"bgcolor": PRIMARY_COLOR},
                 "&.Mui-disabled": {
@@ -894,6 +1046,7 @@ class StreamlitDialogItem:
             },
             "&:hover": {"bgcolor": "grey.200"},
             "fontSize": 14,
+            "& > p": {"lineHeight": 1.2},
         },
     }
 
@@ -903,74 +1056,199 @@ class StreamlitDialogItem:
     DIALOG_SHARE_HEIGHT = 251
     DIALOG_DOWNLOAD_WIDTH = 600
     
-    @staticmethod
-    def initActionMenuState(key):
-        if "ActionMenuInput" not in st.session_state:
-            st.session_state.ActionMenuInput = {key: {"anchor": None, "file": None}}
-        else:
-            if key not in st.session_state.ActionMenuInput:
-                st.session_state.ActionMenuInput[key] = {"anchor": None, "file": None}
+    share_option_buttons = [
+        MuiToggleButton(
+            Permission.READ_ONLY.name,
+            MuiFileListItem.permission_icon[
+                Permission.READ_ONLY
+            ],
+            "Read Only",
+        ),
+        MuiToggleButton(
+            Permission.POST_ONLY.name,
+            MuiFileListItem.permission_icon[
+                Permission.POST_ONLY
+            ],
+            "Post Only",
+        ),
+        MuiToggleButton(
+            Permission.FULL_WRITE.name,
+            MuiFileListItem.permission_icon[
+                Permission.FULL_WRITE
+            ],
+            "Full Write",
+        ),
+    ]
 
+    @staticmethod
+    def initDialogItemData():
+        if "DialogItemState" not in st.session_state:
+            st.session_state.DialogItemState = None
 
     def __init__(
         self,
         mode: Literal["info", "input", "share"],
-        init_value = "",
+        init_value="",
         title: str = "Rename",
         submit_txt: str = "OK",
         info_txt: str = "",
         key="main",
+        open=True,
         onSubmit=None,
+        onClose=None,
     ):
         self.onSubmit = onSubmit
+        self.onClose = onSubmit if onClose == None else onClose
         self.key = key
         self.mode: Literal["info", "input", "share", "upload"] = mode
         self.title = title
         self.submit_txt = submit_txt
         self.info_txt = info_txt
         self.target_value = init_value
-        
-        self.dialog_width = StreamlitDialogItem.DIALOG_WIDTH
-        self.dialog_height = StreamlitDialogItem.DIALOG_HEIGHT
+        self.open = open
+
+        self.initDialogItemData()
+        if st.session_state.DialogItemState == None:
+            st.session_state.DialogItemState = init_value
+
+        self.dialog_width = MuiDialogItem.DIALOG_WIDTH
+        self.dialog_height = MuiDialogItem.DIALOG_HEIGHT
         if mode != "input":
-            self.dialog_width = StreamlitDialogItem.DIALOG_INFO_WIDTH
+            self.dialog_width = MuiDialogItem.DIALOG_INFO_WIDTH
         if mode == "share":
-            self.dialog_height = StreamlitDialogItem.DIALOG_SHARE_HEIGHT
+            self.dialog_height = MuiDialogItem.DIALOG_SHARE_HEIGHT
         if mode == "upload":
-            self.dialog_width = StreamlitDialogItem.DIALOG_DOWNLOAD_WIDTH
+            self.dialog_width = MuiDialogItem.DIALOG_DOWNLOAD_WIDTH
 
-    def handleClose(self):
-        print("Dialog closed")
-        StreamlitDialog.resetDialog()
-        st.experimental_rerun()
+    def handleClose(self, event):
+        debug("MuiDialogItem.handleClose: Dialog closed\n")
+        if self.onClose:
+            self.onClose(event)
+        st.session_state.DialogItemState = None
 
-    def handleFormSubmit(self):
-        
+    def handleFormSubmit(self, event):
+        debug("MuiDialogItem.handleFormSubmit: onSubmit =", self.onSubmit)
         if self.onSubmit != None:
-            print("Submit!")
-            print(self.target_value)
-            self.onSubmit(input=self.target_value)
-        self.handleClose()
-        
+            event["target"] = event.setdefault("target", dict())
+            event["target"]["value"] = st.session_state.DialogItemState
+            debug(
+                "MuiDialogItem.handleFormSubmit: result = ",
+                st.session_state.DialogItemState,
+            )
+
+            self.onSubmit(event)
+        st.session_state.DialogItemState = None
 
     def takeUserInput(self, event):
-        print("takeUserInput called")
-        print(event)
-        self.target_value = event["target"]["value"]
+        debug("MuiDialogItem.takeUserInput: event['target'] = ", event["target"])
+        st.session_state.DialogItemState = event["target"]["value"]
 
     def updateShare(self, event):
-        self.target_value["shared"] = not self.target_value["shared"] 
+        st.session_state.DialogItemState[
+            "shared"
+        ] = not st.session_state.DialogItemState["shared"]
 
     def handlePermission(self, event, controller):
         if controller != None:
-            self.target_value["permission"] = controller
+            st.session_state.DialogItemState["permission"] = controller
 
-    def _renderUpload(self):
+    def render_title(self):
+        with mui.Stack(
+            spacing=0,
+            direction="row",
+            alignItems="start",
+            justifyContent="space-between",
+            sx={"my": 0},
+        ):
+            mui.Typography(
+                variant="h5",
+                component="div",
+                children=[self.title],
+                sx={"margin-bottom": "0.5rem"},
+            )
+
+            with mui.IconButton(
+                onClick=self.handleClose, sx={"fontSize": 18, "p": 0}
+            ):
+                mui.icon.Close(fontSize="inherit")
+                
+    def render_input_textfield(self):
+        mui.TextField(
+            defaultValue=st.session_state.DialogItemState,
+            autoFocus=True,
+            required=True,
+            fullWidth=True,
+            margin="dense",
+            variant="outlined",
+            onChange=lazy(lambda value: self.takeUserInput(value)),
+            sx=MuiDialogItem.text_field_style,
+        )
+        
+    def render_info_text(self):
+        mui.Typography(
+            variant="body2",
+            gutterBottom=True,
+            children=self.info_txt,
+            sx={"height": "54px"},
+        )
+        
+    def render_share_options(self):
+        with mui.Stack(
+            direction="row",
+            spacing=0,
+            alignItems="center",
+            justifyContent="center",
+            sx={"height": "54px"},
+        ):
+            # mui.icon.Compare(sx={"py": "7px"})
+            mui.Typography("Share", sx={"fontSize": 14})
+            switch_on = st.session_state.DialogItemState["shared"]
+            mui.Switch(
+                checked=switch_on,
+                onChange=self.updateShare,
+            )
+
+            ## Share Permission
+            with mui.ToggleButtonGroup(
+                value=st.session_state.DialogItemState[
+                    "permission"
+                ],
+                onChange=self.handlePermission,
+                exclusive=True,
+                disabled=not switch_on,
+                sx=MuiDialogItem.toggle_buttons_style,
+            ):
+                for button in self.share_option_buttons:
+                    button.render()
+            
+    def render_submit_button(self):
+        with mui.Stack(
+            spacing=0,
+            direction="row",
+            alignItems="start",
+            justifyContent="end",
+            sx={"mt": "1.35rem", "mb": "1rem"},
+        ):
+            with mui.Button(
+                onClick=self.handleClose,
+                sx=MuiDialogItem.cancel_button_style,
+            ):
+                mui.Typography("Cancel", sx=MuiDialogItem.font_style)
+            with mui.Button(
+                type="submit",
+                onClick=self.handleFormSubmit,
+                sx=MuiDialogItem.ok_button_style,
+            ):
+                mui.Typography(
+                    self.submit_txt, sx=MuiDialogItem.font_style
+                )
+                    
+    def renderUpload(self):
         float_dialog_css = float_css_helper(
             width=f"{self.dialog_width}px", padding="2rem 2rem 2rem"
         )
         dialog_container = float_dialog(
-            bool(st.session_state.MuiDialogState["file"]),
+            self.open,
             background="var(--default-backgroundColor)",
             transition_from="center",
             css=float_dialog_css,
@@ -1001,35 +1279,18 @@ class StreamlitDialogItem:
                     """,
             ):
                 with elements("dialog_elements_" + self.key):
-                    with mui.Stack(
-                        spacing=0,
-                        direction="row",
-                        alignItems="start",
-                        justifyContent="end",
-                        sx={"mt": "1.35rem", "mb": "1rem"},
-                    ):
-                        with mui.Button(
-                            onClick=self.handleClose,
-                            sx=StreamlitDialogItem.cancel_button_style,
-                        ):
-                            mui.Typography("Cancel", sx=StreamlitDialogItem.font_style)
-                        with mui.Button(
-                            type="submit",
-                            onClick=self.handleFormSubmit,
-                            sx=StreamlitDialogItem.ok_button_style,
-                        ):
-                            mui.Typography("Done", sx=StreamlitDialogItem.font_style)
-
+                    self.render_submit_button()
+                            
     def render(self):
         if self.mode == "upload":
-            self._renderUpload()
-            return
+            self.renderUpload()
+            return self
 
         float_dialog_css = float_css_helper(
             width=f"{self.dialog_width}px", padding="1.5rem 1.5rem 0rem"
         )
         dialog_container = float_dialog(
-            bool(st.session_state.MuiDialogState["file"]),
+            self.open,
             background="var(--default-backgroundColor)",
             transition_from="center",
             css=float_dialog_css,
@@ -1037,7 +1298,7 @@ class StreamlitDialogItem:
 
         with dialog_container:
             with stylable_container(
-                key="dialog_container_"+self.key,
+                key="dialog_container_" + self.key,
                 css_styles=f"""{{
                         display: block;
                         div {{
@@ -1067,119 +1328,20 @@ class StreamlitDialogItem:
                         },
                     ):
                         ## Title + Exit Button
-                        with mui.Stack(
-                            spacing=0,
-                            direction="row",
-                            alignItems="start",
-                            justifyContent="space-between",
-                            sx={"my": 0},
-                        ):
-                            mui.Typography(
-                                variant="h5",
-                                component="div",
-                                children=[self.title],
-                                sx={"margin-bottom": "0.5rem"},
-                            )
-
-                            with mui.IconButton(
-                                onClick=self.handleClose, sx={"fontSize": 18, "p": 0}
-                            ):
-                                mui.icon.Close(fontSize="inherit")
+                        self.render_title()
 
                         ## Input Textfield
                         if self.mode == "input":
-                            mui.TextField(
-                                autoFocus=True,
-                                required=True,
-                                margin="dense",
-                                fullWidth=True,
-                                variant="outlined",
-                                defaultValue=self.target_value,
-                                onChange=lazy(lambda value: self.takeUserInput(value)),
-                                sx=StreamlitDialogItem.text_field_style,
-                            )
+                            self.render_input_textfield()
 
                         ## Info Text
                         if self.mode == "info" or self.mode == "share":
-                            mui.Typography(
-                                variant="body2",
-                                gutterBottom=True,
-                                children=self.info_txt,
-                                sx={"height": "54px"},
-                            )
+                            self.render_info_text()
 
                         ## Share Setting
                         if self.mode == "share":
-                            with mui.Stack(
-                                direction="row",
-                                spacing=0,
-                                alignItems="center",
-                                justifyContent="center",
-                                sx={"height": "54px"},
-                            ):
-                                # mui.icon.Compare(sx={"py": "7px"})
-                                mui.Typography("Share", sx={"fontSize": 14})
-                                switch_on = self.target_value["shared"]
-                                mui.Switch(
-                                    checked=switch_on,
-                                    onChange=self.updateShare,
-                                )
-
-                                ## Share Permission
-                                toggle_buttons = [
-                                    MuiToggleButton(
-                                        Permission.READ_ONLY.name,
-                                        MuiFileListItem.permission_icon[
-                                            Permission.READ_ONLY
-                                        ],
-                                        "Read Only",
-                                    ),
-                                    MuiToggleButton(
-                                        Permission.POST_ONLY.name,
-                                        MuiFileListItem.permission_icon[
-                                            Permission.POST_ONLY
-                                        ],
-                                        "Post Only",
-                                    ),
-                                    MuiToggleButton(
-                                        Permission.FULL_WRITE.name,
-                                        MuiFileListItem.permission_icon[
-                                            Permission.FULL_WRITE
-                                        ],
-                                        "Full Write",
-                                    ),
-                                ]
-
-                                with mui.ToggleButtonGroup(
-                                    value=self.target_value["permission"],
-                                    onChange=self.handlePermission,
-                                    exclusive=True,
-                                    disabled=not switch_on,
-                                    sx=StreamlitDialogItem.toggle_buttons_style,
-                                ):
-                                    for button in toggle_buttons:
-                                        button.render()
+                            self.render_share_options()
 
                         ## Cancel + OK button
-                        with mui.Stack(
-                            spacing=0,
-                            direction="row",
-                            alignItems="start",
-                            justifyContent="end",
-                            sx={"mt": "1.35rem", "mb": "1rem"},
-                        ):
-                            with mui.Button(
-                                onClick=self.handleClose,
-                                sx=StreamlitDialogItem.cancel_button_style,
-                            ):
-                                mui.Typography(
-                                    "Cancel", sx=StreamlitDialogItem.font_style
-                                )
-                            with mui.Button(
-                                type="submit",
-                                onClick=self.handleFormSubmit,
-                                sx=StreamlitDialogItem.ok_button_style,
-                            ):
-                                mui.Typography(
-                                    self.submit_txt, sx=StreamlitDialogItem.font_style
-                                )
+                        self.render_submit_button()
+        return self
