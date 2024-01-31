@@ -1,7 +1,7 @@
 from streamlit_elements import elements, mui, lazy, sync
 from typing import Literal, List, Dict
 from typing import Union
-from quetzal_app.dtos import *
+from quetzal.dtos import *
 import streamlit as st
 from collections import defaultdict
 from streamlit_extras.stylable_container import stylable_container

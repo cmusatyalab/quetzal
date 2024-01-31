@@ -80,12 +80,15 @@ class AnyLocEngine(AbstractEngine):
         self.max_img_size = max_img_size
         self.device = device
         
-        db_version = DatabaseVideo(
-            query_video.root_datasets_dir, 
-            query_video.project_name,
-            query_video.video_name,
-            query_video.metadata_dir     
-        )
+        if query_video:
+            db_version = DatabaseVideo(
+                query_video.root_datasets_dir, 
+                query_video.project_name,
+                query_video.video_name,
+                query_video.metadata_dir     
+            )
+        else:
+            db_version = None
 
         vlad_ready = self._is_vlad_ready(database_video) and (self._is_vlad_ready(query_video) or self._is_vlad_ready(db_version))
 
@@ -223,6 +226,9 @@ class AnyLocEngine(AbstractEngine):
 
 
     def _migrate_db_to_query(self, query_video):
+        if query_video is None:
+            return
+        
         db_version = DatabaseVideo(
             query_video.root_datasets_dir, 
             query_video.project_name,
@@ -362,7 +368,7 @@ class AnyLocEngine(AbstractEngine):
         """
         Downloads and sets up the cache folder necessary for the AnyLoc engine, including DINOv2 model and VLAD cluster centers.
         """
-        from external.AnyLoc.utilities import od_down_links
+        from quetzal.external.AnyLoc.utilities import od_down_links
         from onedrivedownloader import download
 
         # Link

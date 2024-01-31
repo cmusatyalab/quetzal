@@ -1,5 +1,5 @@
-from quetzal_app.page_video_comparison import video_result
-from quetzal_app.page_file_system import file_system
+from quetzal_app.pages.page_video_comparison import video_result
+from quetzal_app.pages.file_explorer import file_system
 
 import streamlit as st
 import base64
@@ -8,26 +8,19 @@ from copy import deepcopy
 
 from streamlit_image_comparison import image_comparison
 
-# from streamlit_javascript import st_javascript
-
 from streamlit_elements import elements, mui, lazy, html, event
-from quetzal_app.mui_components import *
+from quetzal_app.elements.mui_components import *
 import time
 import datetime
 from streamlit_extras.stylable_container import stylable_container
 
-# import streamlit_shadcn_ui as ui
-# import streamlit_antd_components as sac
-
 from streamlit_tags import st_tags
 from streamlit_float import *
-
-# from quetzal_app.external.streamlit_float import *
 
 from quetzal.video import *
 from quetzal.align_frames import align_video_frames, align_frame_pairs
 from quetzal_app.utils.utils import *
-from quetzal_app.dtos import *
+from quetzal.dtos import *
 from quetzal.engines.detection_engine.grounding_sam_engine import GoundingSAMEngine
 
 import argparse
@@ -36,7 +29,7 @@ from glob import glob
 import os
 
 import pickle
-from quetzal_app.image_frame_component import image_frame
+from quetzal_app.elements.image_frame_component import image_frame
 from streamlit.components.v1 import html as html_st, iframe
 from streamlit_js_eval import (
     streamlit_js_eval,

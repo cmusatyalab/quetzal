@@ -8,7 +8,7 @@ from streamlit_image_comparison import image_comparison
 # from streamlit_javascript import st_javascript
 
 from streamlit_elements import elements, mui, lazy, html, event
-from quetzal_app.mui_components import *
+from quetzal_app.elements.mui_components import *
 import time
 import datetime
 from streamlit_extras.stylable_container import stylable_container
@@ -24,7 +24,7 @@ from streamlit_float import *
 from quetzal.video import *
 from quetzal.align_frames import align_video_frames, align_frame_pairs
 from quetzal_app.utils.utils import *
-from quetzal_app.dtos import *
+from quetzal.dtos import *
 from quetzal.engines.detection_engine.grounding_sam_engine import GoundingSAMEngine
 
 import argparse

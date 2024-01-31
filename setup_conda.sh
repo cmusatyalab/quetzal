@@ -258,10 +258,9 @@ pip_install bcrypt
 pip_install streamlit
 pip_install streamlit-extras
 pip_install streamlit-elements==0.1.*
-pip_install streamlit-antd-components
-pip_install streamlit-shadcn-ui
+# pip_install streamlit-antd-components
+# pip_install streamlit-shadcn-ui
 pip_install streamlit-tags
-pip_install streamlit-image-comparison
 pip_install streamlit_js_eval
 pip_install stqdm
 

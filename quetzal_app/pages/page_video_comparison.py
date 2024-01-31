@@ -7,7 +7,7 @@ from streamlit_image_comparison import image_comparison
 # from streamlit_javascript import st_javascript
 
 from streamlit_elements import elements, mui, html
-from quetzal_app.mui_components import *
+from quetzal_app.elements.mui_components import *
 import time
 import datetime
 from streamlit_extras.stylable_container import stylable_container
@@ -30,7 +30,7 @@ from glob import glob
 import os
 
 import pickle
-from quetzal_app.image_frame_component import image_frame
+from quetzal_app.elements.image_frame_component import image_frame
 from streamlit.components.v1 import html as html_st, iframe
 from streamlit_js_eval import (
     streamlit_js_eval,

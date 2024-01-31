@@ -13,7 +13,7 @@ def image_frame(image_urls=[],
                 key=None):
     _image_frame = components.declare_component(
         name='image_frame',
-        path='./image_frame_component'
+        path='./elements/image_frame_component'
     )
 
     if border:

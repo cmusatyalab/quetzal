@@ -7,7 +7,7 @@ from streamlit_image_comparison import image_comparison
 # from streamlit_javascript import st_javascript
 
 from streamlit_elements import elements, mui, html
-from quetzal_app.mui_components import *
+from quetzal_app.elements.mui_components import *
 import time
 import datetime
 from streamlit_extras.stylable_container import stylable_container

@@ -39,6 +39,5 @@ def get_directory_list(path):
                 directories.append(path)
             break
 
-    # Reverse the list because os.path.split gives us the directories from the file up to the root
     directories.reverse()
     return directories

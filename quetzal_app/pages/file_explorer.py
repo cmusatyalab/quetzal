@@ -3,38 +3,21 @@ import base64
 
 from copy import deepcopy
 
-from streamlit_image_comparison import image_comparison
-
-from streamlit_elements import elements, mui, lazy, html, event
-from quetzal_app.mui_components import *
-import time
-import datetime
+from streamlit_elements import elements, mui
+from quetzal_app.elements.mui_components import *
 from streamlit_extras.stylable_container import stylable_container
-
-from streamlit_tags import st_tags
 from streamlit_float import *
 
 from quetzal.video import *
-from quetzal.align_frames import align_video_frames, align_frame_pairs
 from quetzal_app.utils.utils import *
-from quetzal_app.dtos import *
+from quetzal.dtos import *
 from quetzal.engines.detection_engine.grounding_sam_engine import GoundingSAMEngine
 
 import argparse
 import torch
-from glob import glob
 import os
 
-import pickle
-from quetzal_app.image_frame_component import image_frame
-from streamlit.components.v1 import html as html_st, iframe
-from streamlit_js_eval import (
-    streamlit_js_eval,
-    copy_to_clipboard,
-    create_share_link,
-    get_geolocation,
-)
-
+from streamlit_js_eval import streamlit_js_eval
 from collections import defaultdict
 import logging
 from threading import Lock
