@@ -197,10 +197,10 @@ if "page_state" not in st.session_state:
     }
 
 if "matches" not in st.session_state:
-    # st.session_state.matches = run_alignment(project_name, query_video, database_video)
+    st.session_state.matches = run_alignment(project_name, query_video, database_video)
 
-    # with open(TEMP_MATCH_FILENAME, "wb") as f:
-    #     pickle.dump(st.session_state.matches, f)
+    with open(TEMP_MATCH_FILENAME, "wb") as f:
+        pickle.dump(st.session_state.matches, f)
 
     with open(TEMP_MATCH_FILENAME, "rb") as file:
         st.session_state.matches = pickle.load(file)

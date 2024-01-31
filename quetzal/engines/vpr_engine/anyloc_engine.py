@@ -6,9 +6,10 @@ from torchvision import transforms as tvf
 from torchvision.transforms import functional as T
 from quetzal.external.AnyLoc.utilities import DinoV2ExtractFeatures
 from quetzal.external.AnyLoc.utilities import VLAD
-from quetzal.video import Video
+from quetzal.video import Video, DatabaseVideo
 from typing import Literal, List
 from tqdm import tqdm
+from stqdm import stqdm
 from PIL import Image
 from functools import lru_cache
 import logging
@@ -78,10 +79,15 @@ class AnyLocEngine(AbstractEngine):
         ## DINOv2 Extractor ##
         self.max_img_size = max_img_size
         self.device = device
-
-        vlad_ready = self._is_vlad_ready(database_video) and self._is_vlad_ready(
-            query_video
+        
+        db_version = DatabaseVideo(
+            query_video.root_datasets_dir, 
+            query_video.project_name,
+            query_video.video_name,
+            query_video.metadata_dir     
         )
+
+        vlad_ready = self._is_vlad_ready(database_video) and (self._is_vlad_ready(query_video) or self._is_vlad_ready(db_version))
 
         if not vlad_ready:
             desc_layer: int = 31
@@ -127,7 +133,8 @@ class AnyLocEngine(AbstractEngine):
         self.register_db_video(database_video, mode)
         self.register_query_video(query_video, mode)
 
-    def _is_vlad_ready(self, video: Video) -> bool:
+    @staticmethod
+    def _is_vlad_ready(video: Video) -> bool:
         """
         Checks if the VLAD features are already computed for a given video.
 
@@ -191,7 +198,9 @@ class AnyLocEngine(AbstractEngine):
         if self.query_video:
             logger.info("Query Video Already Registered")
             return
-
+        
+        self._migrate_db_to_query(query_video)
+        
         self.query_video = query_video
         self.query_img_frames = (
             query_video.get_frames(verbose=False) if query_video else []
@@ -212,6 +221,23 @@ class AnyLocEngine(AbstractEngine):
                 else:
                     self.query_vlad = None
 
+
+    def _migrate_db_to_query(self, query_video):
+        db_version = DatabaseVideo(
+            query_video.root_datasets_dir, 
+            query_video.project_name,
+            query_video.video_name,
+            query_video.metadata_dir     
+        )
+        
+        if not self._is_vlad_ready(query_video) and self._is_vlad_ready(db_version):
+            print("Converting VLAD from db")
+            db_vlad = np.load(f"{db_version.get_dataset_dir()}/vlads.npy")
+            query_vlad = db_vlad[::3]
+            os.makedirs(query_video.get_dataset_dir(), exist_ok=True)
+            np.save(f"{query_video.get_dataset_dir()}/vlads.npy", query_vlad)
+            
+
     def get_query_vlad(self) -> np.ndarray:
         """
         Retrieves the VLAD features for the registered query video.
@@ -219,6 +245,9 @@ class AnyLocEngine(AbstractEngine):
         Returns:
             np.ndarray: The VLAD features of the query video.
         """
+        
+        self._migrate_db_to_query(self.query_video)
+        
         return self._get_vlad_set(self.query_video) if self.query_video else None
 
     def get_database_vlad(self) -> np.ndarray:
@@ -249,7 +278,10 @@ class AnyLocEngine(AbstractEngine):
             patch_descs = []
             img_frames = video.get_frames(verbose=False)
 
-            for img_fname in tqdm(img_frames):
+            for img_fname in stqdm(
+                img_frames, backend=True, mininterval=1,
+                desc=f"Generating VLAD features for the Video {video.video_name}"
+            ):
                 # DINO features
                 with torch.no_grad():
                     pil_img = Image.open(img_fname).convert("RGB")

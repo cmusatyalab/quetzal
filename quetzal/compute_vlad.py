@@ -1,6 +1,6 @@
-from video import *
+from quetzal.video import *
 import logging
-from engines.vpr_engine.anyloc_engine import AnyLocEngine
+from quetzal.engines.vpr_engine.anyloc_engine import AnyLocEngine
 import torch
 import sys
 

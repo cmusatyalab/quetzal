@@ -13,6 +13,7 @@ import sys
 logging.basicConfig()
 logger = logging.getLogger("generate_aligned_images")
 logger.setLevel(logging.DEBUG)
+from stqdm import stqdm
 
 import argparse
 
@@ -46,6 +47,52 @@ Place your desired video files in dataset_root/route_name/raw_videos/
     |   └── ...
     └── ...
     """
+
+
+# def _run_alignment(
+#     dataset_root: QuetzalFile, 
+#     project: QuetzalFile, 
+#     database: QuetzalFile, 
+#     query: QuetzalFile, 
+#     overlay
+# ):
+#     ## Load DTW and VLAD Features ##
+#     database_video = DatabaseVideo(
+#         datasets_dir=os.path.abspath(database.root_dir),
+#         project_name=os.path.dirname(database._path),
+#         video_name=os.path.basename(database._path),
+#         metadata_dir=os.path.abspath(database.metadata_dir)
+#     )
+#     query_video = QueryVideo(
+#         datasets_dir=os.path.abspath(query.root_dir),
+#         project_name=os.path.dirname(query._path),
+#         video_name=os.path.basename(query._path),
+#         metadata_dir=os.path.abspath(query.metadata_dir)
+#     )
+
+#     db_frame_list = database_video.get_frames()
+#     query_frame_list = query_video.get_frames()
+#     overlay_query_frame_list = query_frame_list
+
+#     if not overlay:
+#         matches = align_video_frames(
+#             database_video=database_video,
+#             query_video=query_video,
+#             torch_device=torch_device,
+#         )
+#     else:
+#         matches, overlay_query_frame_list = align_frame_pairs(
+#             database_video=database_video,
+#             query_video=query_video,
+#             torch_device=torch_device,
+#         )
+
+#     return {
+#         "matches": matches,
+#         "query_frame_list": query_frame_list,
+#         "db_frame_list": db_frame_list,
+#         "overlay_query_frame_list": overlay_query_frame_list,
+#     }
 
 
 def align_video_frames(database_video: Video, query_video: Video, torch_device):
@@ -115,7 +162,7 @@ def align_frame_pairs(database_video: Video, query_video: Video, torch_device, e
     db_frame_list = database_video.get_frames()
 
     aligned_frame_list = list()
-    for query_idx, db_idx in tqdm(matches, desc="Generating Overlay frames"):
+    for query_idx, db_idx in stqdm(matches, desc="Generating Overlay frames", backend=True):
         query_frame = query_frame_list[query_idx]
         db_frame = db_frame_list[db_idx]
         aligned_frame_list.append(engine.process((query_frame, db_frame))[0])

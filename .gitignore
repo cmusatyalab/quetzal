@@ -1,4 +1,4 @@
-__pycache__/
+**/__pycache__/
 compare_aligned_idx_copy.py
 *.ipynb
 quetzal/external/RANSAC_flow/model/pretrained/
@@ -10,5 +10,6 @@ gradio_test.py
 gradio_UX.py
 
 # Builds
-*.egg-info/
-build/
+**/*.egg-info/
+**/build/
+**/dist/

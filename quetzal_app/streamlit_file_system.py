@@ -1,7 +1,8 @@
 import streamlit as st
 import base64
 
-# from streamlit_extras.stylable_container import stylable_container
+from copy import deepcopy
+
 from streamlit_image_comparison import image_comparison
 
 # from streamlit_javascript import st_javascript
@@ -43,247 +44,21 @@ from streamlit_js_eval import (
 
 from collections import defaultdict
 import logging
+from threading import Lock
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.DEBUG)
 
-logger.info("Streamlit Rerunning")
 
 BORDER_RADIUS = "0.8rem"
 BACKGROUND_COLOR = "#f8fafd"
 PRIMARY_COLOR = "#c9e6fd"
-EXAMPLE_LINK = "home/project_name/sub_project/name"
-TEST_FILE_LIST = [
-    {
-        "name": "Project Name 1",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.PRIVATE,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Video Name 1",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.HALF,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Video Name 2",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.FULL,
-            "permission": Permission.READ_ONLY,
-        },
-    },
-    {
-        "name": "Project Name 2",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.PRIVATE,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Video Name 3",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.HALF,
-            "permission": Permission.POST_ONLY,
-        },
-    },
-    {
-        "name": "Video Name 4",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.FULL,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Project Name 3",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.READ_ONLY,
-        },
-    },
-    {
-        "name": "Video Name 5",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.PRIVATE,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Project Name 4",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.POST_ONLY,
-        },
-    },
-    {
-        "name": "Video Name 6",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.PRIVATE,
-            "analyzed": AnalysisProgress.HALF,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Project Name 5",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.PRIVATE,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Video Name 7",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.FULL,
-            "permission": Permission.READ_ONLY,
-        },
-    },
-    {
-        "name": "Project Name 6",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.POST_ONLY,
-        },
-    },
-    {
-        "name": "Video Name 8",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.PRIVATE,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Project Name 7",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.POST_ONLY,
-        },
-    },
-    {
-        "name": "Video Name 9",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.HALF,
-            "permission": Permission.POST_ONLY,
-        },
-    },
-    {
-        "name": "Project Name 8",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.PRIVATE,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Video Name 10",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.FULL,
-            "permission": Permission.POST_ONLY,
-        },
-    },
-    {
-        "name": "Project Name 9",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.PRIVATE,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Very Long Video Name 11",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.READ_ONLY,
-        },
-    },
-    {
-        "name": "Very Very Long Project Name 10",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.READ_ONLY,
-        },
-    },
-    {
-        "name": "Video Name 12",
-        "type": FileType.FILE,
-        "state": {
-            "visibility": Visibility.PRIVATE,
-            "analyzed": AnalysisProgress.HALF,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-    {
-        "name": "Project Name 11",
-        "type": FileType.DIRECTORY,
-        "state": {
-            "visibility": Visibility.SHARED,
-            "analyzed": AnalysisProgress.NONE,
-            "permission": Permission.FULL_WRITE,
-        },
-    },
-]
+GOOGLE_RED = "#EA4335"
+GOOGLE_DARK_RED = "#d33a2e"
+GOOGLE_DARK_BLUE = "#1266F1"
+GOOGLE_BLUE = "#4285F4"
+GOOGLE_LIGHT_BLUE = "#edf1f9"
 
-def convert_to_quetzal_files(file_info):
-    name = file_info["name"]
-    type = file_info["type"]
-    state = file_info["state"]
-    visibility = state["visibility"]
-    analysis_progress = state["analyzed"]
-    permission = state["permission"]
-    
-    # Assuming the owner is the same for all files, using a placeholder
-    owner = "jinho yi"
-    
-    quetzal_file = QuetzalFile(
-        path=name,  # Using 'name' as 'path' for simplicity
-        owner=owner,
-        type=type,
-        visibility=visibility,
-        analysis_progress=analysis_progress,
-        permission=permission
-    )
-    
-    return quetzal_file
 
 top_padding = "1rem"
 
@@ -291,6 +66,11 @@ st.set_page_config(layout="wide")
 st.markdown(
     f"""
         <style>
+                # @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@100&display=swap'); 
+
+                # html, body, [class*="css"] {{
+                #     font-family: 'Roboto', sans-serif;
+                # }}
                 .block-container {{ /* Removes streamlit default white spaces in the main window*/
                     padding-top: {top_padding};
                     padding-bottom: 0rem;
@@ -312,8 +92,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-float_init()
 
+# with open( "./style.css" ) as css:
+#     st.markdown( f'<style>{css.read()}</style>' , unsafe_allow_html= True)
+# float_init()
 
 dataset_layout_help = """
     Dataset structure:
@@ -353,13 +135,17 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--dataset-root", default="../data", help="Root directory of datasets"
+        "--dataset-root", default="../../data/root", help="Root directory of datasets"
+    )
+    parser.add_argument(
+        "--metadata-root", default="../../data/meta_data", help="Meta data directory of datasets"
     )
     parser.add_argument("--cuda", action="store_true", help="Enable cuda", default=True)
     parser.add_argument("--cuda_device", help="Select cuda device", default=0, type=int)
     args = parser.parse_args()
 
     dataset_root = args.dataset_root
+    meta_data_root = args.metadata_root
 
     available_gpus = torch.cuda.device_count()
     print(f"Avaliable GPU={available_gpus}")
@@ -371,539 +157,416 @@ def parse_args():
 
     print(torch_device)
 
-    return dataset_root, cuda_device, torch_device
+    return dataset_root, meta_data_root, cuda_device, torch_device
 
 
 # Initialize Variable
-dataset_root, cuda_device, torch_device = parse_args()
+dataset_root, meta_data_root, cuda_device, torch_device = parse_args()
 project_name = "example_mil19"
 query_video = "P0200020.MP4"
 database_video = "P0190019.MP4"
 grounding_sam = None
-
-MENU_WIDTH = 250
-INFO_WIDTH = 320
-
-# 0.174
-# 0.223
 
 window_height = streamlit_js_eval(
     js_expressions="screen.height", want_output=True, key="WIND_H"
 )
 padding = "11.5rem"
 
-options = ["option1"] * 10
-ITEM_HEIGHT = 24
+MENU_WIDTH = 250
+INFO_WIDTH = 340
+user = "jinho"
 
-curr_file = QuetzalFile(
-    path=EXAMPLE_LINK,
-    type=FileType.DIRECTORY,
-    visibility=Visibility.SHARED,
-    analysis_progress=AnalysisProgress.NONE,
-    permission=Permission.FULL_WRITE,
-    owner="jinhoy",
-)
+user_default = {
+    "root_dir":os.path.join(dataset_root, user), 
+    "metadata_dir":os.path.join(meta_data_root, user), 
+    "user":user, 
+    "path":"./", 
+    "mode":"user",
+}
 
-if "dialogOpen" not in st.session_state:
-    st.session_state.dialogOpen = False
+shared_default = {
+    "root_dir":dataset_root, 
+    "metadata_dir":meta_data_root, 
+    "user":user, 
+    "path":"./", 
+    "mode":"shared",
+}
 
-if "show" not in st.session_state:
-    st.session_state.show = False
+
+#     path=EXAMPLE_LINK,
+#     type=FileType.DIRECTORY,
+#     visibility=Visibility.SHARED,
+#     analysis_progress=AnalysisProgress.NONE,
+#     permission=Permission.FULL_WRITE,
+#     owner="jinhoy",
+# )
+
+# selected_file = convert_to_quetzal_files(TEST_FILE_LIST[1])
 
 if "page_state" not in st.session_state:
-    st.session_state.page_state = {"curr_dir": curr_file}
+    curr_dir = QuetzalFile(**user_default)
+    st.session_state.page_state = {
+        "curr_dir": curr_dir, 
+        "info_file": None,
+        "compare": {"project": None, "database": None, "query": None},
+        "user": user,
+        "last_dir": curr_dir,
+        "menu": "user",
+        "info": None,
+    }
+    st.session_state.lock = Lock()
 
+curr_dir = st.session_state.page_state["curr_dir"]
+if curr_dir != st.session_state.page_state["last_dir"]:
+    st.session_state.page_state["info_file"] = None
+    
+info_file = st.session_state.page_state["info_file"]
+st.session_state.page_state["last_dir"] = curr_dir
 
-def createHandleClickOpen(file_event):
-    def handleClick():
-        st.session_state.show = True
-        print(file_event)
-
-    # st.session_state.dialogOpen = True
-    # print(file_event)
-    # st.session_state.show = True
-    return handleClick
-
-
-def handleClickOpen():
-    # st.session_state.dialogOpen = True
-    print("Im Called Here")
-    st.session_state.show = True
-    st.session_state.MuiDialogState["main"]["open"] = True
-
-
-def handleClose(event, action):
-    print("Dialog closed with action:", event, action)
-    # st.session_state.dialogOpen = False
-
-
-def click_away(event):
-    print("Main Page: Clicked Menu Area\n")
-    # print(st.session_state.MuiDialogState["main"]["open"])
-
+def resetInfoFile():
+    with st.session_state.lock:
+        st.session_state.page_state["info_file"] = None
 
 on_focus_handler = MuiOnFocusHandler()
+# on_focus_handler.registerHandler(resetInfoFile)
+file_list = None
 
-menu_c, files_c, info_c = st.columns([2, 100, 2])
-with menu_c:
-    with stylable_container(
-        key="menu_container",
-        css_styles=f"""{{
-                display: block;
-                div {{
-                        width: {MENU_WIDTH}px;
-                        height: auto;
-                    }}
-                iframe {{
-                    width: {MENU_WIDTH}px;
-                    height: calc({window_height}px - {padding});
-                }}
-                # width: {MENU_WIDTH}px;
-            }}
-            """,
-    ):
-        with elements("menu"):
-            with mui.Paper(
-                variant="outlined",
-                sx={
-                    "borderRadius": "0px",
-                    "border": "0px",
-                    "width": "100%",
-                    "height": f"calc({window_height}px - {padding})",
-                    "bgcolor": BACKGROUND_COLOR,
-                    "position": "absolute",
-                    "left": "0px",
-                    "top": "0px",
-                },
-            ):
-                ## Title
-                mui.Typography(
-                    "Quetzal",
-                    sx={"fontSize": "h4.fontSize", "mx": "1rem"},
-                )
-
-                ## Action Menu
-                upload_menu = MuiActionMenu(
-                    mode=["upload"],
-                    key="upload_action_menu",
-                    onClick=FileActionDialog.buildDialogOpener(),
-                ).render()
-                # upload_menu.render()
-
-                ## Upload Button
-                UploadButton(
-                    key="upload_button", onClick=upload_menu.buildMenuOpener(curr_file)
-                ).render()
-
-                ## Side bar Menu
-                toggle_buttons = [
-                    MuiToggleButton("user", "Home", "My Projects"),
-                    MuiToggleButton("shared", "FolderShared", "Shared by Others"),
-                ]
-                MuiSideBarMenu(toggle_buttons=toggle_buttons, key="main_menu").render()
-
-                on_focus_handler.setScanner(key="menu")
-                on_focus_handler.registerHandler(keys=["menu"], handler=lambda: MuiActionMenu.resetAnchor("upload_action_menu"))
-                # ## Click Focus Handler
-                # focus_handler = MuiFocusHandler(element_key).render()
-                # # focus_handler.render()
-                # focus_handler.register(
-                #     lambda x: MuiActionMenu.resetAnchor("upload_action_menu")
-                # )
-
-
-# with files_c:
-#     with stylable_container(
-#         key="slider",
-#         css_styles=f"""{{
-#                     display: block;
-#                     div {{
-#                         width: 100%;
-#                         height: auto;
-#                     }}
-#                     iframe {{
-#                         position: absolute;
-#                         right: calc({INFO_WIDTH}px - 2%) !important;
-#                         width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
-#                         height: calc({window_height}px - {padding});
-#                     }}
-#                     # position: absolute;
-#                     # right: calc({INFO_WIDTH}px - 2%) !important;
-#                     # width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;  
-#                     # .stSlider {{
-#                     #     position: absolute;
-#                     #     right: calc({INFO_WIDTH}px - 2%) !important;
-#                     #     width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;                   
-#                     # }}
-#                 }}
-#                 """,
-#     ):
-#         with elements("files"):
-#             with mui.Paper(
-#                 variant="outlined",
-#                 sx={
-#                     "borderRadius": "0px",
-#                     "border": "0px",
-#                     "width": "100%",
-#                     "height": f"calc({window_height}px - {padding})",
-#                     "bgcolor": BACKGROUND_COLOR,
-#                     "m": "0px",
-#                     "p": "0px",
-#                     "position": "absolute",
-#                     "left": "0px",
-#                     "top": "0px",
-#                 },
-#             ):
-#                 with mui.Paper(
-#                     variant="outlined",
-#                     sx={
-#                         "borderRadius": "1rem",
-#                         "border": "0px",
-#                         "height": f"calc({window_height}px - {padding} - {top_padding} - 0.5rem);",
-#                         "bgcolor": "white",
-#                         "padding": "0.5rem",
-#                         "margin-right": "1rem",
-#                         # "padding-right" : "2rem",
-#                     },
-#                 ):
-#                     ## Action Menu
-#                     action_menu = MuiActionMenu(
-#                         mode=["upload", "edit", "delete"],
-#                         key="full_menu",
-#                         onClick=FileActionDialog.buildDialogOpener(),
-#                     )
-#                     action_menu.render()
-                    
-#                     no_upload = MuiActionMenu(
-#                         mode=["edit", "delete"],
-#                         key="no_upload_menu",
-#                         onClick=FileActionDialog.buildDialogOpener(),
-#                     )
-#                     no_upload.render()
-
-#                     ## BreadCrumb
-#                     def breadCrumbClickHandler(event: dict):
-#                         clicked_path = event["target"]["value"]
-#                         if clicked_path == curr_file.path:
-#                             action_menu.buildMenuOpener(file=curr_file)(event)
-#                         else:
-#                             logger.info(clicked_path)
-
-#                     MuiFilePathBreadcrumbs(
-#                         file=curr_file,
-#                         key="curr_dir_breadcrumb",
-#                         onClick=breadCrumbClickHandler,
-#                     ).render()
-
-#                     ## File List
-#                     def fileListMoreHandler(event: dict):
-#                         file = event["target"]["value"]
-#                         if file != None:
-#                             logger.debug("Calling MenuOpener")
-#                             no_upload.buildMenuOpener(file=file)(event)
-                    
-#                     file_list = MuiFileList(
-#                         file_list=map(convert_to_quetzal_files, TEST_FILE_LIST), 
-#                         max_height="calc(100% - 48px)", 
-#                         key="main",
-#                         onClickMore=fileListMoreHandler,
-#                     )
-#                     file_list.render()
-
-#                     ## Click Focus Handler
-#                     on_focus_handler.setScanner(key="file_list")
-#                     on_focus_handler.registerHandler(keys="file_list", handler=lambda: MuiActionMenu.resetAnchor(
-#                                 exculde_keys=["full_menu", "no_upload_menu"]
-#                             ))
-#                     on_focus_handler.registerHandler(file_list.onFocusOut)
-
-def draw_background(px, bp):
-    mui.Paper(
-        variant="outlined",
-        sx={
-            "borderRadius": "0",
-            "border": "0px",
-            "width": "100%",
-            "height": f"calc({window_height}px - {padding} + 1rem)",
-            "bgcolor": BACKGROUND_COLOR,
-            "m": "0px",
-            "p": "0px",
-            "position": "absolute",
-            "left": "0px",
-            "top": "0px",
-            "zIndex": -2,
-        },
-    )
-    mui.Paper(
-        variant="outlined",
-        sx={
-            "borderRadius": "1rem",
-            "border": "0px",
-            "width": f"calc(100% - {px}rem)",
-            "height": f"calc({window_height}px - {padding} - {bp}rem)",
-            "bgcolor": "white",
-            "m": "0px",
-            "p": "0px",
-            "position": "absolute",
-            "left": "0px",
-            "top": "0px",
-            "zIndex": -1,
-        },
-    )
-
-with files_c:
-    with stylable_container(
-        key="slider",
-        css_styles=f"""{{
+with st.session_state.lock:
+    menu_c, files_c, info_c, gap= st.columns([2, 100, 2, 1])
+    with menu_c:
+        with stylable_container(
+            key="menu_container",
+            css_styles=f"""{{
                     display: block;
                     div {{
-                        width: 100%;
-                        height: auto;
-                    }}
+                            width: {MENU_WIDTH}px;
+                            height: auto;
+                        }}
                     iframe {{
-                        width: calc(100%) !important;
+                        width: {MENU_WIDTH}px;
                         height: calc({window_height}px - {padding});
                     }}
+                    # width: {MENU_WIDTH}px;
                 }}
                 """,
-    ):
-        buttom_padding = 0.5
-        inner_padding = 0.5
-        padding_right = 0 # additional padding
-        default_margin = 0.5
-        with stylable_container(
-            key="file2",
-            css_styles=f"""{{
-                display: block;
-                border-radius: 0;
-                height: calc({window_height}px - {padding} - {buttom_padding}rem + 1rem);
-                position: absolute;
-                right: calc({INFO_WIDTH}px - 2%) !important;
-                width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
-                background-color: {BACKGROUND_COLOR};
-            }}
-            """,
         ):
-            with elements("files"):
-                # Set Background
-                draw_background(px=(inner_padding * 2 + padding_right), bp=buttom_padding)
+            with elements("menu"):
                 with mui.Paper(
                     variant="outlined",
                     sx={
-                        "borderRadius": "1rem",
-                        "border": "0px",
-                        "width": f"calc(100% - {inner_padding * 2}rem - {padding_right}rem - {default_margin * 2}rem)",
-                        "height": f"calc({window_height}px - {padding} - {top_padding} - {inner_padding * 2}rem);",
-                        "bgcolor": "white",
-                        "padding": f"{inner_padding}rem",
-                        # "padding-right": f"{padding_right + inner_padding}rem",
-                        "zIndex": 2,
-                    },
-                ):
-                    ## Action Menu
-                    action_menu = MuiActionMenu(
-                        mode=["upload", "edit", "delete"],
-                        key="full_menu",
-                        onClick=FileActionDialog.buildDialogOpener(),
-                    )
-                    action_menu.render()
-                    
-                    no_upload = MuiActionMenu(
-                        mode=["edit", "delete"],
-                        key="no_upload_menu",
-                        onClick=FileActionDialog.buildDialogOpener(),
-                    )
-                    no_upload.render()
-
-                    ## BreadCrumb
-                    def breadCrumbClickHandler(event: dict):
-                        clicked_path = event["target"]["value"]
-                        if clicked_path == curr_file.path:
-                            action_menu.buildMenuOpener(file=curr_file)(event)
-                        else:
-                            logger.info(clicked_path)
-
-                    MuiFilePathBreadcrumbs(
-                        file=curr_file,
-                        key="curr_dir_breadcrumb",
-                        onClick=breadCrumbClickHandler,
-                    ).render()
-
-                    ## File List
-                    def fileListMoreHandler(event: dict):
-                        file = event["target"]["value"]
-                        if file != None:
-                            logger.debug("Calling MenuOpener")
-                            no_upload.buildMenuOpener(file=file)(event)
-                    
-                    file_list = MuiFileList(
-                        file_list=map(convert_to_quetzal_files, TEST_FILE_LIST), 
-                        max_height="calc(100% - 48px)", 
-                        key="main",
-                        onClickMore=fileListMoreHandler,
-                    )
-                    file_list.render()
-
-                    ## Click Focus Handler
-                    on_focus_handler.setScanner(key="file_list")
-                    on_focus_handler.registerHandler(keys="file_list", handler=lambda: MuiActionMenu.resetAnchor(
-                                exculde_keys=["full_menu", "no_upload_menu"]
-                            ))
-                    on_focus_handler.registerHandler(file_list.onFocusOut)
-
-
-
-with info_c:
-    with stylable_container(
-        key="file_info",
-        css_styles=f"""{{
-            display: block;
-            # position: absolute;
-            # right: 0px !important;
-            # width: {INFO_WIDTH}px !important;
-            div {{
-                width: 100%;
-                height: auto;
-            }}
-            iframe {{
-                # position: absolute;
-                # right: 0px !important;
-                width: {INFO_WIDTH}px !important;
-                height: 100px;
-            }}
-            
-            .stSlider {{
-                position: absolute;
-                right: 0px !important;
-                width: {INFO_WIDTH}px !important;
-            }}
-        }}
-        """,
-    ):
-        
-        with stylable_container(
-            key="file_info2",
-            css_styles=f"""{{
-                display: block;
-                border-radius: 1rem 1rem 1rem 1rem;
-                height: calc({window_height}px - {padding} - 0.5rem);
-                position: absolute;
-                right: 0px !important;
-                width: {INFO_WIDTH}px !important;
-                background-color: white;
-            }}
-            """,
-        ):
-            st.header("quetzal")
-            st.slider(
-                value=0,
-                label="Info!",
-                min_value=0,
-                max_value=100,
-                step=1,
-                format=f"%d",
-            )
-            with elements("info_1"):
-                with mui.Paper(
-                    variant="outlined",
-                    sx={
-                        "borderRadius": 0,
+                        "borderRadius": "0px",
                         "border": "0px",
                         "width": "100%",
-                        "height": "5rem",
+                        "height": f"calc({window_height}px - {padding})",
                         "bgcolor": BACKGROUND_COLOR,
-                        "m": "0px",
-                        "padding": "0",
-                        # "position": "absolute",
+                        "position": "absolute",
                         "left": "0px",
                         "top": "0px",
                     },
                 ):
+                    ## Title
+                    mui.Typography(
+                        "Quetzal",
+                        sx={"fontSize": "h4.fontSize", "mx": "1rem"},
+                    )
+
+                    ## Action Menu
+                    upload_menu = MuiActionMenu(
+                        mode=["upload"],
+                        key="upload_action_menu",
+                        onClick=FileActionDialog.buildDialogOpener("main_dialog"),
+                    ).render()
+                    # upload_menu.render()
+
+                    ## Upload Button
+                    MuiUploadButton(
+                        key="upload_button", onClick=upload_menu.buildMenuOpener(curr_dir)
+                    ).render()
+
+                    ## Side bar Menu
+                    def onChangeHandler(event):
+                        logger.debug("onChangeHandler: Side bar Menu")
+                        with st.session_state.lock:
+                            value = getEventValue(event)
+                            st.session_state.page_state["menu"] = value
+                            if value == "user":
+                                curr_dir = QuetzalFile(**user_default)
+                            elif value == "shared":
+                                curr_dir = QuetzalFile(**shared_default)
+                            st.session_state.page_state["curr_dir"] = curr_dir
+                        
+                    toggle_buttons = [
+                        MuiToggleButton("user", "Home", "My Projects"),
+                        MuiToggleButton("shared", "FolderShared", "Shared by Others"),
+                    ]
+                    MuiSideBarMenu(toggle_buttons=toggle_buttons, key="main_menu", onChange=onChangeHandler).render()
+                    
+                    ## Compare Prompt
+                    MuiComparePrompt(
+                        **st.session_state.page_state["compare"],
+                        onClick=None,
+                    ).render()
+                    
+                    on_focus_handler.setScanner(key="menu_col")
+                    on_focus_handler.registerHandler(keys="menu_col", handler=lambda: MuiActionMenu.resetAnchor(
+                        exculde_keys=["upload_action_menu"]
+                    ))
+
+    def draw_background(px, bp):
+        mui.Paper(
+            variant="outlined",
+            sx={
+                "borderRadius": "0",
+                "border": "0px",
+                "width": "100%",
+                "height": f"calc({window_height}px - {padding} + 1rem)",
+                "bgcolor": BACKGROUND_COLOR,
+                "m": "0px",
+                "p": "0px",
+                "position": "absolute",
+                "left": "0px",
+                "top": "0px",
+                "zIndex": -2,
+            },
+        )
+        mui.Paper(
+            variant="outlined",
+            sx={
+                "borderRadius": "1rem",
+                "border": "0px",
+                "width": f"calc(100% - {px}rem)",
+                "height": f"calc({window_height}px - {padding} - {bp}rem)",
+                "bgcolor": "white",
+                "m": "0px",
+                "p": "0px",
+                "position": "absolute",
+                "left": "0px",
+                "top": "0px",
+                "zIndex": -1,
+            },
+        )
+
+    with files_c:
+        with stylable_container(
+            key="slider",
+            css_styles=f"""{{
+                display: block;
+                div {{
+                    width: 100%;
+                    height: auto;
+                }}
+                iframe {{
+                    width: calc(100%) !important;
+                    height: calc({window_height}px - {padding});
+                }}
+            }}
+            """,
+        ):
+            buttom_padding = 0.5
+            inner_padding = 0.5
+            padding_right = 0 # additional padding
+            default_margin = 0.5
+            with stylable_container(
+                key="file2",
+                css_styles=f"""{{
+                    display: block;
+                    border-radius: 0;
+                    height: calc({window_height}px - {padding} - {buttom_padding}rem + 1rem);
+                    position: absolute;
+                    right: calc({INFO_WIDTH}px - 2%) !important;
+                    width: calc(104% - {INFO_WIDTH}px - {MENU_WIDTH}px) !important;
+                    background-color: {BACKGROUND_COLOR};
+                }}
+                """,
+            ):
+                with elements("files"):
+                    # Set Background
+                    draw_background(px=(inner_padding * 2 + padding_right), bp=buttom_padding)
                     with mui.Paper(
                         variant="outlined",
                         sx={
                             "borderRadius": "1rem",
                             "border": "0px",
-                            "height": "5rem",
+                            "width": f"calc(100% - {inner_padding * 2}rem - {padding_right}rem - {default_margin * 2}rem)",
+                            "height": f"calc({window_height}px - {padding} - {top_padding} - {inner_padding * 2}rem);",
                             "bgcolor": "white",
-                            "padding": "1rem",
-                            # "margin-right": "1rem",
-                            # "padding-right" : "2rem",
+                            "padding": f"{inner_padding}rem",
+                            "zIndex": 2,
                         },
                     ):
-                    
-                        mui.Typography(
-                            variant="h5",
-                            component="div",
-                            children=["Info"],
-                            sx={"margin-bottom": "0.5rem"},
-                        )
+                        info_shown = False
+                        if st.session_state.page_state["info"]:
+                            info_shown = True
+                            st.session_state.page_state["info"].render(margin=True)
+                            
+                        ## Action Menu
+                        action_menu = MuiActionMenu(
+                            mode=["upload", "edit", "delete", "move"],
+                            key="full_menu",
+                            onClick=FileActionDialog.buildDialogOpener("main_dialog"),
+                        ).render()
+                        
+                        no_upload = MuiActionMenu(
+                            mode=["edit", "delete", "move"],
+                            key="no_upload_menu",
+                            onClick=FileActionDialog.buildDialogOpener("main_dialog"),
+                        ).render()
+
+                        ## BreadCrumb
+                        def breadCrumbClickHandler(event: dict):
+                            clicked_path = getEventValue(event)
+                            logger.debug(f"breadCrumbClickHandler: {clicked_path}")
+
+                            with st.session_state.lock:
+                                clicked_path = getEventValue(event)
+                                if clicked_path == curr_dir.path:
+                                    action_menu.buildMenuOpener(
+                                        file=st.session_state.page_state["curr_dir"]
+                                    )(event)
+                                else:
+                                    clicked_path = replaceInitialSegment(clicked_path, "./")
+                                    if st.session_state.page_state["menu"] == "user":
+                                        args = deepcopy(user_default)
+                                        args["path"] = clicked_path
+                                    else:
+                                        args = deepcopy(shared_default)
+                                        args["path"] = clicked_path
+                                    st.session_state.page_state["curr_dir"] = QuetzalFile(**args)
+                                    st.session_state.page_state["info"] = None
+
+                        MuiFilePathBreadcrumbs(
+                            file=curr_dir,
+                            key="curr_dir_breadcrumb",
+                            onClick=breadCrumbClickHandler,
+                        ).render()
+
+                        ## File List
+                        def fileListMoreHandler(event: dict):
+                            file = getEventValue(event)
+                            if file != None:
+                                logger.debug("Calling MenuOpener")
+                                no_upload.buildMenuOpener(file=file)(event)
+                        
+                        def fileClickHandler(event: dict):
+                            with st.session_state.lock:
+                                file = getEventValue(event)
+                                if (
+                                    st.session_state.page_state["info_file"] 
+                                    and st.session_state.page_state["info_file"].path == file.path
+                                ):
+                                    st.session_state.page_state["info_file"] = None
+                                else:
+                                    st.session_state.page_state["info_file"] = file
+                            
+                        def fileDoubleClickHandler(event: dict):
+                            with st.session_state.lock:
+                                file = getEventValue(event)
+                                if file.type == FileType.DIRECTORY:
+                                    st.session_state.page_state["curr_dir"] = file
+                                    st.session_state.page_state["info"] = None
+                                else: # filtype = FILE
+                                    st.session_state.page_state["info_file"] = file
+                                
+                            
+                        filter_content = st.session_state.page_state["menu"]=="shared"
+                        file_list = MuiFileList(
+                            file_list=curr_dir.listFiles(
+                                sharedOnly=filter_content,
+                                excludeUser=filter_content
+                            ),
+                            max_height=f"calc(100% - 8rem)" if info_shown else f"calc(100% - 48px)", 
+                            key="main",
+                            onClickMore=fileListMoreHandler,
+                            onClick=fileClickHandler,
+                            onDoubleClick=fileDoubleClickHandler
+                        ).render()
+                        # file_list.render()
+
+                        ## Click Focus Handler
+                        on_focus_handler.setScanner(key="file_list")
+                        on_focus_handler.registerHandler(keys="file_list", handler=lambda: MuiActionMenu.resetAnchor(
+                                    exculde_keys=["full_menu", "no_upload_menu"]
+                                ))
+                        # on_focus_handler.registerHandler(file_list.onFocusOut)
+
+
+    with info_c:
+        with stylable_container(
+            key="file_info",
+            css_styles=f"""{{
+                display: block;
+                div {{
+                    width: 100%;
+                    height: auto;
+                }}
+                iframe {{
+                    width: {INFO_WIDTH}px !important;
+                    # height: 100px;
+                }}
                 
-            st.title("WHAT")
-            st.selectbox("hello", options=["what", "is","this"])
+                .stSlider {{
+                    position: absolute;
+                    right: 0px !important;
+                    width: {INFO_WIDTH}px !important;
+                }}
+                
+                video {{
+                    # position: absolute;
+                    right: 0px !important;
+                    width: {INFO_WIDTH}px !important;
+                }}
+            }}
+            """,
+        ):
+            
+            with stylable_container(
+                key="file_info2",
+                css_styles=f"""{{
+                    display: block;
+                    border-radius: 1rem 1rem 1rem 1rem;
+                    height: calc({window_height}px - {padding} - 0.5rem) !important;
+                    max-height: calc({window_height}px - {padding} - 0.5rem) !important;
+                    position: absolute;
+                    right: 0px !important;
+                    width: {INFO_WIDTH}px !important;
+                    background-color: white;
+                }}
+                """,
+            ):
+                video_placeholder_height = int(INFO_WIDTH / 16 * 9 + 0.5)
+                if info_file and info_file.type == FileType.FILE:
+                    infoHeight = f"calc({window_height}px - {padding} - {video_placeholder_height}px - 13rem) !important;"
+                else:
+                    infoHeight = f"calc({window_height}px - {padding} - {video_placeholder_height}px - 9.5rem) !important;"
+                    
+                def onVideoSelect(event):
+                    with st.session_state.lock:
+                        video_type = getEventValue(event)
+                        if st.session_state.page_state["compare"]["project"] != curr_dir.getName():
+                            st.session_state.page_state["compare"] = {"project": None, "database": None, "query": None}
+                        
+                        st.session_state.page_state["compare"]["project"] = curr_dir.getName()
+                        st.session_state.page_state["compare"][video_type] = info_file.getName()
+                
+                def closeDetail(event):
+                    file_list.onFocusOut()
+                    st.session_state.page_state["info_file"] = None
+                            
+                MuiFileDetails(
+                    file=info_file,
+                    width=INFO_WIDTH,
+                    infoHeight=infoHeight,
+                    video_placeholder_height=video_placeholder_height,
+                    key="main_dialog",
+                    onClick=onVideoSelect,
+                    onClose=closeDetail
+                ).render()        
 
-# with st.container(border=True):
-#     if st.session_state.controller == "playback":
-#         if st.session_state.warp:
-#             query_img = overlay_query_frame_list[matches[0]]
-#             db_img = db_frame_list[matches[1]]
-#         else:
-#             query_img = query_frame_list[matches[0]]
-#             db_img = db_frame_list[matches[1]]
-#     elif st.session_state.controller == "object":
-#         if st.session_state.annotated_frame["idx"] == st.session_state.slider:
-#             query_img = st.session_state.annotated_frame["query"]
-#             db_img = st.session_state.annotated_frame["db"]
-#         else:
-#             query_img = query_frame_list[matches[0]]
-#             db_img = db_frame_list[matches[1]]
-#     # elif st.session_state.controller == "overlay":
-#     #     query_img = overlay_query_frame_list[matches[0]]
-#     #     db_img = db_frame_list[matches[1]]
 
-#     query_img_base64 = f"data:image/jpeg;base64,{get_base64(query_img)}"
-#     db_img_base64 = f"data:image/jpeg;base64,{get_base64(db_img)}"
+    
 
-#     imgc1, imgc2 = st.columns([1, 1], gap="small")
-#     with imgc1:
-#         display_frame(
-#             label="Query Frame: " + query_video,
-#             images=[query_img_base64],
-#             frame_len=len(query_frame_list),
-#             idx=matches[0],
-#             fps=2,
-#         )
+    FileActionDialog("main_dialog").render()
+    
+    print(st.session_state.DialogState)
+# FileActionDialog("sub_dialog").render()
 
-#     with imgc2:
-#         if st.session_state.controller != "overlay":
-#             display_frame(
-#                 label="Aligned Database Frame: " + database_video,
-#                 images=[query_img_base64, db_img_base64],
-#                 frame_len=len(db_frame_list),
-#                 idx=matches[1],
-#                 fps=6,
-#             )
-
-#     if BENCH_MARK:
-#         st.info(f"⏱️ Image loaded in {time.time() - start_time:.4f} seconds")
-
-#     controller_tab_ui()
-
-# if st.session_state.playback:
-#     st.session_state.next_frame = False
-#     curr_wakeup_time = st.session_state.wakeup_time
-
-#     sleep_duration = max(
-#         0, (curr_wakeup_time - datetime.datetime.now()).total_seconds()
-#     )
-#     time.sleep(sleep_duration)
-
-#     if (
-#         st.session_state.wakeup_time == curr_wakeup_time
-#     ):  ## no other instance modified it
-#         st.session_state.wakeup_time += datetime.timedelta(seconds=0.5)
-#         st.session_state.next_frame = True
-#         st.rerun()
-FileActionDialog().render()
-
-# MuiActionMenu.resetAnchor()

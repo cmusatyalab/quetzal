@@ -1,6 +1,7 @@
 from copy import deepcopy
 import numpy as np
 from tqdm import tqdm
+from stqdm import stqdm
 import faiss
 from typing import List, Tuple, Optional
 
@@ -86,14 +87,14 @@ def dtw(
     D0[1:, 0] = np.inf
     D1 = D0[1:, 1:]  # View of D0 excluding the first row and column
 
-    for i in tqdm(range(r), desc="Calculating the distance matrix between the frames"):
+    for i in stqdm(range(r), desc="Calculating the distance matrix between the frames", backend=True):
         q_vec = query_vlad[i]
         distances = query_all_indexes(q_vec, db_indexes)
         D0[i + 1, 1:] = distances
 
     D1_orig = deepcopy(D1)
     # DTW computation
-    for i in tqdm(range(r), desc="Aligning the frames"):
+    for i in stqdm(range(r), desc="Aligning the frames", backend=True):
         for j in range(c):
             min_list = [D0[i, j]]
             for k in range(1, warp + 1):

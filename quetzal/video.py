@@ -10,9 +10,10 @@ import cv2
 import numpy as np
 import natsort
 from PIL import Image
+import shutil
 
 from quetzal.utils.video_tools import extract_frames
-
+import time
 logging.basicConfig()
 
 
@@ -74,6 +75,7 @@ class Video:
         video_type: Literal["database", "query"],
         fps: int = 2,
         resolution: int = 1024,
+        metadata_dir: str = None,
     ):
         """
         Initialize the Video object with dataset directory, project, video name, type, fps, and resolution.
@@ -90,9 +92,8 @@ class Video:
             root_datsets_dir/
             |
             ├── project_name/
-            |   ├── raw_video/
-            |   |   ├── video_name.mp4
-            |   |   └── ...
+            |   ├── video_name.mp4
+            |   ├── ...
             |   |
             |   ├── database/
             |   |   ├── video_name/
@@ -122,12 +123,24 @@ class Video:
         self.project_name = project_name
         self.video_name = video_name
         self.video_type: Literal["database", "query"] = video_type
-        self.dataset_dir = join(
-            self.root_datasets_dir,
-            self.project_name,
-            self.video_type,
-            os.path.splitext(self.video_name)[0],
-        )
+        self.metadata_dir = metadata_dir
+        
+        if self.metadata_dir:
+            self.metadata_dir = os.path.abspath(self.metadata_dir)
+            self.dataset_dir = os.path.abspath(join(
+                self.metadata_dir,
+                self.project_name,
+                self.video_type,
+                os.path.splitext(self.video_name)[0],
+            ))
+        else:
+            self.dataset_dir = os.path.abspath(join(
+                self.root_datasets_dir,
+                self.project_name,
+                self.video_type,
+                os.path.splitext(self.video_name)[0],
+            ))
+            
         os.makedirs(self.dataset_dir, exist_ok=True)
 
         self.fps = fps
@@ -344,7 +357,7 @@ class Video:
             str: The file path of the raw video.
         """
         return join(
-            self.root_datasets_dir, self.project_name, "raw_video", self.video_name
+            self.root_datasets_dir, self.project_name, self.video_name
         )
 
     def get_avaliablity(self) -> List[tuple]:
@@ -464,7 +477,13 @@ class DatabaseVideo(Video):
     Inherits all attributes and methods from Video.
     """
 
-    def __init__(self, datasets_dir: str, project_name: str, video_name: str):
+    def __init__(
+        self, 
+        datasets_dir: str, 
+        project_name: str, 
+        video_name: str,
+        metadata_dir: str = None,
+    ):
         """
         Initialize the DatabaseVideo object with dataset directory, project, and video name.
 
@@ -508,6 +527,7 @@ class DatabaseVideo(Video):
             video_type="database",
             fps=6,
             resolution=1024,
+            metadata_dir=metadata_dir
         )
 
     # def get_frames(self, fps = 6, resolution = 1024):
@@ -521,7 +541,13 @@ class QueryVideo(Video):
     Inherits all attributes and methods from Video.
     """
 
-    def __init__(self, datasets_dir: str, project_name: str, video_name: str):
+    def __init__(
+        self, 
+        datasets_dir: str, 
+        project_name: str, 
+        video_name: str,
+        metadata_dir: str = None,
+    ):
         """
         Initialize the QueryVideo object with dataset directory, project, and video name.
 
@@ -569,7 +595,102 @@ class QueryVideo(Video):
             video_type="query",
             fps=2,
             resolution=1024,
+            metadata_dir=metadata_dir
         )
+        
+    def _convert_from_database(self, verbose):
+        database_video = DatabaseVideo(
+            self.root_datasets_dir, 
+            self.project_name,
+            self.video_name,
+            self.metadata_dir     
+        )
+        database_target = database_video.get_dataset_dir()
+        if not database_video.is_dir_valid(database_target):
+            return False
+        
+        if verbose:
+            self.logger.info(
+                f"Extracing Frames in fps={self.fps}, res={self.resolution} from Database..."
+            )
+            
+        target_dir = self.get_dataset_dir()
+        os.makedirs(target_dir, exist_ok=True)
+        
+        database_frames = database_video.get_frames()
+        database_frames = [os.path.basename(frame) for frame in database_frames]
+        
+        every_third_frame = database_frames[::3]
+        for i, frame in enumerate(every_third_frame):
+            old_path = os.path.join(database_target, frame)
+            new_frame_name = f"frame{i+1:05d}.jpg"
+            new_path = os.path.join(target_dir, new_frame_name)
+            
+            # Copying the file
+            shutil.copy2(old_path, new_path)
+            
+        frame_count_file = join(target_dir, "frame_counts.txt")
+        with open(frame_count_file, "w") as f:
+            f.write(str(len(every_third_frame)))
+        
+        return True
+
+        
+    def get_frames(self, verbose: bool = True) -> List[str]:
+        """
+        Retrieves or generates frames for the video at the current fps and resolution settings.
+
+        Args:
+            verbose (bool, optional): If True, logs additional information. Defaults to True.
+
+        Returns:
+            list: A list of frame file paths.
+        """
+
+        fps = self.fps
+        resolution = self.resolution
+
+        target_dir = self.get_dataset_dir()
+        frame_count_file = join(target_dir, "frame_counts.txt")
+
+        loaded = False
+        with self._lock:
+            if not self.is_dir_valid(target_dir):
+                if verbose:
+                    self.logger.info(
+                        f"Frames in fps={fps}, res={resolution} do not exist. Generating..."
+                    )
+                os.makedirs(target_dir, exist_ok=True)
+                
+                if self._convert_from_database(verbose):                    
+                    input_frames = Video.get_frame_list(target_dir)
+                    loaded = True
+                
+                else:
+                    input_frames = extract_frames(
+                        self.get_raw_video_file(), target_dir, max_size=resolution, fps=fps
+                    )
+                    with open(frame_count_file, "w") as f:
+                        f.write(str(len(input_frames)))
+
+                    loaded = True
+
+        if not loaded:
+            if verbose:
+                self.logger.info(
+                    f"Frames in fps={fps}, res={resolution} found in the dataset."
+                )
+            input_frames = Video.get_frame_list(target_dir)
+
+        self.frame_len = len(input_frames)
+        idx_start = self.video_start
+        if self.video_end == None:
+            idx_end = len(input_frames)
+        else:
+            idx_end = self.video_end
+        return natsort.natsorted(input_frames)[
+            idx_start : min(idx_end, len(input_frames))
+        ]
 
 
 # TODO

@@ -263,6 +263,12 @@ pip_install streamlit-shadcn-ui
 pip_install streamlit-tags
 pip_install streamlit-image-comparison
 pip_install streamlit_js_eval
+pip_install stqdm
+
+echo_info "----- Installing streamlit-float packages -----"
+cd quetzal_app/external/streamlit-float
+pip install -e .
+cd ../../..
 
 # pip_install kornia==0.1.4.post2
 conda_raw_install -c conda-forge kornia==0.7.0
