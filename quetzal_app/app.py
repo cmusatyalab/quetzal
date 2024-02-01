@@ -5,9 +5,6 @@ import streamlit as st
 import base64
 
 from copy import deepcopy
-
-from streamlit_image_comparison import image_comparison
-
 from streamlit_elements import elements, mui, lazy, html, event
 from quetzal_app.elements.mui_components import *
 import time

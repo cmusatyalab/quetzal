@@ -2,8 +2,6 @@ import streamlit as st
 import base64
 
 # from streamlit_extras.stylable_container import stylable_container
-from streamlit_image_comparison import image_comparison
-
 # from streamlit_javascript import st_javascript
 
 from streamlit_elements import elements, mui, html
