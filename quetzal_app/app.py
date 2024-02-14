@@ -9,6 +9,11 @@ import torch
 
 from threading import Lock
 from streamlit.web.server.websocket_headers import _get_websocket_headers
+import os
+from pathlib import Path
+
+LOGO_FILE = os.path.normpath(Path(__file__).parent.joinpath("quetzal_logo_trans.png"))
+
 
 dataset_layout_help = """
     Dataset structure:
@@ -86,8 +91,7 @@ dataset_layout_help = """
     └── ...
         """
 
-st.set_page_config(layout="wide")
-
+st.set_page_config(layout="wide", page_title="Quetzal", page_icon=LOGO_FILE)
 
 @st.cache_data
 def parse_args():

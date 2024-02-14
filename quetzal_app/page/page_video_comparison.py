@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 from streamlit import session_state as ss
 
 from streamlit_elements import elements, mui
@@ -14,10 +15,15 @@ from quetzal_app.page.video_comparison_controller import (
     ObjectDetectController,
     PLAY_IDX_KEY,
 )
+from pathlib import Path
 
 from quetzal_app.elements.image_frame_component import image_frame
 
 PAGE_NAME = "video_comparison"
+
+LOGO_FILE = os.path.normpath(Path(__file__).parent.joinpath("../quetzal_logo_trans.png"))
+LOGO_FILE = f"data:image/jpeg;base64,{get_base64(LOGO_FILE)}"
+TITLE = "Quetzal"
 
 BORDER_RADIUS = "0.8rem"
 FRAME_IDX_TXT = "Frame Index: {}/{}"
@@ -133,23 +139,32 @@ class TitleContent:
         self.page_state.info_anchor = None
 
     def title(self):
-        mui.Typography(
-            "Quetzal",
-            sx={
-                "fontSize": "h4.fontSize",
-            },
-        )
+        with mui.Stack(
+            spacing=0.5,
+            direction="row",
+            alignItems="center",
+            justifyContent="start",
+            sx={"hegiht": 51}
+        ):
+            mui.Avatar(
+                alt="Quetzal",
+                src=LOGO_FILE,
+                sx={"width": 48, "height": 48 }
+            )
+            mui.Typography(
+                TITLE,
+                sx={
+                    "fontSize": "h4.fontSize",
+                    # /* top | left and right | bottom */
+                    "margin": "0.5rem 1rem 0.25rem",
+                },
+            )
 
     def render(self):
         with elements("title"):
             with mui.Grid(container=True):
                 with mui.Grid(item=True, xs=4):
-                    mui.Typography(
-                        "Quetzal",
-                        sx={
-                            "fontSize": "h4.fontSize",
-                        },
-                    )
+                    self.title()
 
                 with mui.Grid(item=True, xs=4):
                     mui.Box(
