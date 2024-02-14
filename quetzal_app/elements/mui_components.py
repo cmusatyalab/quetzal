@@ -1,35 +1,93 @@
-from streamlit_elements import elements, mui, lazy, sync
-from typing import Literal, List, Dict
-from typing import Union
-from quetzal.dtos import *
-import streamlit as st
 from collections import defaultdict
-from streamlit_extras.stylable_container import stylable_container
-from streamlit_float import *
-from quetzal_app.utils.utils import *
-from functools import partial
-import logging
-import time
+from pathlib import Path
 import datetime
+import logging
 
-from threading import RLock
+import torch
+import streamlit as st
+from streamlit_elements import elements, mui, lazy
+from streamlit_extras.stylable_container import stylable_container
+from streamlit_float import float_css_helper, float_dialog
+
+from typing import Dict, List, Literal
+
+from quetzal.dtos.dtos import (
+    QuetzalFile, FileType, Permission, Visibility,
+    AnalysisProgress, Action, AccessMode
+)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 debug = lambda *args: logger.debug(" ".join([str(arg) for arg in args]))
 
+ELEMENT_BOTTOM_MARGIN = "7.594px"
 PRIMARY_COLOR = "#c9e6fd"
 GOOGLE_RED = "#EA4335"
 GOOGLE_DARK_RED = "#d33a2e"
 GOOGLE_DARK_BLUE = "#1266F1"
+GOOGLE_DEEP_BLUE = "#e9eef6"
 GOOGLE_BLUE = "#4285F4"
 GOOGLE_LIGHT_BLUE = "#edf1f9"
 
-EXAMPLE_INFO = """Route: army-demo
-Recorded Date (MM/DD/YYYY): 10/5/2023
-Uploader: Admin
-Weather Condition: Sunny, Green
-Description: Recorded by Mihir and Thom"""
+def css_to_dict(css_str):
+    """
+    Converts CSS string to a Python dictionary
+    """
+    css_dict = {}
+    # Split the string into blocks
+    blocks = css_str.split('},')
+    for block in blocks:
+        if block.strip():  # Check if the block is not just whitespace
+            selector, styles = block.split('{', 1)
+            selector = selector.strip().replace('\n', '')
+            styles_dict = {}
+            for line in styles.split(';'):
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    styles_dict[key.strip()] = value.strip()
+            css_dict[selector] = styles_dict
+    return css_dict
+
+def dict_to_css(css_dict):
+    """
+    Converts a Python dictionary to a CSS string
+    """
+    css_str = ""
+    for selector, styles in css_dict.items():
+        css_str += selector + " {\n"
+        for key, value in styles.items():
+            css_str += f"    {key}: {value};\n"
+        css_str += "}\n\n"
+    return css_str.strip()
+
+scroll_style = {
+    "&::-webkit-scrollbar" : {
+        "background-color": "transparent",
+        "width": "8px",
+        "position": "absolute",
+        "left": 0,
+    },
+
+    "&::-webkit-scrollbar-track": {
+        "background-color": "transparent",
+    },
+
+    "&::-webkit-scrollbar-thumb": {
+        "background-color": "#babac0",
+        "border-radius": "4px",
+    },
+    
+    "&::-webkit-scrollbar-thumb:hover": {
+        "background-color":"#757575",
+    },
+
+    "&::-webkit-scrollbar-button": {
+        "display": "none",
+    },
+}
+
+scroll_style_css = dict_to_css(scroll_style)
+
 
 TEST_FILE_LIST = [
     {
@@ -366,12 +424,12 @@ class MuiToggleButton:
 class MuiSideBarMenu:
     toggle_buttons_style = {
         "width": "100%",
-        "pb": "1rem",
+        "py": "0.5rem",
         "& .MuiToggleButtonGroup-grouped": {
             "border": 0,
-            "mx": "1rem",
-            "px": "1.0rem",
-            "py": "0.2rem",
+            "mx": "0.5rem",
+            "px": "1rem",
+            "py": "0.25rem",
             "justifyContent": "start",
             "justifyItem": "start",
             "gap": "0.8rem",
@@ -442,6 +500,9 @@ class ClickedFiles:
         st.session_state.MuiFileListState[self.session_state_key]["last_clicked"][
             key
         ] = value
+        
+    def clear(self):
+        st.session_state.MuiFileListState[self.session_state_key]["last_clicked"].clear()
 
 
 class MuiFileList:
@@ -466,6 +527,7 @@ class MuiFileList:
         file_list,
         max_height="50%",
         key="main",
+        tightDisplay=False,
         onClick=None,
         onDoubleClick=None,
         onClickMore=None,
@@ -477,6 +539,7 @@ class MuiFileList:
         self.onDoubleClick = onDoubleClick
         self.onClickMore = onClickMore
         self._last_clicked = ClickedFiles(key)
+        self.tightDisplay = tightDisplay
 
         if "MuiFileListState" not in st.session_state:
             st.session_state.MuiFileListState = {
@@ -584,11 +647,11 @@ class MuiFileList:
                     getattr(
                         mui.icon, MuiFileListItem.progress_icon[AnalysisProgress.HALF]
                     )(sx=icon_style)
-                    mui.Typography("Analysis Only for the Query Done", sx=text_style)
+                    mui.Typography("Shallow Analysis Done", sx=text_style)
                     getattr(
                         mui.icon, MuiFileListItem.progress_icon[AnalysisProgress.FULL]
                     )(sx=icon_style)
-                    mui.Typography("Full Analysis for the Database Done", sx=text_style)
+                    mui.Typography("Deep Analysis Done", sx=text_style)
 
     def render(self):
         def buildItemClickHandler(file):
@@ -599,37 +662,45 @@ class MuiFileList:
                     self.selected_item = file
 
                 last_click = self.last_clicked[file]
-                if (
-                    last_click
-                    and last_click + datetime.timedelta(seconds=0.7)
-                    > datetime.datetime.now()
-                ):
+                # if (
+                #     last_click
+                #     and last_click + datetime.timedelta(seconds=0.7)
+                #     > datetime.datetime.now()
+                # ):
+                if last_click:
                     if self.onDoubleClick:
                         if getEventValue(event).type == FileType.DIRECTORY:
                             self.selected_item = None
                         self.onDoubleClick(event)
-                        return
+                    self.last_clicked[file] = None
+                    return
                 
-                self.last_clicked[file] = datetime.datetime.now()
-                
+                else:
+                    self.last_clicked.clear()
+                    self.last_clicked[file] = datetime.datetime.now()
+
                 if self.onClick:
                     self.onClick(event)
-                
+
                 debug("Clicked:", self.last_clicked[file])
-                
 
             return _onClick
-
+ 
+        scroll_style.update()
         with mui.Paper(
             variant="outlined",
             sx={
+                "width": f"calc(100% - {1.0 if self.tightDisplay else 0.5}rem)",
                 "borderRadius": "0px",
                 "border": "0px",
                 "height": self.max_height,
-                "overflow": "auto",
-                "bgcolor": "white",
+                "bgcolor": "transparent",
                 "padding": "0px",
-            },
+                "overflow-y": "scroll", ## adds extra padding of 0.5rem 
+                "padding-left": "0.5rem",
+                "padding-right": "0.5rem" if self.tightDisplay else "1rem",
+                **scroll_style
+            }
         ):
             with mui.ListSubheader(
                 component="div",
@@ -656,13 +727,14 @@ class MuiFileList:
                 if len(self.file_list) == 0:
                     with mui.Stack(
                         alignItems="center",
-                        justifyContent="end",
+                        justifyContent="center",
                         sx={
                             "borderRadius": "0.3rem",
                             "border": "0px",
-                            "bgcolor": "white",
+                            "bgcolor": "transparent",
                             "padding": "0",
-                            "height": f"12rem",
+                            "height": f"18rem",
+                            "maxHeight": f"calc({self.max_height} - 48px)",
                         },
                     ):
                         mui.icon.FolderOff(
@@ -675,11 +747,11 @@ class MuiFileList:
                 for i, file in enumerate(self.file_list):
                     MuiFileListItem(
                         key=self.key,
-                        onClick=buildItemClickHandler(file.path),
+                        onClick=buildItemClickHandler(file),
                         onClickMore=self.onClickMore,
                         # onDoubleClick=self.onDoubleClick,
                         file=file,
-                        selected=(self.selected_item == file.path),
+                        selected=(self.selected_item == file),
                     ).render()
                     mui.Divider()
 
@@ -798,7 +870,7 @@ class MuiFileListItem:
         )
 
         list_item_text = MuiFileListItem.listTextFormater(
-            filename=file.getName(), owner=file.owner if file.owner else " "
+            filename=file.name, owner=file.createdBy if file.createdBy else " "
         )
 
         state_icons = []
@@ -814,7 +886,7 @@ class MuiFileListItem:
                         mui.icon, MuiFileListItem.progress_icon[file.analysis_progress]
                     )(sx=MuiFileListItem.STATE_ICON_STYLE)
                 )
-        # elif file.type == FileType.DIRECTORY:
+                
         if file.visibility == Visibility.SHARED:
             state_icons.append(
                 getattr(mui.icon, MuiFileListItem.permission_icon[file.permission])(
@@ -900,8 +972,6 @@ class MuiActionMenu:
             if k not in exculde_keys:
                 st.session_state.ActionMenuInput[k]["anchor"] = None
 
-        debug("MuiActionMenu.resetAnchor: Resetting")
-
     @staticmethod
     def initActionMenuState(key):
         if "ActionMenuInput" not in st.session_state:
@@ -925,6 +995,9 @@ class MuiActionMenu:
         self.onlyNew = onlyNew
 
         self.initActionMenuState(key)
+
+    def buildHandleClose(self, action):
+        return lambda event: self.handleClose(event, action)
 
     def handleClose(self, event, action: Action):
         debug("MuiActionMenu.handleClose: Action =", action, event, "\n")
@@ -975,10 +1048,10 @@ class MuiActionMenu:
                 ### PUT/UPLOAD SECTION
                 if "upload" in self.mode and targetFile.type != FileType.FILE:
                     with mui.MenuItem(
-                        onClick=lambda event: self.handleClose(event, Action.NEW_DIR),
+                        onClick=self.buildHandleClose(Action.NEW_DIR),
                         disabled=(
                             targetFile.permission == Permission.READ_ONLY
-                            and targetFile.mode != "user"
+                            and targetFile.mode != AccessMode.OWNER
                         ),
                     ):
                         with mui.ListItemIcon():
@@ -987,12 +1060,10 @@ class MuiActionMenu:
 
                     if not self.onlyNew:
                         with mui.MenuItem(
-                            onClick=lambda event: self.handleClose(
-                                event, Action.UPLOAD_FILE
-                            ),
+                            onClick=self.buildHandleClose(Action.UPLOAD_FILE),
                             disabled=(
                                 targetFile.permission == Permission.READ_ONLY
-                                and targetFile.mode != "user"
+                                and targetFile.mode != AccessMode.OWNER
                             ),
                         ):
                             with mui.ListItemIcon():
@@ -1007,7 +1078,7 @@ class MuiActionMenu:
                 ### READ Section
                 if "download" in self.mode and targetFile.type != FileType.DIRECTORY:
                     with mui.MenuItem(
-                        onClick=lambda event: self.handleClose(event, Action.DOWNLOAD),
+                        onClick=self.buildHandleClose(Action.DOWNLOAD),
                     ):
                         with mui.ListItemIcon():
                             mui.icon.FileDownloadOutlined(fontSize="small")
@@ -1020,10 +1091,11 @@ class MuiActionMenu:
                 ### EDIT SECTION
                 if "edit" in self.mode:
                     with mui.MenuItem(
-                        onClick=lambda event: self.handleClose(event, Action.RENAME),
+                        onClick=self.buildHandleClose(Action.RENAME),
                         disabled=(
                             targetFile.permission != Permission.FULL_WRITE
-                            and targetFile.mode != "user"
+                            and targetFile.mode != AccessMode.OWNER
+                            or targetFile.path == Path()
                         ),
                     ):
                         with mui.ListItemIcon():
@@ -1031,10 +1103,11 @@ class MuiActionMenu:
                         mui.ListItemText("Rename")
 
                     with mui.MenuItem(
-                        onClick=lambda event: self.handleClose(event, Action.SHARE),
+                        onClick=self.buildHandleClose(Action.SHARE),
                         disabled=(
                             targetFile.permission != Permission.FULL_WRITE
-                            and targetFile.mode != "user"
+                            and targetFile.mode != AccessMode.OWNER
+                            or targetFile.path == Path()
                         ),
                     ):
                         with mui.ListItemIcon():
@@ -1046,12 +1119,13 @@ class MuiActionMenu:
                         mui.Divider()
 
                 if "move" in self.mode:
-                    if targetFile.mode == "user":
+                    if targetFile.mode == AccessMode.OWNER:
                         with mui.MenuItem(
-                            onClick=lambda event: self.handleClose(event, Action.MOVE),
+                            onClick=self.buildHandleClose(Action.MOVE),
                             disabled=(
                                 targetFile.permission != Permission.FULL_WRITE
-                                and targetFile.mode != "user"
+                                and targetFile.mode != AccessMode.OWNER
+                                or targetFile.path == Path()
                             ),
                         ):
                             with mui.ListItemIcon():
@@ -1059,7 +1133,7 @@ class MuiActionMenu:
                             mui.ListItemText("Move")
 
                     with mui.MenuItem(
-                        onClick=lambda event: self.handleClose(event, Action.COPY),
+                        onClick=self.buildHandleClose(Action.COPY),
                         # disabled=(targetFile.permission != Permission.FULL_WRITE),
                     ):
                         with mui.ListItemIcon():
@@ -1073,10 +1147,11 @@ class MuiActionMenu:
                 ### DELETE SECTION
                 if "delete" in self.mode:
                     with mui.MenuItem(
-                        onClick=lambda event: self.handleClose(event, Action.DELETE),
+                        onClick=self.buildHandleClose(Action.DELETE),
                         disabled=(
                             targetFile.permission != Permission.FULL_WRITE
-                            and targetFile.mode != "user"
+                            and targetFile.mode != AccessMode.OWNER
+                            or targetFile.path == Path()
                         ),
                     ):
                         with mui.ListItemIcon():
@@ -1117,7 +1192,7 @@ class MuiFilePathBreadcrumbs:
         size: Literal["small", "medium"] = "medium",
     ):
         self.file = file
-        self.link_path = get_directory_list(file.path)
+        self.link_path = (Path("home") / file.path).parts
         self.onClick = onClick
         self.key = key
         self.size: Literal["small", "medium"] = size
@@ -1157,9 +1232,7 @@ class MuiFilePathBreadcrumbs:
                 for i, label in enumerate(self.link_path[:-1]):
                     mui.Chip(
                         label=label,
-                        onClick=buildClickHandler(
-                            os.path.join(*self.link_path[: i + 1])
-                        ),
+                        onClick=buildClickHandler(Path(*self.link_path[1 : i + 1])),
                         **clip_common_attr,
                     )
                 mui.Chip(
@@ -1178,7 +1251,7 @@ class MuiFilePathBreadcrumbs:
 
 
 class MuiEditButton:
-    font_style = {"fontSize": "0.8rem", "color": GOOGLE_BLUE}  
+    font_style = {"fontSize": "0.8rem", "color": GOOGLE_BLUE}
     disabled_style = {"fontSize": "0.8rem", "color": "grey.400"}
 
     def __init__(
@@ -1194,20 +1267,18 @@ class MuiEditButton:
         self.disabled = disabled
         self.style = self.disabled_style if disabled else self.font_style
 
-        if mode == "edit":
-            self.icon = "Edit"
-            self.text = "Edit"
-
-        elif mode == "share":
-            self.icon = "Share"
-            self.text = "Setting"
-
-        elif mode == "analysis":
-            self.icon = "AutoAwesome"
-            self.text = "Analyze"
-
-        else:
-            raise "No Such mode: " + mode
+        match mode:
+            case "edit":
+                self.icon = "Edit"
+                self.text = "Edit"
+            case "share":
+                self.icon = "Share"
+                self.text = "Setting"
+            case "analysis":
+                self.icon = "AutoAwesome"
+                self.text = "Analyze"
+            case _:
+                raise "No Such mode: " + mode
 
     def onClickHander(self, event):
         debug("EditButton.onClickHandler:", "help")
@@ -1245,7 +1316,7 @@ class MuiInfoDisplay:
         Created by::= Admin
         """
         lines = info_text.strip().split("\n")
-        return [line.split("::=") for line in lines]
+        return [line.split("::=") for line in lines if line]
 
     @property
     def expand(self) -> bool:
@@ -1331,19 +1402,20 @@ class MuiInfoDisplay:
 
             if self.expand and self.info_items:
                 for key, value in self.info_items:
-                    mui.Typography(
-                        variant="body2",
-                        children=key.strip(),
-                        sx={
-                            "lineHeight": 1.1,
-                            "fontWeight": 400,
-                            "fontSize": "0.75rem",
-                        },
-                    )
-                    mui.Typography(
-                        variant="body2",
-                        children=value.strip(),
-                        sx={"lineHeight": 1.2, "pb": "1rem", "fontSize": "0.9rem"},
+                    if key and value:
+                        mui.Typography(
+                            variant="body2",
+                            children=key.strip(),
+                            sx={
+                                "lineHeight": 1.1,
+                                "fontWeight": 400,
+                                "fontSize": "0.75rem",
+                            },
+                        )
+                        mui.Typography(
+                            variant="body2",
+                            children=value.strip(),
+                            sx={"lineHeight": 1.2, "pb": "1rem", "fontSize": "0.9rem"},
                     )
         if self.divier:
             mui.Divider()
@@ -1368,8 +1440,8 @@ class MuiUploadButton:
             disableRipple=True,
             onClick=lambda event: handleClick(event),
             sx={
-                "my": "1rem",
-                "mx": "1rem",
+                "my": "0.5rem",
+                "mx": "0.5rem",
                 "px": "24px",
                 "py": "17.5px",
                 "borderRadius": "1rem",
@@ -1390,16 +1462,16 @@ class FileActionDialog:
     DELETE_INFO = " will be deleted forever and you won't be able to restore it."
     ANALYZE_INFO = """Choose the analysis option that best suits your needs:
 
-1. Full Analysis (Database + Query): Opt for this to register the video for both database and query usage. This comprehensive method takes longer to complete.
-2. Partial Analysis (Query-Only): Select this for a quicker analysis, suitable for registering the video solely as a query video. It generally takes about one-third of the time needed for full analysis.
+1. Deep Analysis (Database + Query): Opt for this to register the video for both database and query usage. This comprehensive method takes longer to complete.
+2. Shallow Analysis (Query-Only): Select this for a quicker analysis, suitable for registering the video solely as a query video. It generally takes about one-third of the time needed for deep analysis.
 
 Note: To enable comparisons within your project, at least one video must be set up as a Database video."""
 
     option_convert = {
-        "Full Analysis": AnalysisProgress.FULL,
-        "Partial Analysis": AnalysisProgress.HALF,
+        "Deep Analysis": AnalysisProgress.FULL,
+        "Shallow Analysis": AnalysisProgress.HALF,
     }
-    analyze_options = ["Full Analysis", "Partial Analysis"]
+    analyze_options = ["Deep Analysis", "Shallow Analysis"]
 
     @property
     def file(self) -> QuetzalFile:
@@ -1416,7 +1488,7 @@ Note: To enable comparisons within your project, at least one video must be set 
     @action.setter
     def action(self, value: Action):
         st.session_state.DialogState[self.key]["action"] = value
-        
+
     @property
     def onRender(self) -> Action:
         return st.session_state.DialogState[self.key]["onRender"]
@@ -1433,7 +1505,7 @@ Note: To enable comparisons within your project, at least one video must be set 
         def _openDialog(event):
             debug("FileActionDialog.openDialog:", key, "\n")
             st.session_state.DialogState[key] = getEventValue(event)
-
+            print(st.session_state.DialogState[key])
         return _openDialog
 
     @staticmethod
@@ -1443,75 +1515,80 @@ Note: To enable comparisons within your project, at least one video must be set 
 
     def _postProcessResult(self, value, action):
         debug("FileActionDialog._postProcessResult\n")
-        if action == Action.NEW_DIR:
-            value = {"dir_name": value}
-        elif action == Action.UPLOAD_FILE:
-            value = {"uploaded_files": value}
-        elif action == Action.RENAME:
-            value = {"new_file_name": value}
-        elif action == Action.SHARE:
-            value = {
-                "permission": getattr(Permission, value["permission"]),
-                "shared": Visibility.SHARED if value["shared"] else Visibility.PRIVATE,
-            }
-        elif action == Action.DELETE:
-            value = {}
-        elif action == Action.DOWNLOAD:
-            value = {}
-        elif action == Action.ANALYZE:
-            value = {"option": self.option_convert[value]}
-        elif action == Action.EDIT:
-            value = {"value": value}
-        elif action == Action.COPY or action == Action.MOVE:
-            value = {"destination": value["target_directory"]}
+
+        match action:
+            case Action.NEW_DIR:
+                value = {"dir_name": value}
+            case Action.UPLOAD_FILE:
+                value = {"uploaded_files": value}
+            case Action.RENAME:
+                value = {"new_file_name": value}
+            case Action.SHARE:
+                value = {
+                    "permission": getattr(Permission, value["permission"]),
+                    "shared": (
+                        Visibility.SHARED if value["shared"] else Visibility.PRIVATE
+                    ),
+                }
+            case Action.DELETE:
+                value = {}
+            case Action.DOWNLOAD:
+                value = {}
+            case Action.ANALYZE:
+                value = {
+                    "option": self.option_convert[value],
+                    "engine": "vpr_engine.anyloc_engine.AnyLocEngine",
+                    "device": self.device
+                }
+            case Action.EDIT:
+                value = {"value": value}
+            case Action.COPY | Action.MOVE:
+                value = {"dest_dir": value["target_directory"]}
 
         return value
 
-    def handleClose(self, event):   
-        if self.action != Action.ANALYZE: 
+    def handleClose(self, event):
+        if self.action != Action.ANALYZE:
             self.handleSubmit(event)
         else:
             self.handleAnalyze(event)
-        
+
         self.closeDialog(self.key)
-          
-            
+
     def _handleSubmit(self, value, action=None):
         if action == None:
             action = self.action
         try:
             result = self.file.perform(action, value)
             if result != None:
-                st.session_state.page_state["info"] = MuiInfo(
-                    result,
-                    "success"
-                )
+                # st.session_state.page_states["info"] = MuiInfo(result, "success")
+                MuiInfo(result, "success")
         except Exception as e:
             # raise e
-            st.session_state.page_state["info"] = MuiInfo(
-                f"{e}",
-                "error"
-            )
+            # st.session_state.page_states["info"] = MuiInfo(f"{e}", "error")
+            MuiInfo(f"{e}", "error")
 
     def handleSubmit(self, event):
         value = event["target"].get("value", None)
         if value != None:
             value = self._postProcessResult(value, self.action)
             self._handleSubmit(value)
-            
+
     def handleAnalyze(self, event):
         value = event["target"].get("value", None)
         debug("FileActionDialog.handleAnalyze: ", event)
-        if value == None: return
-        
+        if value == None:
+            return
+
         debug("FileActionDialog.handleAnalyze: doing p0stProcess")
         value = self._postProcessResult(value, Action.ANALYZE)
         if self.file.analysis_progress >= value["option"]:
             debug("FileActionDialog.handleAnalyze: already done")
-            st.session_state.page_state["info"] = MuiInfo(
-                f'"{self.file.getName()}" has been already analyzed with the given option'
+            # st.session_state.page_states["info"] = MuiInfo(
+            MuiInfo(
+                f'"{self.file.name}" has been already analyzed with the given option'
             )
-            print(st.session_state.page_state)
+            print(st.session_state.page_states)
             setEventValue(
                 event,
                 {
@@ -1527,163 +1604,19 @@ Note: To enable comparisons within your project, at least one video must be set 
                 {
                     "file": self.file,
                     "action": "process",
-                    "onRender": lambda : FileActionDialog._handleSubmit(self, value, Action.ANALYZE)
+                    "onRender": lambda: FileActionDialog._handleSubmit(
+                        self, value, Action.ANALYZE
+                    ),
                 },
             )
             FileActionDialog.buildDialogOpener(self.key)(event)
 
-
-    def __init__(self, key="main", onSubmit=None):
+    def __init__(self, key="main", onSubmit=None, device=torch.device("cuda:0")):
         self.onSubmit = onSubmit
         self.key = key
+        self.device = device
 
         self.initDialogState(key)
-
-        share_info = lambda file: (
-            FileActionDialog.FILE_SHARE_INFO
-            if file.type == FileType.FILE
-            else FileActionDialog.DIRECTORY_SHARE_INFO
-        )
-
-        dialog_dict = dict()
-        dialog_dict[Action.NEW_DIR] = lambda file: MuiDialogItem(
-            mode="input",
-            initValue="New Project",
-            title="New Project",
-            submitText="Create",
-            size="small",
-            key=self.key,
-            onSubmit=self.handleClose,
-        )
-        dialog_dict[Action.UPLOAD_FILE] = lambda file: MuiDialogItem(
-            mode="upload",
-            submitText="Done",
-            size="large",
-            width="large",
-            key=self.key,
-            onSubmit=self.handleClose,
-        )
-        dialog_dict[Action.RENAME] = lambda file: MuiDialogItem(
-            mode="input",
-            initValue=file.getName(),
-            title="Rename",
-            submitText="OK",
-            size="small",
-            key=self.key,
-            onSubmit=self.handleClose,
-        )
-        dialog_dict[Action.SHARE] = lambda file: MuiDialogItem(
-            mode="share",
-            initValue={
-                "shared": file.visibility == Visibility.SHARED,
-                "permission": file.permission.name,
-            },
-            title="Share: " + file.getName(),
-            submitText="Save",
-            infoText=share_info(file),
-            size="medium",
-            key=self.key,
-            onSubmit=self.handleClose,
-        )
-        dialog_dict[Action.DELETE] = lambda file: MuiDialogItem(
-            mode="info",
-            title="Delete forever?",
-            submitText="Delete Forever",
-            infoText=f'"{file.getName()}"' + FileActionDialog.DELETE_INFO,
-            size="small",
-            key=self.key,
-            onSubmit=self.handleClose,
-        )
-        dialog_dict[Action.DOWNLOAD] = None
-
-        dialog_dict[Action.ANALYZE] = lambda file: MuiDialogItem(
-            mode="options",
-            title=f'Analyze "{file.getName()}" For Comparison',
-            infoText=FileActionDialog.ANALYZE_INFO,
-            infoSize="large",
-            options=self.analyze_options,
-            size="large",
-            key=self.key,
-            onSubmit=self.handleAnalyze,
-            onClose=lambda x: self.closeDialog(self.key),
-        )
-
-        dialog_dict[Action.EDIT] = lambda file: MuiDialogItem(
-            mode="input",
-            title=f"Edit Metadata: " + f"{file.getName()}",
-            size="large",
-            submitText="Save",
-            paragraph=True,
-            initValue=file.getDescription(),
-            key=self.key,
-            onSubmit=self.handleClose,
-        )
-
-        dialog_dict[Action.MOVE] = lambda file: MuiDialogItem(
-            mode="files",
-            initValue={
-                "current_directory": QuetzalFile(
-                    path="./",
-                    root_dir=os.path.join(file.root_dir, file.user)
-                    if file.mode == "shared"
-                    else file.root_dir,
-                    metadata_dir=os.path.join(file.metadata_dir, file.user)
-                    if file.mode == "shared"
-                    else file.metadata_dir,
-                    user=file.user,
-                    mode="user",
-                ),
-                "selected": None,
-                "target_directory": None,
-            },
-            title="Move " + f'"{file.getName()}"',
-            infoText="Current location: " + "parentDir",
-            infoSize="small",
-            size="large_large",
-            submitText="Move",
-            paragraph=True,
-            key=self.key,
-            onSubmit=self.handleClose,
-        )
-
-        dialog_dict[Action.COPY] = lambda file: MuiDialogItem(
-            mode="files",
-            initValue={
-                "current_directory": QuetzalFile(
-                    path="./",
-                    root_dir=os.path.join(file.root_dir, file.user)
-                    if file.mode == "shared"
-                    else file.root_dir,
-                    metadata_dir=os.path.join(file.metadata_dir, file.user)
-                    if file.mode == "shared"
-                    else file.metadata_dir,
-                    user=file.user,
-                    mode="user",
-                ),
-                "selected": None,
-                "target_directory": None,
-            },
-            title="Copy " + f'"{file.getName()}"',
-            infoText="Select one of your projects as the destination to copy the selected video or project",
-            infoSize="small",
-            size="large_large",
-            submitText="Copy",
-            paragraph=True,
-            key=self.key,
-            onSubmit=self.handleClose,
-        )
-        
-        dialog_dict["process"] = lambda file: MuiDialogItem(
-            mode="process",
-            title=f"Processing: " + f"{file.getName()}",
-            size="large_large",
-            submitText="Done",
-            key=self.key,
-            onSubmit=self.onRender,
-            onClose=lambda x: self.closeDialog(self.key),
-        )
-
-        self.dialogs = dialog_dict
 
     def openDialog(self, file: QuetzalFile, action: Action):
         self.file = file
@@ -1692,36 +1625,188 @@ Note: To enable comparisons within your project, at least one video must be set 
     def render(self):
         if not self.file:
             return self
-                
-        if isinstance(self.action, Action) or self.action == "process":
-            self.dialogs[self.action](self.file).render()
 
-            if self.key != "sub_dialog_uniuqe_key":
-                FileActionDialog("sub_dialog_uniuqe_key").render()
+        share_info = lambda file: (
+            FileActionDialog.FILE_SHARE_INFO
+            if file.type == FileType.FILE
+            else FileActionDialog.DIRECTORY_SHARE_INFO
+        )
+
+        match self.action:
+            case Action.NEW_DIR:
+                MuiDialogItem(
+                    mode="input",
+                    initValue="New Project",
+                    title="New Project",
+                    submitText="Create",
+                    size="small",
+                    key=self.key,
+                    onSubmit=self.handleClose,
+                ).render()
+            case Action.UPLOAD_FILE:
+                MuiDialogItem(
+                    mode="upload",
+                    submitText="Done",
+                    size="large",
+                    width="large",
+                    key=self.key,
+                    onSubmit=self.handleClose,
+                ).render()
+            case Action.RENAME:
+                MuiDialogItem(
+                    mode="input",
+                    initValue=self.file.name,
+                    title="Rename",
+                    submitText="OK",
+                    size="small",
+                    key=self.key,
+                    onSubmit=self.handleClose,
+                ).render()
+            case Action.SHARE:
+                MuiDialogItem(
+                    mode="share",
+                    initValue={
+                        "shared": self.file.visibility == Visibility.SHARED,
+                        "permission": self.file.permission.name,
+                    },
+                    title="Share: " + self.file.name,
+                    submitText="Save",
+                    infoText=share_info(self.file),
+                    size="medium",
+                    key=self.key,
+                    onSubmit=self.handleClose,
+                ).render()
+            case Action.DELETE:
+                MuiDialogItem(
+                    mode="info",
+                    title="Delete forever?",
+                    submitText="Delete Forever",
+                    infoText=f'"{self.file.name}"' + FileActionDialog.DELETE_INFO,
+                    size="small",
+                    key=self.key,
+                    onSubmit=self.handleClose,
+                ).render()
+            case Action.DOWNLOAD:
+                pass
+            case Action.ANALYZE:
+                MuiDialogItem(
+                    mode="options",
+                    title=f'Analyze "{self.file.name}" For Comparison',
+                    infoText=FileActionDialog.ANALYZE_INFO,
+                    infoSize="large",
+                    options=self.analyze_options,
+                    size="large",
+                    key=self.key,
+                    onSubmit=self.handleAnalyze,
+                    onClose=lambda x: self.closeDialog(self.key),
+                ).render()
+            case Action.EDIT:
+                MuiDialogItem(
+                    mode="input",
+                    title=f"Edit Metadata: " + f"{self.file.name}",
+                    size="large",
+                    submitText="Save",
+                    paragraph=True,
+                    initValue=self.file.getDescription(),
+                    key=self.key,
+                    onSubmit=self.handleClose,
+                ).render()
+            case Action.MOVE:
+                MuiDialogItem(
+                    mode="files",
+                    initValue={
+                        "current_directory": QuetzalFile.fromFile(self.file, "./", self.file.user),
+                        "selected": None,
+                        "target_directory": None,
+                    },
+                    title="Move " + f'"{self.file.name}"',
+                    infoText="Current location: " + "parentDir",
+                    infoSize="small",
+                    size="large_large",
+                    submitText="Move",
+                    paragraph=True,
+                    key=self.key,
+                    onSubmit=self.handleClose,
+                ).render()
+            case Action.COPY:
+                MuiDialogItem(
+                    mode="files",
+                    initValue={
+                        "current_directory": QuetzalFile.fromFile(self.file, "./", self.file.user),
+                        "selected": None,
+                        "target_directory": None,
+                    },
+                    title="Copy " + f'"{self.file.name}"',
+                    infoText="Select one of your projects as the destination to copy the selected video or project",
+                    infoSize="small",
+                    size="large_large",
+                    submitText="Copy",
+                    paragraph=True,
+                    key=self.key,
+                    onSubmit=self.handleClose,
+                ).render()
+            case "process":
+                MuiDialogItem(
+                    mode="process",
+                    title=f"Processing: " + f"{self.file.name if isinstance(self.file, QuetzalFile) else ' '}",
+                    size="large_large",
+                    submitText="Done",
+                    key=self.key,
+                    onSubmit=self.onRender,
+                    onClose=lambda x: self.closeDialog(self.key),
+                ).render()
+            case _:
+                return
+
+        if self.key != "sub_dialog_uniuqe_key":
+            FileActionDialog("sub_dialog_uniuqe_key", device=self.device).render()
+
         return self
+
 
 class MuiInfo:
     
+    def setInfoState(self):
+        st.session_state.MuiInfoState = self
+        
     def __init__(self, text, serverity="info"):
         self.text = text
         self.open = True
         self.severity = serverity
+        self.setInfoState()
+        
+    @staticmethod
+    def closeAlert():
+        st.session_state.MuiInfoState = None
+        
+    @staticmethod
+    def getAlert() -> 'MuiInfo':
+        if "MuiInfoState" not in st.session_state:
+            st.session_state.MuiInfoState = None
+        return st.session_state.MuiInfoState
     
+
     def render(self, margin=False):
         def alertClose():
             self.open = False
-        
+
         if self.open:
             mui.Alert(
-                severity=self.severity, 
+                severity=self.severity,
                 children=[self.text],
-                onClose=alertClose,
-                sx={"margin": "0.5rem" if margin else "0rem"}
+                # onClose=alertClose,
+                sx={
+                    "margin": "0.5rem" if margin else "0rem",
+                    "border-radius": "2rem",
+                    "my": "4px",
+                    "mx": "-0.5rem",
+                },
             )
+
 
 class MuiDialogItem:
     font_style = {"textTransform": "none", "fontSize": 14, "fontWeight": 500}
-    
+
     text_field_style = {
         "width": "100%",
         "height": "42px",
@@ -1845,14 +1930,16 @@ class MuiDialogItem:
 
     def __init__(
         self,
-        mode: Literal["info", "input", "share", "upload", "options", "files", "process"],
+        mode: Literal[
+            "info", "input", "share", "upload", "options", "files", "process"
+        ],
         initValue="",
         title: str = "Rename",
         submitText: str = "OK",
         infoText: str = "",
         infoSize: Literal["small", "medium", "large"] = "medium",
         paragraph: bool = False,
-        options: [str] = None,
+        options: list[str] = None,
         size: Literal["small", "medium", "large"] = "small",
         height: Literal["small", "medium", "large"] = None,
         width: Literal["small", "medium", "large"] = None,
@@ -1864,7 +1951,9 @@ class MuiDialogItem:
         self.onSubmit = onSubmit
         self.onClose = onSubmit if onClose == None else onClose
         self.key = key
-        self.mode: Literal["info", "input", "share", "upload", "options", "files", "process"] = mode
+        self.mode: Literal[
+            "info", "input", "share", "upload", "options", "files", "process"
+        ] = mode
         self.title = title
         self.submitText = submitText
         self.infoSize = infoSize
@@ -1915,9 +2004,11 @@ class MuiDialogItem:
             margin="dense",
             variant="outlined",
             onChange=lazy(lambda value: self.takeUserInput(value)),
-            sx=MuiDialogItem.text_field_paragraph_style
-            if self.paragraph
-            else MuiDialogItem.text_field_style,
+            sx=(
+                MuiDialogItem.text_field_paragraph_style
+                if self.paragraph
+                else MuiDialogItem.text_field_style
+            ),
         )
 
     ## INFO
@@ -1970,9 +2061,9 @@ class MuiDialogItem:
 
     ## OPTION SHARE
     def updateShare(self, event):
-        st.session_state.DialogItemState[self.key][
-            "shared"
-        ] = not st.session_state.DialogItemState[self.key]["shared"]
+        st.session_state.DialogItemState[self.key]["shared"] = (
+            not st.session_state.DialogItemState[self.key]["shared"]
+        )
 
     def handlePermission(self, event, controller):
         if controller != None:
@@ -2105,11 +2196,12 @@ class MuiDialogItem:
         curr_dir: QuetzalFile = st.session_state.DialogItemState[self.key][
             "current_directory"
         ]
-        
+
         MuiFileList(
-            file_list=curr_dir.listFiles(directoryOnly=True),
+            file_list=curr_dir.iterdir(directoryOnly=True),
             max_height=f"calc({self.DIALOG_LARGE_LARGE_HEIGHT}px - 13rem)",
             key=self.key,
+            tightDisplay=True,
             onClick=self.fileSelectHandler,
             onDoubleClick=self.fileDoubleClickHandler,
             onClickMore=fileListMoreHandler,
@@ -2133,14 +2225,8 @@ class MuiDialogItem:
                         ]
                     )(event)
                 else:
-                    clicked_path = replaceInitialSegment(clicked_path, "./")
-                    new_dir = QuetzalFile(
-                        path=clicked_path,
-                        root_dir=curr_dir.root_dir,
-                        metadata_dir=curr_dir.metadata_dir,
-                        user=curr_dir.user,
-                        mode=curr_dir.mode,
-                    )
+                    # clicked_path = replaceInitialSegment(clicked_path, "./")
+                    new_dir = QuetzalFile.fromFile(curr_dir, clicked_path)
                     st.session_state.DialogItemState[self.key][
                         "current_directory"
                     ] = new_dir
@@ -2148,7 +2234,6 @@ class MuiDialogItem:
                         "target_directory"
                     ] = None
 
-        
         with mui.Stack(
             spacing=1,
             direction="row",
@@ -2162,22 +2247,23 @@ class MuiDialogItem:
                 onClick=breadCrumbClickHandler,
                 size="small",
             ).render()
-        
+
             def setToCurrentFile(event):
-                st.session_state.DialogItemState[self.key][
-                    "target_directory"
-                ] = st.session_state.DialogItemState[self.key]["current_directory"]
-            
-            disabled = (st.session_state.DialogItemState[self.key][
-                "target_directory"
-            ] == st.session_state.DialogItemState[self.key]["current_directory"])
-            
+                st.session_state.DialogItemState[self.key]["target_directory"] = (
+                    st.session_state.DialogItemState[self.key]["current_directory"]
+                )
+
+            disabled = (
+                st.session_state.DialogItemState[self.key]["target_directory"]
+                == st.session_state.DialogItemState[self.key]["current_directory"]
+            )
+
             mui.Button(
-                "Select current directory", 
-                variant="text", 
+                "Select current directory",
+                variant="text",
                 sx={"color": GOOGLE_BLUE},
                 onClick=setToCurrentFile,
-                disabled=disabled
+                disabled=disabled,
             )
 
         # mui.Divider()
@@ -2195,43 +2281,19 @@ class MuiDialogItem:
         )
 
         with dialog_container:
-            # uploaded_files = st.file_uploader(
-            #     "Choose a Video file", accept_multiple_files=True, key="uploaded_files"
-            # )
             st.session_state.DialogItemState[self.key] = st.file_uploader(
                 "Choose a Video file", accept_multiple_files=True
             )
-            
-            # with stylable_container(
-            #     key="dialog_container_" + self.key,
-            #     css_styles=f"""{{
-            #             display: block;
-            #             div {{
-            #                     width: calc({self.dialog_width}px - 3rem);
-            #                     height: auto;
-            #                 }}
-            #             iframe {{
-            #                 width: calc({self.dialog_width}px - 3rem);
-            #                 height: calc({self.dialog_height}px - 8.6px - 1.5rem);
-            #             }}
-            #         }}
-            #         """,
-            # ):
-            
-                # for uploaded_file in uploaded_files:
-                #     bytes_data = uploaded_file.read()
-                #     st.write("filename:", uploaded_file.name)
-                #     st.write(bytes_data)
 
             with stylable_container(
                 key="dialog_container_" + self.key,
                 css_styles=f"""{{
                         display: block;
-                        div {{
+                        & div {{
                                 width: calc({self.dialog_width}px - 3rem);
                                 height: auto;
                             }}
-                        iframe {{
+                        & iframe {{
                             width: calc({self.dialog_width}px - 3rem);
                         }}
                     }}
@@ -2239,7 +2301,7 @@ class MuiDialogItem:
             ):
                 with elements("dialog_elements_" + self.key):
                     self.renderSubmitButton()
-                    
+
     def renderProcess(self):
         float_dialog_css = float_css_helper(
             width=f"{self.dialog_width}px",
@@ -2254,16 +2316,16 @@ class MuiDialogItem:
         )
 
         with dialog_container:
-
             with st.spinner(self.title):
-                if self.onSubmit: self.onSubmit()
-                
+                if self.onSubmit:
+                    self.onSubmit()
+
             self.handleClose(None)
             st.rerun()
-        
-        
+
     ## Main Render
-    def render(self, info: MuiInfo=None):
+    def render(self, info: MuiInfo = None):
+        
         if self.mode == "upload":
             self.renderUpload()
             return self
@@ -2285,24 +2347,23 @@ class MuiDialogItem:
         )
 
         with dialog_container:
-            
-            
+
             with stylable_container(
                 key="dialog_container_" + self.key,
                 css_styles=f"""{{
                         display: block;
-                        div {{
+                        & div {{
                                 width: calc({self.dialog_width}px - 3rem);
                                 height: auto;
                             }}
-                        iframe {{
+                        & iframe {{
                             width: calc({self.dialog_width}px - 3rem);
                             height: calc({self.dialog_height}px - 8.6px - 1.5rem);
                         }}
                     }}
                     """,
             ):
-                
+
                 with elements("dialog_elements_" + self.key):
                     with mui.Paper(
                         variant="outlined",
@@ -2320,14 +2381,7 @@ class MuiDialogItem:
                     ):
                         if info:
                             info.render(margin=True)
-                        
-                        # mui.Alert(
-                        #     severity="info", 
-                        #     children=[self.text],
-                        #     onClose=alertClose,
-                        #     sx={"margin": "0.5rem" if margin else "0rem"}
-                        # )
-                            
+
                         ## Title + Exit Button
                         self.renderTitle()
 
@@ -2356,11 +2410,10 @@ class MuiDialogItem:
                         if self.mode in ["files"]:
                             self.renderFileSystem()
 
-                        ## Cancel + OK button                        
+                        ## Cancel + OK button
                         if self.mode not in ["options"]:
                             self.renderSubmitButton()
-            # if self.mode in ["files"]:
-            #     FileActionDialog("sub_dialog")
+
         return self
 
 
@@ -2385,20 +2438,19 @@ class MuiFileDetails:
         self,
         file: QuetzalFile,
         width=340,
-        infoHeight=600,
-        video_placeholder_height=600,
         key="file_detail_main",
+        top_margin=0,
         onClick=None,
         onClose=None,
     ):
         self.file: QuetzalFile = file
         self.width = width
-        self.video_placeholder_height = video_placeholder_height
+        self.video_placeholder_height = int(width / 16 * 9 + 0.5)
         self.key = key
-        self.infoHeight = infoHeight
         self.onClick = onClick
-        self.onClose= onClose
-        
+        self.onClose = onClose
+        self.top_margin = top_margin
+
         if isinstance(file, QuetzalFile) and file.type == FileType.FILE:
             file._syncAnalysisState()
         self.initFileDetails(self.key)
@@ -2406,7 +2458,7 @@ class MuiFileDetails:
     def renderInfo(self):
         def buildActionClickHandler(action):
             def _onClick(event):
-                
+
                 debug("renderInfo.BuildActionClicker:", action, event)
                 setEventValue(
                     event,
@@ -2436,28 +2488,27 @@ class MuiFileDetails:
                 ],
                 disabled=[
                     (self.file.analysis_progress == AnalysisProgress.NONE),
-                    (self.file.analysis_progress != AnalysisProgress.FULL)
+                    (self.file.analysis_progress != AnalysisProgress.FULL),
                 ],
-                padding="0rem 0rem 1rem 0rem",
+                padding="0.5rem 0rem 1rem 0rem",
             ).render()
-        mui.Divider()
 
         with mui.Paper(
             variant="outlined",
             sx={
                 "borderRadius": "0px",
                 "border": "0px",
-                "maxHeight": self.infoHeight,
-                "overflow": "auto",
                 "bgcolor": "white",
                 "padding": "0px",
+                "mx": "-0.5rem",
             },
         ):
-            with mui.List():
+            mui.Divider()
+            with mui.List(sx={"py": "0rem"}):
                 info = {
                     AnalysisProgress.NONE: "No Analysis Done",
-                    AnalysisProgress.HALF: "Query Analysis Done",
-                    AnalysisProgress.FULL: "Full Analysis Done",
+                    AnalysisProgress.HALF: "Shallow Analysis Done",
+                    AnalysisProgress.FULL: "Deep Analysis Done",
                 }
                 if self.file.type == FileType.FILE:
                     MuiInfoDisplay(
@@ -2470,7 +2521,7 @@ class MuiFileDetails:
                             onClick=buildActionClickHandler(Action.ANALYZE),
                             disabled=(
                                 self.file.permission == Permission.READ_ONLY
-                                and self.file.mode != "user"
+                                and self.file.mode != AccessMode.OWNER
                             ),
                         ),
                         key="video_analysis",
@@ -2489,14 +2540,14 @@ class MuiFileDetails:
                     info_items=[
                         ["Sharing", info[self.file.visibility]],
                         ["Permission", info[self.file.permission]],
-                        ["Created By", self.file.owner],
+                        ["Created By", self.file.createdBy],
                     ],
                     expendable=True,
                     divider=True,
                     secondaryItem=MuiEditButton(
                         "share",
                         onClick=buildActionClickHandler(Action.SHARE),
-                        disabled=(self.file.mode != "user"),
+                        disabled=(self.file.mode != AccessMode.OWNER),
                     ),
                     key="sharing",
                 ).render()
@@ -2507,44 +2558,70 @@ class MuiFileDetails:
                         self.file.getDescription()
                     ),
                     expendable=True,
-                    divider=False,
+                    divider=True,
                     secondaryItem=MuiEditButton(
                         "edit",
                         onClick=buildActionClickHandler(Action.EDIT),
                         disabled=(
                             self.file.permission != Permission.FULL_WRITE
-                            and self.file.mode != "user"
+                            and self.file.mode != AccessMode.OWNER
                         ),
                     ),
                     key="file_metadata",
                 ).render()
-        mui.Divider()
 
     def renderInsturction(self):
-        with mui.Stack(
-            alignItems="center",
-            justifyContent="center",
-            sx={
-                "borderRadius": "0.3rem",
-                "border": "0px",
-                "bgcolor": "white",
-                "padding": "0",
-                "height": f"25rem",
-            },
+        with stylable_container(
+            key="info_title_container_" + self.key,
+            css_styles=f"""{{
+                display: block;
+                & div {{
+                    width: 100%;
+                    height: auto;
+                }}
+                & iframe {{
+                    width: 100%;
+                    margin-top: 1rem;
+                    height: calc(25rem + {ELEMENT_BOTTOM_MARGIN});
+                    max-height: calc(100vh - {self.top_margin} - 3rem);
+                }}
+            }}
+            """
         ):
-            mui.icon.Info(sx={"fontSize": "5rem", "color": GOOGLE_BLUE})
-            mui.Typography("Select an item to see details", sx={"fontSize": "0.8rem"})
+            with elements("info_instruction_" + self.key):
+                with mui.Stack(
+                    alignItems="center",
+                    justifyContent="center",
+                    sx={
+                        "borderRadius": "0.3rem",
+                        "border": "0px",
+                        "bgcolor": "white",
+                        "padding": "0",
+                        "height": f"25rem",
+                        "maxHeight": f"calc(100vh - {ELEMENT_BOTTOM_MARGIN})"
+                    },
+                ):
+                    mui.icon.Info(sx={"fontSize": "5rem", "color": GOOGLE_BLUE})
+                    mui.Typography("Select an item to see details", sx={"fontSize": "0.8rem"})
 
-    def render(self):
-        st.markdown("&nbsp;")
-
-        with elements("info_title_" + self.key):
-            if self.file == None:
-                self.renderInsturction()
-                return self
-            else:
-                self.file.type
-
+    def renderTitle(self):
+        with stylable_container(
+            key="info_title_container_" + self.key,
+            css_styles=f"""{{
+                display: block;
+                & div {{
+                    width: 100%;
+                    height: auto;
+                }}
+                & iframe {{
+                    width: 100%;
+                    height: 50px;
+                    margin-top: 1rem;
+                }}
+            }}
+            """
+        ):
+            with elements("info_title_" + self.key):
                 ## Title
                 with mui.Stack(
                     spacing=1,
@@ -2564,81 +2641,129 @@ class MuiFileDetails:
                             "padding": "0rem 0rem",
                         },
                     ):
-                        color_style = {"color": "#d33a2e"} if self.file.type == FileType.FILE else {}
+                        color_style = (
+                            {"color": "#d33a2e"}
+                            if self.file.type == FileType.FILE
+                            else {}
+                        )
                         getattr(
                             mui.icon,
                             MuiFileListItem.file_type_icon[self.file.type][
                                 self.file.visibility
                             ],
                         )(sx=color_style)
-                        # mui.icon.Movie(sx={"color": GOOGLE_DARK_RED})
                         mui.Typography(
                             variant="subtitle1",
                             component="div",
-                            children=[self.file.getName()],
+                            children=[self.file.name],
                         )
+                        
                     mui.IconButton(
-                        mui.icon.Close(sx={"fontSize":"1.5rem"}),
+                        mui.icon.Close(sx={"fontSize": "1.5rem"}),
                         onClick=self.onClose,
-                        sx={"p":"0.1rem"}
+                        sx={"p": "0.1rem"},
                     )
 
-                    
 
-        ## Video Placeholder
-        if self.showVideo:
-            st.video(self.file._absPath, format="video/mp4", start_time=0)
-            self.showVideo = False
-
-            with elements("show_info_" + self.key):
-                self.renderInfo()
+    def render(self):
+        if self.file == None:
+            self.renderInsturction()
+            return
         else:
-            with elements("show_info_" + self.key):
-                with mui.Stack(
-                    # variant="outlined",
-                    alignItems="center",
-                    justifyContent="center",
-                    sx={
-                        "borderRadius": "0.3rem",
-                        "border": "0px",
-                        "bgcolor": "grey.100",
-                        "margin-bottom": "1rem",
-                        "height": f"{self.video_placeholder_height}px",
-                    },
-                ):
+            self.renderTitle()
+        
+        with stylable_container(
+            key="info_main_divier",
+            css_styles=f"""{{
+                & .stMarkdown {{
+                    width: 100%;
+                }}
+                & hr {{
+                    margin-bottom: 1rem;
+                    margin-top: 1rem;
+                }}
+            }}
+            """,
+        ):
+            st.divider()
+            
+        title_height = 73.59 #px
+        with stylable_container(
+                key="info_main_display",
+                css_styles=f"""{{
+                    display: block;
+                    border-radius: 0;
+                    border-bottom-right-radius: 1rem !important;
+                    border-bottom-left-radius: 1rem !important;
+                    & > div:nth-child(2) {{
+                        height: calc(100vh - {title_height}px - 1rem - {self.top_margin}) !important;
+                        overflow-y: scroll;
+                        overflow-x: clip;
+                        border-radius: 0;
+                        border-bottom-right-radius: 1rem !important;
+                        border-bottom-left-radius: 1rem !important;
+                        {scroll_style_css}
+                    }};
+                    background-color: white;
+                }}
+                """,
+            ):
+                with st.container():
+                    ## Video Placeholder
+                    if self.showVideo:
+                        
+                        st.video(str(self.file._abs_path), format="video/mp4", start_time=0)
+                        self.showVideo = False
 
-                    def video_show():
-                        self.showVideo = True
+                        with elements("show_info_" + self.key):
+                            self.renderInfo()
+                    else:
+                        with elements("show_info_" + self.key):
+                            with mui.Stack(
+                                # variant="outlined",
+                                alignItems="center",
+                                justifyContent="center",
+                                sx={
+                                    "borderRadius": "0.3rem",
+                                    "border": "0px",
+                                    "bgcolor": "grey.100",
+                                    "margin-bottom": "0.5rem",
+                                    "height": f"{self.video_placeholder_height}px",
+                                },
+                            ):
 
-                    if self.file.type == FileType.FILE:
-                        with mui.Button(
-                            variant="text",
-                            sx={
-                                "height": "min-content",
-                                "margin": 0,
-                                "padding": 0,
-                            },
-                            onClick=video_show,
-                        ):
-                            mui.Typography(
-                                "Display Video",
-                                sx={"fontSize": "0.8rem", "color": GOOGLE_BLUE},
-                            )
-                        mui.Typography(
-                            "+ show download option", sx={"fontSize": "0.8rem"}
-                        )
+                                def video_show():
+                                    self.showVideo = True
+                                
+                                match self.file.type:
+                                    case FileType.FILE:
+                                        with mui.Button(
+                                            variant="text",
+                                            sx={
+                                                "height": "min-content",
+                                                "margin": 0,
+                                                "padding": 0,
+                                            },
+                                            onClick=video_show,
+                                        ):
+                                            mui.Typography(
+                                                "Display Video",
+                                                sx={"fontSize": "0.8rem", "color": GOOGLE_BLUE},
+                                            )
+                                        mui.Typography(
+                                            "+ show download option", sx={"fontSize": "0.8rem"}
+                                        )
+                                    case FileType.DIRECTORY:
+                                        getattr(
+                                            mui.icon,
+                                            MuiFileListItem.file_type_icon[self.file.type][
+                                                self.file.visibility
+                                            ],
+                                        )(sx={"fontSize": "5rem"})
 
-                    elif self.file.type == FileType.DIRECTORY:
-                        getattr(
-                            mui.icon,
-                            MuiFileListItem.file_type_icon[self.file.type][
-                                self.file.visibility
-                            ],
-                        )(sx={"fontSize": "5rem"})
+                            self.renderInfo()
 
-                self.renderInfo()
-        pass
-
+        return self
 
 class MuiOptionButton:
     button_style = {
@@ -2687,26 +2812,28 @@ class MuiOptionButton:
 class MuiComparePrompt:
     def __init__(
         self,
-        project: QuetzalFile=None,
-        query: QuetzalFile=None,
-        database: QuetzalFile=None,
-        onClick: QuetzalFile=None,
+        project: QuetzalFile = None,
+        query: QuetzalFile = None,
+        database: QuetzalFile = None,
+        onClick: QuetzalFile = None,
     ):
-        self.project = project.getName() if project else "Not Selected"
-        self.query = query.getName() if query else "Not Selected"
-        self.database = database.getName() if database else "Not Selected"
+        self.project = project.name if project else "Not Selected"
+        self.query = query.name if query else "Not Selected"
+        self.database = database.name if database else "Not Selected"
         self.onClick = onClick
-        self.disabled = not (project and database and query)
+        self.disabled = not (database and query)
 
     def render(self):
         with mui.Paper(
+            variant="outlined",
             sx={
                 "borderRadius": "1rem",
                 "border": "0px",
                 "borderColor": "grey.500",
                 "overflow": "auto",
-                "margin": "1rem",
-                "bgcolor": "white",
+                "my": "1rem",
+                "mx": "0.5rem",
+                "bgcolor": GOOGLE_DEEP_BLUE,
                 "padding-left": "0.2rem",
                 "padding-bottom": "0.5rem",
             },
@@ -2714,7 +2841,7 @@ class MuiComparePrompt:
             MuiInfoDisplay(
                 title="Selected for Comparison",
                 info_items=[
-                    ["Project", self.project],
+                    # ["Project", self.project],
                     ["Database Video", self.database],
                     ["Query Video", self.query],
                 ],

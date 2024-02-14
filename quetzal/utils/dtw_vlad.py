@@ -1,6 +1,6 @@
 from copy import deepcopy
 import numpy as np
-from tqdm import tqdm
+# from tqdm import tqdm
 from stqdm import stqdm
 import faiss
 from typing import List, Tuple, Optional
