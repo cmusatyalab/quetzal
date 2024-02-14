@@ -1,10 +1,17 @@
-from quetzal.video import *
+from quetzal.dtos.video import QueryVideo, DatabaseVideo, Video
 import logging
-from quetzal.engines.image_registration_engine.ransac_flow_engine import RansacFlowEngine
 from quetzal.engines.vpr_engine.anyloc_engine import AnyLocEngine
 from quetzal.engines.image_registration_engine.loftr_engine import LoFTREngine
-from quetzal.utils.dtw_vlad import *
+from quetzal.utils.dtw_vlad import (
+    create_FAISS_indexes,
+    dtw,
+    extract_unique_dtw_pairs,
+    smooth_frame_intervals,
+)
+import numpy as np
 import torch.nn.functional as F
+from typing import TypeAlias, NewType, Literal
+from pathlib import Path
 
 import torch
 import sys
@@ -48,54 +55,14 @@ Place your desired video files in dataset_root/route_name/raw_videos/
     └── ...
     """
 
-
-# def _run_alignment(
-#     dataset_root: QuetzalFile, 
-#     project: QuetzalFile, 
-#     database: QuetzalFile, 
-#     query: QuetzalFile, 
-#     overlay
-# ):
-#     ## Load DTW and VLAD Features ##
-#     database_video = DatabaseVideo(
-#         datasets_dir=os.path.abspath(database.root_dir),
-#         project_name=os.path.dirname(database._path),
-#         video_name=os.path.basename(database._path),
-#         metadata_dir=os.path.abspath(database.metadata_dir)
-#     )
-#     query_video = QueryVideo(
-#         datasets_dir=os.path.abspath(query.root_dir),
-#         project_name=os.path.dirname(query._path),
-#         video_name=os.path.basename(query._path),
-#         metadata_dir=os.path.abspath(query.metadata_dir)
-#     )
-
-#     db_frame_list = database_video.get_frames()
-#     query_frame_list = query_video.get_frames()
-#     overlay_query_frame_list = query_frame_list
-
-#     if not overlay:
-#         matches = align_video_frames(
-#             database_video=database_video,
-#             query_video=query_video,
-#             torch_device=torch_device,
-#         )
-#     else:
-#         matches, overlay_query_frame_list = align_frame_pairs(
-#             database_video=database_video,
-#             query_video=query_video,
-#             torch_device=torch_device,
-#         )
-
-#     return {
-#         "matches": matches,
-#         "query_frame_list": query_frame_list,
-#         "db_frame_list": db_frame_list,
-#         "overlay_query_frame_list": overlay_query_frame_list,
-#     }
+QueryIdx = NewType("QueryIdx", int)
+DatabaseIdx = NewType("DatabaseIdx", int)
+Match: TypeAlias = tuple[QueryIdx, DatabaseIdx]
 
 
-def align_video_frames(database_video: Video, query_video: Video, torch_device):
+def align_video_frames(
+    database_video: Video, query_video: Video, torch_device
+) -> list[Match]:
     anylocEngine = AnyLocEngine(
         database_video=database_video, query_video=query_video, device=torch_device
     )
@@ -119,8 +86,8 @@ def align_video_frames(database_video: Video, query_video: Video, torch_device):
     matches = extract_unique_dtw_pairs(path, D1)
 
     # Smooth the frame alignment Results
-    query_fps = query_video.get_fps()
-    db_fps = database_video.get_fps()
+    query_fps = query_video.fps
+    db_fps = database_video.fps
 
     diff = 1
     count = 0
@@ -137,32 +104,33 @@ def align_video_frames(database_video: Video, query_video: Video, torch_device):
     return matches
 
 
-def align_frame_pairs(database_video: Video, query_video: Video, torch_device, engine: Literal["ransac-flow", "loftr"] = "loftr"):
+def align_frame_pairs(
+    database_video: Video,
+    query_video: Video,
+    torch_device,
+    engine: Literal["ransac-flow", "loftr"] = "loftr",
+) -> tuple[list[Match], list[str]]:
     logger.info("Loading Videos")
 
-    if engine == "ransac-flow":
-        engine = RansacFlowEngine(
-            query_video,
-            max_img_size=1024,
-            fine_align=False,
-            device=torch_device,
-            db_name=database_video.get_video_name(),
-        )
-    elif engine == "loftr":
+    if engine == "loftr":
         engine = LoFTREngine(
             query_video,
             device=torch_device,
-            db_name=database_video.get_video_name(),
+            db_name=database_video.full_path.stem,
         )
 
-    matches = align_video_frames(database_video=database_video, 
-                                 query_video=query_video,
-                                 torch_device=torch_device)
+    matches = align_video_frames(
+        database_video=database_video,
+        query_video=query_video,
+        torch_device=torch_device,
+    )
     query_frame_list = query_video.get_frames()
     db_frame_list = database_video.get_frames()
 
     aligned_frame_list = list()
-    for query_idx, db_idx in stqdm(matches, desc="Generating Overlay frames", backend=True):
+    for query_idx, db_idx in stqdm(
+        matches, desc="Generating Overlay frames", backend=True
+    ):
         query_frame = query_frame_list[query_idx]
         db_frame = db_frame_list[db_idx]
         aligned_frame_list.append(engine.process((query_frame, db_frame))[0])
@@ -170,6 +138,7 @@ def align_frame_pairs(database_video: Video, query_video: Video, torch_device, e
     del engine
 
     return matches, aligned_frame_list
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -210,15 +179,13 @@ def main():
 
     if args.database_video:
         database_video = DatabaseVideo(
-            datasets_dir=args.dataset_root,
-            route_name=args.route_name,
-            video_name=args.database_video,
+            path=Path(args.route_name) / Path(args.database_video),
+            root_dir=args.dataset_root,
         )
     if args.query_video:
         query_video = QueryVideo(
-            datasets_dir=args.dataset_root,
-            route_name=args.route_name,
-            video_name=args.query_video,
+            path=Path(args.route_name) / Path(args.query_video),
+            root_dir=args.dataset_root,
         )
 
     align_frame_pairs(database_video, query_video, device)

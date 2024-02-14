@@ -6,7 +6,7 @@ from torchvision import transforms as tvf
 from torchvision.transforms import functional as T
 from quetzal.external.AnyLoc.utilities import DinoV2ExtractFeatures
 from quetzal.external.AnyLoc.utilities import VLAD
-from quetzal.video import Video, DatabaseVideo
+from quetzal.dtos.video import Video, DatabaseVideo
 from typing import Literal, List
 from tqdm import tqdm
 from stqdm import stqdm
@@ -37,7 +37,7 @@ class AnyLocEngine(AbstractEngine):
         device=torch.device("cuda:0"),
 
         domain: Literal["aerial", "indoor", "urban"] = "aerial",
-        mode: Literal["vpr", "realtime", "lazy"] = "realtime",
+        mode: Literal["vpr", "realtime", "lazy"] = "lazy",
     ):
         """
         Initializes the AnyLocEngine with optional database and query videos.
@@ -75,57 +75,30 @@ class AnyLocEngine(AbstractEngine):
             logger.info("Anyloc cache folder already exists!")
         else:
             self._download_cache()
+        
+        
 
         ## DINOv2 Extractor ##
         self.max_img_size = max_img_size
         self.device = device
-        
-        if query_video:
-            db_version = DatabaseVideo(
-                query_video.root_datasets_dir, 
-                query_video.project_name,
-                query_video.video_name,
-                query_video.metadata_dir     
-            )
-        else:
-            db_version = None
+        self.domain = domain
+        self.model_loaded = False
 
-        vlad_ready = self._is_vlad_ready(database_video) and (self._is_vlad_ready(query_video) or self._is_vlad_ready(db_version))
-
-        if not vlad_ready:
-            desc_layer: int = 31
-            desc_facet: Literal["query", "key", "value", "token"] = "value"
-            num_c: int = 32
-            # Domain for use case (deployment environment)
-            domain: Literal["aerial", "indoor", "urban"] = domain
-
-            self.extractor = DinoV2ExtractFeatures(
-                "dinov2_vitg14", desc_layer, desc_facet, device=device
-            )
-            self.base_tf = tvf.Compose(
-                [
-                    tvf.ToTensor(),
-                    tvf.Normalize(
-                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                    ),
-                ]
-            )
-
-        ## VLAD object ##
-        if not vlad_ready:
-            ext_specifier = f"dinov2_vitg14/l{desc_layer}_{desc_facet}_c{num_c}"
-            c_centers_file = os.path.join(
-                cache_dir, "vocabulary", ext_specifier, domain, "c_centers.pt"
-            )
-            assert os.path.isfile(c_centers_file), "Cluster centers not cached!"
-            c_centers = torch.load(c_centers_file)
-            assert c_centers.shape[0] == num_c, "Wrong number of clusters!"
-
-            self.vlad = VLAD(
-                num_c, desc_dim=None, cache_dir=os.path.dirname(c_centers_file)
-            )
-            # Fit (load) the cluster centers (this'll also load the desc_dim)
-            self.vlad.fit(None)
+        if mode != "lazy":
+            if query_video:
+                db_version = DatabaseVideo(
+                    path=query_video._path,
+                    root_dir=query_video._root_dir,
+                    metadata_dir=query_video._metadata_dir,
+                    user=query_video._user,
+                    home=query_video._home,
+                )
+            else:
+                db_version = None
+                
+            vlad_ready = self.is_video_analyzed(database_video) and (self.is_video_analyzed(query_video) or self.is_video_analyzed(db_version))
+            if not vlad_ready:
+                self.load_models()
 
         ## Initialize VLAD features ##
         self.db_index = None
@@ -135,9 +108,45 @@ class AnyLocEngine(AbstractEngine):
         ## Register Videos ##
         self.register_db_video(database_video, mode)
         self.register_query_video(query_video, mode)
+        
+    def load_models(self):
+        desc_layer: int = 31
+        desc_facet: Literal["query", "key", "value", "token"] = "value"
+        num_c: int = 32
+        # Domain for use case (deployment environment)
+        domain: Literal["aerial", "indoor", "urban"] = self.domain
+
+        self.extractor = DinoV2ExtractFeatures(
+            "dinov2_vitg14", desc_layer, desc_facet, device=self.device
+        )
+        self.base_tf = tvf.Compose(
+            [
+                tvf.ToTensor(),
+                tvf.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
+            ]
+        )
+        
+        ext_specifier = f"dinov2_vitg14/l{desc_layer}_{desc_facet}_c{num_c}"
+        c_centers_file = os.path.join(
+            cache_dir, "vocabulary", ext_specifier, domain, "c_centers.pt"
+        )
+        assert os.path.isfile(c_centers_file), "Cluster centers not cached!"
+        c_centers = torch.load(c_centers_file)
+        assert c_centers.shape[0] == num_c, "Wrong number of clusters!"
+
+        self.vlad = VLAD(
+            num_c, desc_dim=None, cache_dir=os.path.dirname(c_centers_file)
+        )
+        # Fit (load) the cluster centers (this'll also load the desc_dim)
+        self.vlad.fit(None)
+        
+        self.model_loaded = True
+        
 
     @staticmethod
-    def _is_vlad_ready(video: Video) -> bool:
+    def is_video_analyzed(video: Video) -> bool:
         """
         Checks if the VLAD features are already computed for a given video.
 
@@ -148,9 +157,18 @@ class AnyLocEngine(AbstractEngine):
             bool: True if the VLAD features are precomputed, False otherwise.
         """
         return (
-            os.path.isfile(f"{video.get_dataset_dir()}/vlads.npy") if video else False
+            os.path.isfile(f"{video.dataset_dir}/vlads.npy") if video else False
         )
+    
+    def analyze_video(self, video: Video):
+        """Return True if no further real-time analysis required"""
+        if video.video_type == "query":
+            AnyLocEngine._migrate_db_to_query(video)
+            return self._get_vlad_set(video)
+        elif video.video_type == "database":
+            return self._get_vlad_set(video)
 
+    
     def register_db_video(
         self, database_video: Video, mode: Literal["vpr", "realtime", "lazy"] = "vpr"
     ):
@@ -216,32 +234,33 @@ class AnyLocEngine(AbstractEngine):
             elif mode == "realtime":
                 ## Load Cached query_vlad features if exist ##
                 if query_video and os.path.isfile(
-                    f"{query_video.get_dataset_dir()}/vlads.npy"
+                    f"{query_video.dataset_dir}/vlads.npy"
                 ):
                     self.query_vlad = np.load(
-                        f"{query_video.get_dataset_dir()}/vlads.npy"
+                        f"{query_video.dataset_dir}/vlads.npy"
                     )
                 else:
                     self.query_vlad = None
 
-
-    def _migrate_db_to_query(self, query_video):
+    @staticmethod
+    def _migrate_db_to_query(query_video: Video):
         if query_video is None:
             return
         
         db_version = DatabaseVideo(
-            query_video.root_datasets_dir, 
-            query_video.project_name,
-            query_video.video_name,
-            query_video.metadata_dir     
+            path=query_video._path,
+            root_dir=query_video._root_dir,
+            metadata_dir=query_video._metadata_dir, 
+            user=query_video._user,
+            home=query_video._home,
         )
         
-        if not self._is_vlad_ready(query_video) and self._is_vlad_ready(db_version):
+        if not AnyLocEngine.is_video_analyzed(query_video) and AnyLocEngine.is_video_analyzed(db_version):
             print("Converting VLAD from db")
-            db_vlad = np.load(f"{db_version.get_dataset_dir()}/vlads.npy")
+            db_vlad = np.load(f"{db_version.dataset_dir}/vlads.npy")
             query_vlad = db_vlad[::3]
-            os.makedirs(query_video.get_dataset_dir(), exist_ok=True)
-            np.save(f"{query_video.get_dataset_dir()}/vlads.npy", query_vlad)
+            os.makedirs(query_video.dataset_dir, exist_ok=True)
+            np.save(f"{query_video.dataset_dir}/vlads.npy", query_vlad)
             
 
     def get_query_vlad(self) -> np.ndarray:
@@ -275,18 +294,21 @@ class AnyLocEngine(AbstractEngine):
         Returns:
             np.ndarray: The computed VLAD features for the video.
         """
-        dataset_folder = video.get_dataset_dir()
+        dataset_folder = video.dataset_dir
         max_img_size = self.max_img_size
 
         if not os.path.isfile(f"{dataset_folder}/vlads.npy"):
-            logger.info(f"Generating VLAD features for the Video {video.video_name}")
+            logger.info(f"Generating VLAD features for the Video {video._path.name}")
+
+            if not self.model_loaded:
+                self.load_models()
 
             patch_descs = []
             img_frames = video.get_frames(verbose=False)
 
             for img_fname in stqdm(
                 img_frames, backend=True, mininterval=1,
-                desc=f"Generating VLAD features for the Video {video.video_name}"
+                desc=f"Generating VLAD features for the Video {video._path.name}"
             ):
                 # DINO features
                 with torch.no_grad():
@@ -334,6 +356,7 @@ class AnyLocEngine(AbstractEngine):
         Returns:
             np.ndarray: The computed VLAD feature for the frame.
         """
+        assert self.model_loaded
         max_img_size = self.max_img_size
 
         # DINO features
@@ -423,8 +446,8 @@ class AnyLocEngine(AbstractEngine):
         self._save_query_vlad()
 
     def _save_query_vlad(self):
-        if self.query_video.get_frame_len() == len(self.query_vlad_cache):
-            dataset_folder = self.query_video.get_dataset_dir()
+        if self.query_video.frame_len == len(self.query_vlad_cache):
+            dataset_folder = self.query_video.dataset_dir
             query_vlad = np.concatenate(self.query_vlad_cache, axis=0)
             np.save(f"{dataset_folder}/vlads.npy", query_vlad)
             self.query_vlad = query_vlad

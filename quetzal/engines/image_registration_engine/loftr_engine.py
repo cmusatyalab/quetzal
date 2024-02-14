@@ -6,7 +6,7 @@ import cv2
 
 from functools import lru_cache
 import logging
-from quetzal.video import Video
+from quetzal.dtos.video import Video
 from typing import Literal, List
 from quetzal.engines.engine import AbstractEngine
 
@@ -30,7 +30,7 @@ class LoFTREngine(AbstractEngine):
 
         self.name = "Image Alignment - LoFTR"
         self.save_dir = join(
-            query_video.get_dataset_dir(),
+            query_video.dataset_dir,
             db_name + "_LoFTR",
         )
         os.makedirs(self.save_dir, exist_ok=True)
@@ -39,6 +39,12 @@ class LoFTREngine(AbstractEngine):
         self.device = device
         self.model = LoFTR(pretrained=pretrained)
         self.model = self.model.eval().to(device)
+        
+    def analyze_video(self, video: Video):
+        """Return True if no further real-time analysis required"""
+        
+        pass
+
 
     def _generate_aligned_images(
         self, query_image, database_image, save_file_path

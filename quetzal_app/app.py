@@ -1,80 +1,93 @@
-from quetzal_app.pages.page_video_comparison import video_result
-from quetzal_app.pages.file_explorer import file_system
+from quetzal_app.page.page_video_comparison import VideoComparisonPage
+from quetzal_app.page.page_file_explorer import FileExplorerPage
+from quetzal_app.page.page_state import AppState, PageState, Page
 
 import streamlit as st
-import base64
-
-from copy import deepcopy
-from streamlit_elements import elements, mui, lazy, html, event
-from quetzal_app.elements.mui_components import *
-import time
-import datetime
-from streamlit_extras.stylable_container import stylable_container
-
-from streamlit_tags import st_tags
-from streamlit_float import *
-
-from quetzal.video import *
-from quetzal.align_frames import align_video_frames, align_frame_pairs
-from quetzal_app.utils.utils import *
-from quetzal.dtos import *
-from quetzal.engines.detection_engine.grounding_sam_engine import GoundingSAMEngine
-
+from streamlit import session_state as ss
 import argparse
 import torch
-from glob import glob
-import os
 
-import pickle
-from quetzal_app.elements.image_frame_component import image_frame
-from streamlit.components.v1 import html as html_st, iframe
-from streamlit_js_eval import (
-    streamlit_js_eval,
-    copy_to_clipboard,
-    create_share_link,
-    get_geolocation,
-)
-
-from collections import defaultdict
-import logging
 from threading import Lock
-
-TEMP_MATCH_FILENAME = "./match_obj.pkl"
-BENCH_MARK = False
-BORDER_RADIUS = "0.8rem"
-DEFAULT_BOX_TH = 0.3
-DEFAULT_TEXT_TH = 0.25
-DEFAULT_SLIDER_VAL = 0
+from streamlit.web.server.websocket_headers import _get_websocket_headers
 
 dataset_layout_help = """
-        Dataset structure:
-        root_datasets_dir/
-        |
-        ├── project_name/
-        |   ├── raw_videos/
-        |   |   ├── video_name.mp4
-        |   |   └── ...
-        |   |
-        |   ├── database/
-        |   |   ├── video_name/
-        |   |   |   ├── frames_{fps}_{resolution}/
-        |   |   |   |   ├── frame_%05d.jpg
-        |   |   |   |   └── ...
-        |   |   |   └── ...
-        |   |   └── ...
-        |   |
-        |   ├── query/
-        |   |   ├── video_name/
-        |   |   |   ├── frames_{fps}_{resolution}/
-        |   |   |   |   ├── frame_%05d.jpg
-        |   |   |   |   └── ...
-        |   |   |   └── ...
-        |   |   └── ...
-        |   └── ...
-        └── ...
+    Dataset structure:
+    root_datasets_dir/
+    |
+    ├──user_name1/
+    |   |
+    |   ├── project_name1/
+    |   |   ├── video_name1.mp4
+    |   |   ├── video_name2.mp4
+    |   |   ├── ...
+    |   |   |
+    |   |   ├── subproject_name/
+    |   |   |   ├──video_name1.mp4
+    |   |   |   └── ...
+    |   |   └── ...
+    |   |
+    |   |
+    |   └── project_name2/
+    |
+    ├──user_name2/
+    └── ...
+
+    metadata_directory/
+
+    ├── user_name1.info.txt
+    ├── user_name1.meta.txt
+    ├── user_name1/
+    |   |
+    |   ├── project_name1.info.txt
+    |   ├── project_name1.meta.txt
+    |   ├── project_name1/
+    |   |   ├── video_name1.mp4.info.txt
+    |   |   ├── video_name1.mp4.meta.txt
+    |   |   |
+    |   |   ├── video_name2.mp4.info.txt
+    |   |   ├── video_name2.mp4.meta.txt
+    |   |   |
+    |   |   ├── ...
+    |   |   |
+    |   |   ├── database/
+    |   |   |   ├── video_name1/
+    |   |   |   |   ├── frames_{fps}_{resolution}/
+    |   |   |   |   |   ├── frame_%05d.jpg
+    |   |   |   |   |   └── ...
+    |   |   |   |   └── ...
+    |   |   |   └── video_name2/
+    |   |   |       ├── frames_{fps}_{resolution}/
+    |   |   |       |   ├── frame_%05d.jpg
+    |   |   |       |   └── ...
+    |   |   |       └── ...
+    |   |   |
+    |   |   ├── query/
+    |   |   |   ├── video_name2/
+    |   |   |   |   ├── frames_{fps}_{resolution}/
+    |   |   |   |   |   ├── frame_%05d.jpg
+    |   |   |   |   |   └── ...
+    |   |   |   |   └── ...
+    |   |   |   └── ...
+    |   |   |
+    |   |   ├── subproject_name.info.txt
+    |   |   ├── subproject_name.meta.txt
+    |   |   ├── subproject_name/
+    |   |   |   ├──video_name1.mp4.info.txt
+    |   |   |   ├──video_name1.mp4.meta.txt
+    |   |   |   └── ...
+    |   |   └── ...
+    |   |
+    |   |
+    |   └── project_name2/
+    |
+    ├── user_name1.info.txt
+    ├── user_name1.meta.txt
+    ├── user_name2/
+    └── ...
         """
 
 st.set_page_config(layout="wide")
+
 
 @st.cache_data
 def parse_args():
@@ -85,13 +98,20 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--dataset-root", default="../../data/root", help="Root directory of datasets"
+        "-d",
+        "--dataset-root",
+        default="./data/home/root",
+        help="Root directory of datasets",
     )
     parser.add_argument(
-        "--metadata-root", default="../../data/meta_data", help="Meta data directory of datasets"
+        "-m",
+        "--metadata-root",
+        default="./data/meta_data/root",
+        help="Meta data directory of datasets",
     )
     parser.add_argument("--cuda", action="store_true", help="Enable cuda", default=True)
-    parser.add_argument("--cuda_device", help="Select cuda device", default=0, type=int)
+    parser.add_argument("--cuda-device", help="Select cuda device", default=0, type=int)
+    parser.add_argument("-u", "--user", default="default_user")
     args = parser.parse_args()
 
     dataset_root = args.dataset_root
@@ -107,54 +127,48 @@ def parse_args():
 
     print(torch_device)
 
-    return dataset_root, meta_data_root, cuda_device, torch_device
+    return dataset_root, meta_data_root, cuda_device, torch_device, args.user
 
-dataset_root, meta_data_root, cuda_device, torch_device = parse_args()
-user = "jinho"
 
-user_default = {
-    "root_dir":os.path.join(dataset_root, user), 
-    "metadata_dir":os.path.join(meta_data_root, user), 
-    "user":user, 
-    "path":"./", 
-    "mode":"user",
-}
+dataset_root, meta_data_root, cuda_device, torch_device, user = parse_args()
+headers = _get_websocket_headers()
+user = headers.get("X-Forwarded-User", user)
 
-shared_default = {
-    "root_dir":dataset_root, 
-    "metadata_dir":meta_data_root, 
-    "user":user, 
-    "path":"./", 
-    "mode":"shared",
-}
+page_list: list[Page] = [FileExplorerPage, VideoComparisonPage]
+page_dict: dict[str, Page] = {page.name: page for page in page_list}
 
-if "page_state" not in st.session_state:
-    curr_dir = QuetzalFile(**user_default)
-    st.session_state.page_state = {
-        "curr_dir": curr_dir, 
-        "info_file": None,
-        "compare": {"project": None, "database": None, "query": None},
-        "user": user,
-        "last_dir": curr_dir,
-        "menu": "user",
-        "info": None,
-        # object Detection
-        "playback": {"slider": DEFAULT_SLIDER_VAL},
-        "object": {
-            "slider_box_th": DEFAULT_BOX_TH,
-            "slider_text_th": DEFAULT_TEXT_TH,
-            "class_prompts": ["objects"],
-        },
-        
-        
-        "init": [dataset_root, meta_data_root, cuda_device, torch_device],
-        "page": "file_system"
-    }
-    st.session_state.lock = Lock()
-    
-if st.session_state.page_state["page"] == "file_system":
-    file_system(user)
-elif st.session_state.page_state["page"] == "video":
-    video_result(
-        **st.session_state.page_state["compare"]
+if "page_states" not in ss:
+    app_state = AppState()
+    root_state = PageState(
+        root_dir=dataset_root,
+        metadata_dir=meta_data_root,
+        cuda_device=cuda_device,
+        torch_device=torch_device,
+        page=FileExplorerPage.name,
+        user=user,
+        comparison_matches=None,
     )
+
+    root_state.page = FileExplorerPage.name
+
+    def build_to_page(page: Page):
+        def to_page():
+            root_state.page = page.name
+            print("to_page", page.name)
+
+        return to_page
+
+    to_page = [build_to_page(page) for page in page_list]
+
+    ss.pages = dict()
+
+    app_state.root = root_state
+    for key, page in page_dict.items():
+        page_object = page(root_state=root_state, to_page=to_page)
+        ss.pages[key] = page_object
+        app_state[key] = page_object.page_state
+
+    ss.page_states = app_state
+    ss.lock = Lock()
+
+ss.pages[ss.page_states.root.page].render()

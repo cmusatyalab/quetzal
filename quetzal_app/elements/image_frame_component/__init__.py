@@ -1,4 +1,5 @@
 import streamlit.components.v1 as components
+from pathlib import Path
 
 def image_frame(image_urls=[], 
                 captions=[],
@@ -13,9 +14,10 @@ def image_frame(image_urls=[],
                 key=None):
     _image_frame = components.declare_component(
         name='image_frame',
-        path='./elements/image_frame_component'
+        path=str(Path(__file__).parent)
     )
 
+    # Path(__file__).parent.joinpath("app.py")
     if border:
         border_width = "1px" 
     else:
