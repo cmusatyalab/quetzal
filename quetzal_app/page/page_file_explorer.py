@@ -1,4 +1,5 @@
 import logging
+import os
 
 import streamlit as st
 from streamlit import session_state as ss
@@ -23,11 +24,11 @@ from quetzal_app.elements.mui_components import (
     setEventValue,
 )
 from quetzal_app.page.page_state import Page, PageState
+from quetzal_app.utils.utils import get_base64
 from quetzal.dtos.dtos import FileType, QuetzalFile
 from quetzal.dtos.video import DatabaseVideo, QueryVideo
 from quetzal.align_frames import align_frame_pairs, align_video_frames
-
-
+from pathlib import Path
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.DEBUG)
@@ -38,6 +39,10 @@ MENU_WIDTH = 256
 INFO_WIDTH = 340
 TOP_MARGIN = "64px"
 
+TITLE = "Quetzal"
+
+LOGO_FILE = os.path.normpath(Path(__file__).parent.joinpath("../quetzal_logo_trans.png"))
+LOGO_FILE = f"data:image/jpeg;base64,{get_base64(LOGO_FILE)}"
 # ELEMENT_BOTTOM_MARGIN = "7.594px"
 PAGE_NAME = "file_explorer"
 
@@ -346,14 +351,26 @@ class MenuContent:
                 },
             ):
                 ## Title
-                mui.Typography(
-                    "Quetzal",
-                    sx={
-                        "fontSize": "h4.fontSize",
-                        # /* top | left and right | bottom */
-                        "margin": "0.5rem 1rem 0.25rem",
-                    },
-                )
+                with mui.Stack(
+                    spacing=0.5,
+                    direction="row",
+                    alignItems="center",
+                    justifyContent="start",
+                    sx={"hegiht": 55, "pb": "3px"}
+                ):
+                    mui.Avatar(
+                        alt="Quetzal",
+                        src=LOGO_FILE,
+                        sx={"width": 52, "height": 52 }
+                    )
+                    mui.Typography(
+                        TITLE,
+                        sx={
+                            "fontSize": "h5.fontSize",
+                            # /* top | left and right | bottom */
+                            "margin": "0.5rem 1rem 0.25rem",
+                        },
+                    )
 
                 ## Upload Button
                 MuiUploadButton(
