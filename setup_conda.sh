@@ -4,6 +4,9 @@
 readonly ARGS="$@"  # Reset using https://stackoverflow.com/a/4827707
 readonly PROGNAME=$(basename $0)
 readonly PROGPATH=$(realpath $(dirname $0))
+export CUDA_HOME=/usr/local/cuda
+
+echo $CUDA_HOME
 
 # Internal variables
 env_name="anyloc"   # Name of the environment
@@ -218,9 +221,7 @@ start_time_secs=$SECONDS
 echo_debug "---- Start time: $start_time ----"
 # Core packages using conda_install and conda_raw_install
 echo_info "------ Installing core packages ------"
-conda_raw_install  -c pytorch -c nvidia pytorch==1.13.1 \
-    torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.7
-conda_raw_install -c pytorch faiss-gpu==1.7.2
+conda_raw_install pytorch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 pytorch-cuda=11.7 -c pytorch -c nvidia
 conda_raw_install -c conda-forge matplotlib==3.6.2
 pip_install fast-pytorch-kmeans==0.1.6
 conda_raw_install -c conda-forge einops==0.6.0
@@ -231,30 +232,64 @@ conda_raw_install -c conda-forge natsort==8.2.0
 conda_raw_install -c conda-forge pandas==2.0.0
 conda_raw_install -c conda-forge opencv=4.7
 conda_raw_install -c conda-forge tyro
-conda_raw_install -c conda-forge scipy==1.6.3
-conda_raw_install -c conda-forge scikit-learn==0.24.2
+conda_raw_install -c conda-forge scipy==1.11.4
+conda_raw_install -c conda-forge scikit-learn==1.4.0
 conda_raw_install -c conda-forge imageio==2.25.0
 conda_raw_install -c conda-forge seaborn==0.12.1
-# pip_install torch-tensorrt  # This replaces torch with '2.0.1+cu117'
 pip_install pytorchvideo==0.1.5
+pip install kornia==0.7.0
 conda_raw_install -c conda-forge transformers==4.28.0
 # conda_raw_install -c conda-forge googledrivedownloader==0.4
 conda_raw_install -c conda-forge distinctipy==1.2.2
 echo_info "------ Installing CLIP ------"
 pip_install git+https://github.com/openai/CLIP.git
+# pip install git+https://github.com/openai/CLIP.git
 pip_install open-clip-torch==2.16.0
 echo_info "------ Installing additional packages ------"
 conda_raw_install -c conda-forge scikit-image==0.19.3
 conda_raw_install -c conda-forge torchinfo==1.7.2
 conda_raw_install -c conda-forge graphviz
 conda_raw_install -c conda-forge gradio
-conda install pyrsistent
+conda_raw_install -c conda-forge pyrsistent
 pip_install torchviz=='0.0.2'
-pip_install torchscan
+# pip_install torchscan
 pip_install onedrivedownloader
 pip_install utm
 pip_install bcrypt
+pip_install streamlit
+pip_install streamlit-extras
+pip_install streamlit-elements==0.1.*
+pip_install streamlit-tags
+pip_install stqdm
+
+echo_info "----- Installing streamlit-float packages -----"
+cd quetzal_app/external/streamlit-float
+pip install -e .
+cd ../../..
+
+# pip_install kornia==0.1.4.post2
+conda_raw_install -c conda-forge kornia==0.7.0
+
+echo_info "----- Installing Grounding Dino -----"
+pip install --upgrade protobuf==4.21.12
+
+cd quetzal/external/GroundingDINO
+pip install -q -e .
+cd ../../..
+
+echo_info "----- Installing Segment-Anything -----"
+pip install git+https://github.com/facebookresearch/segment-anything.git
+
 conda_raw_install -c conda-forge jupyter
+
+
+pip_install supervision==0.6.0
+
+echo_info "----- Installing Quetzal -----"
+pip install -e .
+
+conda install -y -c pytorch faiss-gpu==1.7.4
+# # conda_raw_install -c pytorch faiss-gpu==1.7.2
 # Core packages using pip_install
 if [ $dev_tools == "true" ]; then 
     echo_info "------ Installing documentation and packaging tools ------"
