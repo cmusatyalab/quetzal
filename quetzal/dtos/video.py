@@ -440,7 +440,7 @@ class Video(QuetzalFile):
     
     def _updateMetaForRename(self, new_path):
         self._renameAnalysisData(new_path)
-        super()._updateMetaForRename()
+        super()._updateMetaForRename(new_path)
     
     
     def _deleteAnalysisData(self):

@@ -15,7 +15,7 @@ from quetzal.align_frames import DatabaseIdx, Match, QueryIdx
 from quetzal.engines.detection_engine.grounding_sam_engine import GoundingSAMEngine
 from quetzal.engines.engine import ObjectDetectionEngine
 
-DEFAULT_BOX_TH = 0.3
+DEFAULT_BOX_TH = 0.25
 DEFAULT_TEXT_TH = 0.25
 DEFAULT_SLIDER_VAL = 0
 DEFAULT_OBJECT_PROMPT = ["objects"]
