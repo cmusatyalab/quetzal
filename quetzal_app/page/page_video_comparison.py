@@ -40,11 +40,11 @@ class VideoComparisonPage(Page):
 
     def __init__(self, root_state: PageState, to_page: list[callable]):
         self.root_state = root_state
-        self.page_state = self.init_page_state(root_state)
+        self.init_page_state(root_state)
         self.to_page = to_page
 
     def init_page_state(self, root_state: PageState) -> PageState:
-        init_state = PageState(
+        self.page_state = PageState(
             matches=None,
             controller=PlaybackController.name,
             warp=True,
@@ -57,7 +57,7 @@ class VideoComparisonPage(Page):
             },
         )
 
-        init_state.update(
+        self.page_state.update(
             {
                 PlaybackController.name: PlaybackController.initState(root_state),
                 ObjectDetectController.name: ObjectDetectController.initState(
@@ -67,10 +67,10 @@ class VideoComparisonPage(Page):
             }
         )
 
-        return init_state
+        return self.page_state
 
     def open_file_explorer(self):
-        self.page_state.matches = None
+        self.init_page_state(self.root_state)
         self.to_page[0]()
 
     def render(self):
@@ -99,14 +99,14 @@ class VideoComparisonPage(Page):
         )
 
         # Initialize Variable
-        if self.page_state.matches == None:
-            self.page_state.update(self.root_state.comparison_matches)
+        if self.page_state.matches is None:
+            self.page_state.update(self.root_state.comparison_matches)            
 
         if "first_load" not in ss:
             ss.first_load = True
 
         TitleContent(
-            page_state=self.page_state, to_file_explorer=self.to_page[0]
+            page_state=self.page_state, to_file_explorer=self.open_file_explorer
         ).render()
 
         controller: dict[str, Controller] = {

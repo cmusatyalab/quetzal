@@ -560,7 +560,7 @@ class QuetzalFile:
     
 
     def _upload(self, uploaded_files):
-        assert self._mode == "user" or self._permission != Permission.READ_ONLY
+        assert self._mode == AccessMode.OWNER or self._permission != Permission.READ_ONLY
         assert self._type == FileType.DIRECTORY
         
         for uploaded_file in uploaded_files:
