@@ -43,7 +43,7 @@ SAM_CHECKPOINT_URL = (
 GROUNDING_DINO_CHECKPOINT_URL = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
 
 
-class GoundingSAMEngine(ObjectDetectionEngine):
+class GroundingSAMEngine(ObjectDetectionEngine):
     name = "grounding_sam"
     
     def __init__(
@@ -142,4 +142,4 @@ class GoundingSAMEngine(ObjectDetectionEngine):
 
 
 if __name__ == "__main__":
-    engine = GoundingSAMEngine()
+    engine = GroundingSAMEngine()

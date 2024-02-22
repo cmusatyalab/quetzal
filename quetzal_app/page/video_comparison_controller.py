@@ -12,7 +12,7 @@ from streamlit_tags import st_tags
 import torch
 
 from quetzal.align_frames import DatabaseIdx, Match, QueryIdx
-from quetzal.engines.detection_engine.grounding_sam_engine import GoundingSAMEngine
+from quetzal.engines.detection_engine.grounding_sam_engine import GroundingSAMEngine
 from quetzal.engines.engine import ObjectDetectionEngine
 
 DEFAULT_BOX_TH = 0.25
@@ -40,7 +40,7 @@ DB_ANNOTATE_IMG = str(Path(__file__).parent.joinpath("../tmp/quetzal_annotated_d
 ## List of Object Detector to Use
 DetectorName = NewType("DetectorName", str)
 
-detector_list = [GoundingSAMEngine]
+detector_list = [GroundingSAMEngine]
 detector_dict: dict[DetectorName, ObjectDetectionEngine] = {
     model.name: model for model in detector_list
 }
@@ -287,7 +287,7 @@ class ObjectDetectController(Controller):
             CLASS_PROMT_KEY: DEFAULT_OBJECT_PROMPT,
             "torch_device": root_state.torch_device,
             DETECTOR_KEY: None,
-            DETECTOR_NAME_KEY: GoundingSAMEngine.name,
+            DETECTOR_NAME_KEY: GroundingSAMEngine.name,
         }
         return values
 
@@ -317,7 +317,7 @@ class ObjectDetectController(Controller):
 
     def __init__(self, page_state):
         self.page_state = page_state
-        # page_state[self.name][DETECTOR_NAME_KEY] = GoundingSAMEngine.name
+        # page_state[self.name][DETECTOR_NAME_KEY] = GroundingSAMEngine.name
 
     def _run_detection(
         self, text_prompt, input_img, output_file, box_threshold, text_threshold
