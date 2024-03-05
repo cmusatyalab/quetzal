@@ -37,7 +37,7 @@ def main():
     # args = parser.parse_args()
     args, input_arg = parser.parse_known_args()
 
-    entrypoint = Path(__file__).parent.joinpath("app.py")
+    entrypoint = Path(__file__).parent.joinpath("test_app.py")
     config = dict(
         browser_gatherUsageStats=False,
         client_toolbarMode="viewer",
@@ -45,6 +45,7 @@ def main():
         server_port=args.port,
         server_headless=True,
         server_fileWatcherType="none",
+        runner_fastReruns=True,
     )
     
     st_config_file= Path(__file__).parent.joinpath(".streamlit/config.toml")
@@ -54,6 +55,23 @@ def main():
     bootstrap.load_config_options(flag_options=config)
     bootstrap.run(str(entrypoint), False, input_arg, config)
 
+import threading
+import time
+from streamlit.runtime import Runtime
+
+
+def watcher():
+    time.sleep(2)
+    while True:
+        
+        main_thread = [t for t in threading.enumerate()]
+        runtime: Runtime = Runtime.instance()
+        sessions = [(s.session.id, s.session._state, s.session._session_state) for s in runtime._session_mgr.list_sessions()]
+        print(main_thread)
+        print(sessions)
+        time.sleep(2)
 
 if __name__ == "__main__":
+    t = threading.Thread(target=watcher)
+    t.start()
     main()

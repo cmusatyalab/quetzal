@@ -5,6 +5,9 @@ import streamlit as st
 from streamlit import session_state as ss
 from streamlit_elements import elements, mui
 from streamlit_extras.stylable_container import stylable_container
+from quetzal.engines.align_engine.dtw_engine import DTWEngine
+from quetzal.engines.align_engine.realtime_engine import RealtimeAlignmentEngine
+from quetzal.engines.engine import AlignmentEngine
 import torch
 
 from quetzal_app.elements.mui_components import (
@@ -196,6 +199,7 @@ class FileExplorerPage(Page):
         overlay: bool = True,
         torch_device: torch.device = torch.device("cuda:0"),
     ):
+        
         ## Load DTW and VLAD Features ##
         database_video = DatabaseVideo.from_quetzal_file(self.page_state.database)
         query_video = QueryVideo.from_quetzal_file(self.page_state.query)
@@ -203,19 +207,23 @@ class FileExplorerPage(Page):
         db_frame_list = database_video.get_frames()
         query_frame_list = query_video.get_frames()
         warp_query_frame_list = query_frame_list
+        
+        # alignemnt_engine: AlignmentEngine = DTWEngine(torch_device)
+        alignemnt_engine: AlignmentEngine = RealtimeAlignmentEngine(torch_device)
+        matches, warp_query_frame_list = alignemnt_engine.align_frame_list(database_video, query_video, overlay)
 
-        if not overlay:
-            matches = align_video_frames(
-                database_video=database_video,
-                query_video=query_video,
-                torch_device=torch_device,
-            )
-        else:
-            matches, warp_query_frame_list = align_frame_pairs(
-                database_video=database_video,
-                query_video=query_video,
-                torch_device=torch_device,
-            )
+        # if not overlay:
+        #     matches = align_video_frames(
+        #         database_video=database_video,
+        #         query_video=query_video,
+        #         torch_device=torch_device,
+        #     )
+        # else:
+        #     matches, warp_query_frame_list = align_frame_pairs(
+        #         database_video=database_video,
+        #         query_video=query_video,
+        #         torch_device=torch_device,
+        #     )
 
         self.root_state["comparison_matches"] = {
             "query": query_video,

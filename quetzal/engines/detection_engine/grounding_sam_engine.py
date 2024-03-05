@@ -43,7 +43,7 @@ SAM_CHECKPOINT_URL = (
 GROUNDING_DINO_CHECKPOINT_URL = "https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth"
 
 
-class GoundingSAMEngine(ObjectDetectionEngine):
+class GroundingSAMEngine(ObjectDetectionEngine):
     name = "grounding_sam"
     
     def __init__(
@@ -114,12 +114,19 @@ class GoundingSAMEngine(ObjectDetectionEngine):
 
         image = cv2.imread(query_image)
 
+        import time 
+        
+        start = time.time()
         detections = self.grounding_dino_model.predict_with_caption(
             image=image,
             caption=caption,
             box_threshold=box_threshold,
             text_threshold=text_threshold,
         )
+        
+        end = time.time()
+        print(end - start)
+        
         labels = detections[1]
         detections = detections[0]
 
@@ -142,4 +149,4 @@ class GoundingSAMEngine(ObjectDetectionEngine):
 
 
 if __name__ == "__main__":
-    engine = GoundingSAMEngine()
+    engine = GroundingSAMEngine()

@@ -263,7 +263,7 @@ class AnyLocEngine(AbstractEngine):
             np.save(f"{query_video.dataset_dir}/vlads.npy", query_vlad)
             
 
-    def get_query_vlad(self) -> np.ndarray:
+    def get_query_vlad(self, each=False) -> np.ndarray:
         """
         Retrieves the VLAD features for the registered query video.
 
@@ -272,17 +272,17 @@ class AnyLocEngine(AbstractEngine):
         """
         
         self._migrate_db_to_query(self.query_video)
-        
+           
         return self._get_vlad_set(self.query_video) if self.query_video else None
 
-    def get_database_vlad(self) -> np.ndarray:
+    def get_database_vlad(self, each=False) -> np.ndarray:
         """
         Retrieves the VLAD features for the registered database video.
 
         Returns:
             np.ndarray: The VLAD features of the database video.
         """
-        return self._get_vlad_set(self.db_video) if self.db_video else None
+        return self._get_vlad_set(self.db_video) if self.db_video else None    
 
     def _get_vlad_set(self, video: Video) -> np.ndarray:
         """
@@ -310,9 +310,13 @@ class AnyLocEngine(AbstractEngine):
                 img_frames, backend=True, mininterval=1,
                 desc=f"Generating VLAD features for the Video {video._path.name}"
             ):
+            # for img_frame in tqdm(
+            #     img_frames,
+            #     desc=f"Generating VLAD features for the Video {video._path.name}"
+            # ):
                 # DINO features
                 with torch.no_grad():
-                    pil_img = Image.open(img_fname).convert("RGB")
+                    pil_img = Image.open(img_frame).convert("RGB")
                     img_pt = self.base_tf(pil_img).to(self.device)
                     if max(img_pt.shape[-2:]) >= max_img_size:
                         c, h, w = img_pt.shape

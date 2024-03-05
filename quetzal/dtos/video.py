@@ -107,7 +107,7 @@ class Video(QuetzalFile):
             metadata=metadata,
             parent=parent
         )
-        
+                
         assert video_type in [
             "database",
             "query",
@@ -440,7 +440,7 @@ class Video(QuetzalFile):
     
     def _updateMetaForRename(self, new_path):
         self._renameAnalysisData(new_path)
-        super()._updateMetaForRename()
+        super()._updateMetaForRename(new_path)
     
     
     def _deleteAnalysisData(self):
@@ -807,3 +807,6 @@ class LiveQueryVideo(Video):
 
     def get_frames(self, fps=2, resolution=1024):
         super().get_frames(fps, resolution)
+
+
+

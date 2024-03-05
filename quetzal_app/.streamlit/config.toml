@@ -8,3 +8,6 @@ font="sans serif"
 [server]
 maxUploadSize = 2000
 fileWatcherType = "none"
+
+[runner]
+fastReruns = "True"

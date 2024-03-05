@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from abc import ABC, abstractmethod
+from typing import NewType
 
 class AbstractEngine(ABC):
     # @abstractmethod
@@ -40,6 +41,10 @@ class AbstractEngine(ABC):
         """Save state in save_path. return None or final result"""
         pass
 
+QueryFrame = NewType("QueryFrame", str)
+DataBaseFrame = NewType("DataBaseFrame", str)
+FrameMatch = NewType("FrameMatch", list[tuple[QueryFrame, DataBaseFrame]])
+WarpedFrame = NewType("WarpedFrame", list[str])
 
 class ObjectDetectionEngine(ABC):
     name = "Default Name"
@@ -57,4 +62,23 @@ class ObjectDetectionEngine(ABC):
     def generate_masked_images(
         self, query_image, caption, save_file_path, box_threshold, text_threshold
     ):
+        pass
+
+
+class AlignmentEngine(ABC):
+    name = "Default Name"
+
+    def __init__(self, device):
+        pass
+
+    @staticmethod
+    def is_video_analyzed(video) -> bool:
+        """Return True if no further real-time analysis required"""
+
+        return False
+
+    @abstractmethod
+    def align_frame_list(
+        self, database_video, query_video, overlay
+    ) -> tuple[FrameMatch, WarpedFrame]:
         pass
