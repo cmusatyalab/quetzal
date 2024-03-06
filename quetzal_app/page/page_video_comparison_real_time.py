@@ -5,7 +5,7 @@ from streamlit import session_state as ss
 from streamlit_elements import elements, mui
 from quetzal_app.elements.mui_components import MuiToggleButton
 
-from quetzal.dtos.video import QueryVideo, DatabaseVideo
+from quetzal.dtos.video import QueryVideo, DatabaseVideo, Video, convert_path
 from quetzal.align_frames import QueryIdx, DatabaseIdx, Match
 from quetzal_app.utils.utils import format_time, get_base64
 from quetzal_app.page.page_state import PageState, Page
@@ -18,8 +18,21 @@ from quetzal_app.page.video_comparison_controller import (
 from pathlib import Path
 
 from quetzal_app.elements.image_frame_component import image_frame
+from quetzal_app.notifier import get_browser_session_id, get_streamlit_session
+from streamlit.runtime.scriptrunner import add_script_run_ctx
+from quetzal.engines.pipeline_executor import Pipeline
+from quetzal.engines.engine import AbstractEngine
+from quetzal.engines.align_engine.realtime_engine import RealtimeAlignmentEngine
+from quetzal.dtos.gps import AnafiGPS, AbstractGPS
 
-PAGE_NAME = "video_comparison"
+import threading
+import queue
+import os
+import time
+import logging
+
+
+PAGE_NAME = "video_comparison_real_time"
 
 LOGO_FILE = os.path.normpath(Path(__file__).parent.joinpath("../quetzal_logo_trans.png"))
 LOGO_FILE = f"data:image/jpeg;base64,{get_base64(LOGO_FILE)}"
@@ -31,23 +44,146 @@ PLAYBACK_TIME_TXT = "Playback Time: {}/{}"
 
 controller_dict: dict[str, Controller] = {
     PlaybackController.name: PlaybackController,
-    ObjectDetectController.name: ObjectDetectController,
+    # ObjectDetectController.name: ObjectDetectController,
 }
 
+logging.basicConfig()
 
-class VideoComparisonPage(Page):
+from glob import glob
+
+streamlit_session = get_streamlit_session(get_browser_session_id())
+
+def frontend_rerun() -> None:
+    streamlit_session._handle_rerun_script_request()
+
+class DirectoryMonitorThread(threading.Thread):
+
+    def __init__(self, directory, pipline_executor: Pipeline, poll_interval=1.0, gps=None):
+        threading.Thread.__init__(self)
+        self.dir = directory
+        self.poll_interval = poll_interval
+        self.last_known_state = {}
+        self.pipeline_executor = pipline_executor
+        self.stop_event = threading.Event()
+        self.logger = logging.getLogger("DirectoryMonitorThread")
+        self.logger.setLevel(logging.DEBUG)
+        
+        self.logger.debug("Initializing with: " + str(directory))
+        self.gps = gps
+
+    def run(self):
+        self.logger.debug("Start Running")
+        ss.directoryMonitorThreadLife = True
+        while not self.stop_event.is_set():
+            try:
+                if ss.directoryMonitorThreadLife: # session state disapear when session closes
+                    self.scan_directory()
+                    time.sleep(self.poll_interval)
+                else:
+                    self.logger.debug("Should never reach here")
+                    break
+            except:
+                self.logger.debug("Session Closed")
+                self.pipeline_executor.end()
+                break
+            
+        self.logger.debug("Stopped")
+
+    def scan_directory(self):
+        files = glob(os.path.join(self.dir, f"frame*.jpg"))
+        current_state = {f: os.path.getmtime(f) for f in files if os.path.isfile(f)}
+        added = current_state.keys() - self.last_known_state.keys()
+        removed = self.last_known_state.keys() - current_state.keys()
+        modified = {f for f in current_state if f in self.last_known_state and current_state[f] != self.last_known_state[f]}
+        
+        if added:
+            added_list = [file for file in added]
+            added_list.sort()
+            added_list = [((file, convert_path(file, 512)), self.gps[i]) for i, file in enumerate(added_list)]
+            
+            self.pipeline_executor.submit(added_list)
+        if removed:
+            pass
+        if modified:
+            pass
+
+        self.last_known_state = current_state
+    
+    def stop(self):
+        self.stop_event.set()
+
+from quetzal_app.page.video_comparison_controller import SLIDER_KEY
+
+class MatchUpdateThread(threading.Thread):
+
+    def __init__(self, page_state, pipline_executor: Pipeline, timeout=60, wait_interval=5):
+        threading.Thread.__init__(self)
+        self.page_state = page_state
+        self.last_known_state = {}
+        self.pipeline_executor = pipline_executor
+        self.stop_event = threading.Event()
+        self.matches = list()
+        self.logger = logging.getLogger("MatchUpdateThread")
+        self.logger.setLevel(logging.DEBUG)
+        self.waited = 0
+        self.wait_interval = wait_interval
+        self.timeout = timeout
+
+    def run(self):
+        self.logger.debug("Start Running")
+        ss.MatchUpdateThread = True
+    
+        while not self.stop_event.is_set():
+            try:
+                if ss.MatchUpdateThread: # session state disapear when session closes
+                    rv = self.pipeline_executor.get_result()
+                    if rv is None:
+                        time.sleep(self.wait_interval)
+                        self.waited += self.wait_interval
+                    
+                    else:
+                        self.waited = 0
+                        self.matches.append(rv)
+                        self.update_matches()
+                else:
+                    self.logger.debug("Should never reach here")
+                    break
+                
+                if self.waited >= self.timeout:
+                    self.logger.debug("Input Inactive")
+                    break
+            except:
+                self.logger.debug("Session Closed")
+                break
+            
+        self.logger.debug("Stopped")
+
+    def update_matches(self):
+        self.page_state.matches = self.matches
+        self.page_state[PLAY_IDX_KEY] = len(self.matches) - 1
+        
+        # ss[SLIDER_KEY] = len(self.matches) - 1
+        # ss[SLIDER_KEY + "value"] = ss[SLIDER_KEY]
+        
+        frontend_rerun()
+    
+    def stop(self):
+        self.stop_event.set()
+        
+class VideoComparisonRealTimePage(Page):
     name = PAGE_NAME
 
     def __init__(self, root_state: PageState, to_page: list[callable]):
         self.root_state = root_state
         self.page_state = self.init_page_state(root_state)
         self.to_page = to_page
+        
 
     def init_page_state(self, root_state: PageState) -> PageState:
         init_state = PageState(
             matches=None,
             controller=PlaybackController.name,
-            warp=True,
+            warp=False,
             next_frame=False,
             info_anchor=None,
             annotated_frame={
@@ -60,9 +196,9 @@ class VideoComparisonPage(Page):
         init_state.update(
             {
                 PlaybackController.name: PlaybackController.initState(root_state),
-                ObjectDetectController.name: ObjectDetectController.initState(
-                    root_state
-                ),
+                # ObjectDetectController.name: ObjectDetectController.initState(
+                #     root_state
+                # ),
                 PLAY_IDX_KEY: 0,
             }
         )
@@ -70,7 +206,23 @@ class VideoComparisonPage(Page):
         return init_state
 
     def open_file_explorer(self):
+        ss.first_load = True
         self.init_page_state(self.root_state)
+        
+        pipeline: Pipeline = ss.pipeline_thread
+        pipeline.end()
+        ss.pipeline_thread = None
+        
+        monitor_thread: DirectoryMonitorThread = ss.monitor_thread
+        monitor_thread.stop()
+        monitor_thread.join()
+        ss.monitor_thread = None
+        
+        update_thread: MatchUpdateThread = ss.update_thread
+        update_thread.stop()
+        update_thread.join()
+        ss.update_thread = None
+        
         self.to_page[0]()
 
     def render(self):
@@ -102,7 +254,52 @@ class VideoComparisonPage(Page):
         if self.page_state.matches == None:
             self.page_state.update(self.root_state.comparison_matches)
 
-        if "first_load" not in ss:
+        if "first_load" not in ss or ss.first_load:
+            query_video: Video = self.page_state.query
+            db_video: Video = self.page_state.database
+            db_gps_anafi = AnafiGPS(db_video)
+            query_gps_anfi = AnafiGPS(query_video)
+            query_gps_look_at = query_gps_anfi.get_look_at_gps(camera_angle=45)
+            
+            query_video.resolution = 256
+            
+            def realtime_align_engine_wrapper():
+                engine: AbstractEngine = RealtimeAlignmentEngine(
+                    device=self.root_state.torch_device, 
+                    database_video=db_video,
+                    database_gps=db_gps_anafi,
+                )
+                return engine
+            
+            pipeline = Pipeline([
+                    (realtime_align_engine_wrapper, 1, None),
+                ], 
+                queue_maxsize=2000,
+                verbose = False
+            )
+            
+            ss.pipeline_thread = pipeline
+            
+            monitor_thread = DirectoryMonitorThread(
+                query_video.dataset_dir, 
+                pipline_executor=pipeline,
+                poll_interval=1,
+                gps=query_gps_look_at
+            )
+            add_script_run_ctx(monitor_thread)
+            ss.monitor_thread = monitor_thread
+            
+            match_update_thread = MatchUpdateThread(
+                page_state=self.page_state,
+                pipline_executor=pipeline
+            )
+            add_script_run_ctx(match_update_thread)
+            ss.update_thread = match_update_thread
+            
+            pipeline.start()
+            monitor_thread.start()
+            match_update_thread.start()
+
             ss.first_load = True
 
         TitleContent(
@@ -326,9 +523,9 @@ class ControllerOptions:
     def render(self):
         toggle_buttons = [
             MuiToggleButton(PlaybackController.name, "PlayArrow", "Playback Control"),
-            MuiToggleButton(
-                ObjectDetectController.name, "CenterFocusStrong", "Object Detection"
-            ),
+            # MuiToggleButton(
+            #     ObjectDetectController.name, "CenterFocusStrong", "Object Detection"
+            # ),
         ]
 
         with elements("tabs"):

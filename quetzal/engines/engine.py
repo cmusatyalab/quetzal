@@ -16,12 +16,7 @@ class AbstractEngine(ABC):
         """Return True if no further real-time analysis required"""
 
         return False
-
-    @abstractmethod
-    def analyze_video(self, video):
-        """Return True if no further real-time analysis required"""
-
-        pass
+    
 
     @abstractmethod
     def process(self, file_path: list):
@@ -52,12 +47,6 @@ class ObjectDetectionEngine(ABC):
     def __init__(self, device):
         pass
 
-    @staticmethod
-    def is_video_analyzed(video) -> bool:
-        """Return True if no further real-time analysis required"""
-
-        return False
-
     @abstractmethod
     def generate_masked_images(
         self, query_image, caption, save_file_path, box_threshold, text_threshold
@@ -70,12 +59,6 @@ class AlignmentEngine(ABC):
 
     def __init__(self, device):
         pass
-
-    @staticmethod
-    def is_video_analyzed(video) -> bool:
-        """Return True if no further real-time analysis required"""
-
-        return False
 
     @abstractmethod
     def align_frame_list(

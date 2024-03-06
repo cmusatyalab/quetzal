@@ -1,4 +1,5 @@
 from quetzal_app.page.page_video_comparison import VideoComparisonPage
+from quetzal_app.page.page_video_comparison_real_time import VideoComparisonRealTimePage
 from quetzal_app.page.page_file_explorer import FileExplorerPage
 from quetzal_app.page.page_state import AppState, PageState, Page
 
@@ -136,9 +137,10 @@ def parse_args():
 
 dataset_root, meta_data_root, cuda_device, torch_device, user = parse_args()
 headers = _get_websocket_headers()
-user = headers.get("X-Forwarded-User", user)
+# user = headers.get("X-Forwarded-User", user)
+user = user
 
-page_list: list[Page] = [FileExplorerPage, VideoComparisonPage]
+page_list: list[Page] = [FileExplorerPage, VideoComparisonPage, VideoComparisonRealTimePage]
 page_dict: dict[str, Page] = {page.name: page for page in page_list}
 
 if "page_states" not in ss:
@@ -174,5 +176,32 @@ if "page_states" not in ss:
 
     ss.page_states = app_state
     ss.lock = Lock()
+
+
+# import pickle
+# from quetzal.dtos.video import DatabaseVideo, QueryVideo
+# with open("../test_matches.pkl", 'rb') as f:
+#     comparison_matches = pickle.load(f)
+
+# database_video = DatabaseVideo(
+#     path = comparison_matches["database"],
+#     root_dir=dataset_root,
+#     metadata_dir=meta_data_root,
+#     user=user,
+# )
+
+# query_video = QueryVideo(
+#     path = comparison_matches["query"],
+#     root_dir=dataset_root,
+#     metadata_dir=meta_data_root,
+#     user=user,
+# )
+
+# comparison_matches["database"] = database_video
+# comparison_matches["query"] = query_video
+
+# ss.page_states.root["comparison_matches"] = comparison_matches
+
+
 
 ss.pages[ss.page_states.root.page].render()

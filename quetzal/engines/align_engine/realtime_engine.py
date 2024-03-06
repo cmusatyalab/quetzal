@@ -8,10 +8,10 @@ import supervision as sv
 import cv2
 
 import logging
-from quetzal.engines.engine import AlignmentEngine, FrameMatch, WarpedFrame
+from quetzal.engines.engine import AlignmentEngine, FrameMatch, WarpedFrame, AbstractEngine
 from quetzal.align_frames import align_frame_pairs, align_video_frames
 from quetzal.dtos.video import Video
-from quetzal.dtos.gps import AnafiGPS, find_frames_within_radius
+from quetzal.dtos.gps import AnafiGPS, find_frames_within_radius, AbstractGPS, GpsPoint
 import faiss
 import torch
 import torch.nn.functional as F
@@ -21,9 +21,10 @@ from quetzal.engines.vpr_engine.anyloc_engine import AnyLocEngine
 import numpy as np
 import pickle
 from pathlib import Path
+from typing import TypeAlias
 
 logging.basicConfig()
-logger = logging.getLogger("DTW Engine")
+logger = logging.getLogger("RealtimeAlignment Engine")
 logger.setLevel(logging.DEBUG)
 
 def is_transformation_acceptable(H, max_translation=200, min_scale=0.2, max_scale=3.0):
@@ -49,13 +50,19 @@ def calculate_blackout_area(image):
     black_pixels = np.all(image == 0, axis=-1)
     return np.sum(black_pixels)
 
+FilePath256: TypeAlias = str
+FilePath512: TypeAlias = str
 
-class RealtimeAlignmentEngine(AlignmentEngine):
+class RealtimeAlignmentEngine(AlignmentEngine, AbstractEngine):
     name = "grounding_sam"
     
     def __init__(
         self,
         device: torch.device = torch.device("cuda:0"),
+        database_video: Video = None,
+        database_gps: AbstractGPS = None,
+        camera_angle: int = 45,
+        query_num: int = 10,
     ):
         """
         Assumes Using GPU (cuda)
@@ -63,6 +70,124 @@ class RealtimeAlignmentEngine(AlignmentEngine):
 
         ## Loading model
         self.device = device
+        self.database_video = database_video
+        self.database_gps = database_gps
+        self.camera_angle = camera_angle
+        self.query_num = query_num
+        
+        
+        
+        if database_video and database_gps:
+            
+            logger.debug("Loading AnylocEngine")
+            
+            database_video.resolution = 512
+            self.db_frames_512 = database_video.get_frames()
+            database_video.resolution = 256
+            
+            self.db_gps_look_at: list[GpsPoint] = database_gps.get_look_at_gps(camera_angle=camera_angle)
+            
+            self.anyloc_256 = AnyLocEngine(
+                database_video=database_video,
+                query_video=None,
+                max_img_size=256,
+            )
+            self.anyloc_256.load_models()
+            self.db_256 = self.anyloc_256.get_database_vlad()
+            
+            self.res = faiss.StandardGpuResources()
+            self.orb = cv2.ORB_create()
+            self.bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+            self.db_vlad = F.normalize(self.db_256)
+            
+            ex_image = self.db_frames_512[0]
+            ex_image = cv2.imread(ex_image)
+            img_shape = ex_image.shape
+            self.img_pixels = img_shape[0] * img_shape[1]
+            
+        self.frame_match = list()
+        
+        logger.debug("Done Loading")
+        
+        
+    def is_video_analyzed(video) -> bool:
+        """Return True if no further real-time analysis required"""
+
+        return False
+    
+    
+    def process(self, file_path: list[(FilePath256, FilePath512), AbstractGPS]):
+        """take (file_path, AbstractGps)"""
+        
+        (query_frame, query_frame_512), query_gps_look_at = file_path
+        
+        query = self.anyloc_256._get_vlad(query_frame)
+            
+        db_idx_selected, _= find_frames_within_radius(db_gps=self.db_gps_look_at, query_point=query_gps_look_at, radius=20)
+
+        db_256_gps = np.array([self.db_vlad[idx] for idx in db_idx_selected])
+        db_index = faiss.IndexFlatIP(db_256_gps.shape[1])
+        db_index: faiss.IndexFlatIP = faiss.index_cpu_to_gpu(self.res, 0, db_index)
+        db_index.add(db_256_gps)
+        
+        _distance, db_idx_from_vlad = db_index.search(query, self.query_num)
+        db_idx_from_vlad = [db_idx_selected[idx] for idx in db_idx_from_vlad[0]]
+        
+        db_frames_input = [self.db_frames_512[idx] for idx in db_idx_from_vlad]
+        
+        blackout_area_list = []
+        magnitudes = []
+        img_query = cv2.imread(query_frame_512)
+        kp_query, des_query = self.orb.detectAndCompute(img_query, None)
+        for i, db in enumerate(db_frames_input):
+        # Load images
+            img_db = cv2.imread(db)
+
+            # Detect keypoints and descriptors with ORB
+            kp_db, des_db = self.orb.detectAndCompute(img_db, None)
+
+            # Match descriptors
+            matches = self.bf.match(des_db, des_query)
+            matches = sorted(matches, key = lambda x:x.distance)
+            points_db = np.float32([kp_db[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+            points_query = np.float32([kp_query[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+            
+            # Find homography
+            H, _ = cv2.findHomography(points_db, points_query, cv2.RANSAC)
+            if H is not None and is_transformation_acceptable(H):
+                aligned_img = cv2.warpPerspective(img_db, H, (img_query.shape[1], img_query.shape[0]))
+                blackout_area = calculate_blackout_area(aligned_img)
+                blackout_area_list.append(blackout_area)
+                magnitudes.append((i, blackout_area))
+            else:
+                blackout_area = self.img_pixels
+                blackout_area_list.append(blackout_area)
+                magnitudes.append((i, blackout_area))
+
+        # Sort by magnitudes
+        magnitudes.sort(key=lambda x: x[1])  
+        if magnitudes[0][1] == self.img_pixels:
+            aligned_db_idx = db_idx_from_vlad[0]
+        else:
+            aligned_db_idx = db_idx_from_vlad[magnitudes[0][0]]
+        
+        ## NEED CHANGE
+        query_idx = int(query_frame[-9:-4]) - 1
+        self.frame_match.append((query_idx, aligned_db_idx))
+        
+        # print("Matched", (self.query_idx, aligned_db_idx))
+        return (query_idx, aligned_db_idx)
+
+
+    def end(self):
+        """Indicate no more input will be processed"""
+        pass
+
+
+    def save_state(self, save_path):
+        """Save state in save_path. return None or final result"""
+        pass
+    
     
     def align_frame_list(
         self, database_video: Video, query_video: Video, overlay: bool, query_num: int = 10
@@ -121,7 +246,7 @@ class RealtimeAlignmentEngine(AlignmentEngine):
 
             db_256_gps = np.array([db_vlad[idx] for idx in db_idx_selected])
             db_index = faiss.IndexFlatIP(db_256_gps.shape[1])
-            db_index = faiss.index_cpu_to_gpu(res, 0, db_index)
+            db_index: faiss.IndexFlatIP = faiss.index_cpu_to_gpu(res, 0, db_index)
             db_index.add(db_256_gps)
             
             _distance, db_idx_from_vlad = db_index.search(query, query_num)

@@ -24,6 +24,7 @@ Elevation: TypeAlias = float # meter
 Utm = NewType("Utm", tuple[Easting, Northing])
 GpsPoint = NewType("GpsPoint", tuple[Latitude, Longitude])
 
+
 def dms_to_decimal(dms_str):
     """
     Convert a string in DMS format (DDD° MM' SS.S") to Decimal Degrees.

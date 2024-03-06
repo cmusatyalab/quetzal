@@ -22,6 +22,25 @@ import torch
 logging.basicConfig()
 
 
+def convert_path(original_path, resolution):
+    path_obj = Path(original_path)
+    
+    parts = list(path_obj.parts)
+    parent_dir = parts[-2]
+        
+    # Check if the parent directory follows the 'frame_{}_{}' convention
+    if parent_dir.startswith('frames_') and parent_dir.count('_') == 2:
+        base, fps, _ = parent_dir.split('_')
+        new_parent_dir = f"{base}_{fps}_{resolution}"
+        
+        parts[-2] = new_parent_dir
+        new_path = Path(*parts)
+        return str(new_path)
+    else:
+        print("The parent directory does not follow the expected 'frames_{}_{}' convention.")
+        return None
+
+
 def extract_fps_res(directory_name):
     """
     Extracts frames per second (fps) and resolution from a directory name.
@@ -121,7 +140,7 @@ class Video(QuetzalFile):
         self.logger = logging.getLogger("Video_" + self._path.name)
         self.logger.setLevel(logging.DEBUG)
         self.debug = lambda *args: self.logger.debug(" ".join([str(arg) for arg in args]))
-
+        
         self._lock = threading.RLock()
         self._cam = None
         self._native_fps = None
@@ -531,8 +550,6 @@ class Video(QuetzalFile):
         
         if option == None:
             return None
-
-        self.debug("I am here")
 
         self._syncAnalysisState(engine)
         if self._analysis_progress >= option:

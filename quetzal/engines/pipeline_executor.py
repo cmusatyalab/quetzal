@@ -125,8 +125,6 @@ class Pipeline:
             )
             for i, (engine_setup, num_threads, total_items) in enumerate(stages)
         ]
-        # self.stages = [Stage(engine_setup, self.queues[i], self.queues[i + 1], num_threads, total=total)
-        #                      for i, (engine_setup, num_threads, total) in enumerate(stages)]
 
         self.output_list = []
         self._lock = threading.Lock()
@@ -161,9 +159,7 @@ class Pipeline:
         with self._lock:
             running_list = [stage for stage in self.stages if stage.is_running()]
 
-            for stage in running_list:
-                if not stage.input_queue.empty():
-                    empty = False
+            empty = all(stage.input_queue.empty() for stage in running_list)
 
             # Handle the case where last input is being processed
             if empty and self.stages[-1].is_running():
@@ -172,7 +168,7 @@ class Pipeline:
 
             # when it is not empty, wait for next result()
             if not empty:
-                result = self.queues[-1].get()
+                result = self.queues[-1].get(block=True,timeout=30)
                 self.output_list.append(result)
                 self.queues[-1].task_done()
                 if pbar:
@@ -213,6 +209,7 @@ class Pipeline:
                 stage.input_queue.join()
 
             self.executor.shutdown(wait=True)
+            self.executor = None
 
             for q in self.queues:
                 with q.mutex:

@@ -110,7 +110,7 @@ class PlaybackController(Controller):
     def __init__(self, page_state):
         self.page_state = page_state
         self.slider_min = 0
-        self.slider_max = len(page_state.query_frames) - 1
+        self.slider_max = len(page_state.matches) - 1
         self.initPlayBackController()
 
     def set_slider(self, val):
