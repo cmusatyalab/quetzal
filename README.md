@@ -1,4 +1,4 @@
-# Quetzal: Drone Footage Frame Alignment
+# Quetzal: An Interactive System for Drone Video Frame Alignment & Detection of Salient Changes
 
 Quetzal provides automatic frame alignment between two drone footages taken along similar routes.
 
