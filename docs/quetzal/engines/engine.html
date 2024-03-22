@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>quetzal.engines.engine API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>quetzal.engines.engine</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">#!/usr/bin/env python
+
+from abc import ABC, abstractmethod
+from typing import NewType, Union, Any
+
+class AbstractEngine(ABC):
+    &#34;&#34;&#34;
+    An abstract base class for defining processing engines to be used within a Pipeline Stage. 
+    Engines derived from this class can perform various types of data or file processing.
+
+    Attributes:
+        name (str): The name of the engine, used for logging and identification.
+
+    Methods:
+        is_video_analyzed: Static method to determine if a video requires further real-time analysis.
+        process: Abstract method to process a given file or list of files.
+        end: Abstract method called to signal that no more inputs will be processed.
+        save_state: Abstract method to save the current state or results of processing.
+    &#34;&#34;&#34;
+    name = &#34;Default Name&#34; # name (str): The name of the engine, used for logging and identification.
+
+    @staticmethod
+    def is_video_analyzed(video) -&gt; bool:
+        &#34;&#34;&#34;Static method to determine if a video requires further real-time analysis.&#34;&#34;&#34;
+
+        return False
+    
+
+    @abstractmethod
+    def process(self, file_path: Any) -&gt; Any:
+        &#34;&#34;&#34;Abstract method to process a given file or list of files.&#34;&#34;&#34;
+
+        pass
+
+    @abstractmethod
+    def end(self):
+        &#34;&#34;&#34;Abstract method called to signal that no more inputs will be processed.&#34;&#34;&#34;
+        pass
+
+    @abstractmethod
+    def save_state(self, save_path: str):
+        &#34;&#34;&#34;Abstract method to save the current state or results of processing.&#34;&#34;&#34;
+        pass
+
+QueryFrame = NewType(&#34;QueryFrame&#34;, str)
+DataBaseFrame = NewType(&#34;DataBaseFrame&#34;, str)
+FrameMatch = NewType(&#34;FrameMatch&#34;, list[tuple[QueryFrame, DataBaseFrame]])
+WarpedFrame = NewType(&#34;WarpedFrame&#34;, list[str])
+
+class ObjectDetectionEngine(ABC):
+    &#34;&#34;&#34;
+    Abstract class for engines performing object detection on images or video frames.
+
+    Attributes:
+        name (str): Name of the object detection engine.
+
+    Methods:
+        generate_masked_images: Processes an image to identify objects, applying masks and optionally saving the results.
+    &#34;&#34;&#34;
+    name = &#34;Default Name&#34;
+
+    def __init__(self, device):
+        pass
+
+    @abstractmethod
+    def generate_masked_images(
+        self, query_image, caption, save_file_path, box_threshold, text_threshold
+    ):
+        &#34;&#34;&#34;Processes an image to identify objects, applying masks and optionally saving the results.&#34;&#34;&#34;
+        pass
+
+class AlignmentEngine(ABC):
+    &#34;&#34;&#34;
+    Abstract class for engines that perform alignment of video frames, typically used for matching or comparison tasks.
+
+    Attributes:
+        name (str): Name of the alignment engine.
+
+    Methods:
+        align_frame_list: Aligns frames from two videos, typically a database and a query video, and returns matched frames and any transformations applied.
+    &#34;&#34;&#34;
+    name = &#34;Default Name&#34;
+
+    def __init__(self, device):
+        pass
+
+    @abstractmethod
+    def align_frame_list(
+        self, database_video, query_video, overlay
+    ) -&gt; tuple[FrameMatch, WarpedFrame]:
+        &#34;&#34;&#34;Aligns frames from two videos, typically a database and a query video, and returns matched frames and any transformations applied.&#34;&#34;&#34;
+        pass
+    
+
+## LET pdoc3 to generate documentation for private methods 
+__pdoc__ = {name: True
+            for name, klass in globals().items()
+            if name.startswith(&#39;_&#39;) and isinstance(klass, type)}
+__pdoc__.update({f&#39;{name}.{member}&#39;: True
+                 for name, klass in globals().items()
+                 if isinstance(klass, type)
+                 for member in klass.__dict__.keys()
+                 if member not in {&#39;__module__&#39;, &#39;__dict__&#39;, 
+                                   &#39;__weakref__&#39;, &#39;__doc__&#39;}})</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="quetzal.engines.engine.AbstractEngine"><code class="flex name class">
+<span>class <span class="ident">AbstractEngine</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>An abstract base class for defining processing engines to be used within a Pipeline Stage.
+Engines derived from this class can perform various types of data or file processing.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The name of the engine, used for logging and identification.</dd>
+</dl>
+<h2 id="methods">Methods</h2>
+<p>is_video_analyzed: Static method to determine if a video requires further real-time analysis.
+process: Abstract method to process a given file or list of files.
+end: Abstract method called to signal that no more inputs will be processed.
+save_state: Abstract method to save the current state or results of processing.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class AbstractEngine(ABC):
+    &#34;&#34;&#34;
+    An abstract base class for defining processing engines to be used within a Pipeline Stage. 
+    Engines derived from this class can perform various types of data or file processing.
+
+    Attributes:
+        name (str): The name of the engine, used for logging and identification.
+
+    Methods:
+        is_video_analyzed: Static method to determine if a video requires further real-time analysis.
+        process: Abstract method to process a given file or list of files.
+        end: Abstract method called to signal that no more inputs will be processed.
+        save_state: Abstract method to save the current state or results of processing.
+    &#34;&#34;&#34;
+    name = &#34;Default Name&#34; # name (str): The name of the engine, used for logging and identification.
+
+    @staticmethod
+    def is_video_analyzed(video) -&gt; bool:
+        &#34;&#34;&#34;Static method to determine if a video requires further real-time analysis.&#34;&#34;&#34;
+
+        return False
+    
+
+    @abstractmethod
+    def process(self, file_path: Any) -&gt; Any:
+        &#34;&#34;&#34;Abstract method to process a given file or list of files.&#34;&#34;&#34;
+
+        pass
+
+    @abstractmethod
+    def end(self):
+        &#34;&#34;&#34;Abstract method called to signal that no more inputs will be processed.&#34;&#34;&#34;
+        pass
+
+    @abstractmethod
+    def save_state(self, save_path: str):
+        &#34;&#34;&#34;Abstract method to save the current state or results of processing.&#34;&#34;&#34;
+        pass</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>abc.ABC</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="quetzal.engines.image_registration_engine.loftr_engine.LoFTREngine" href="image_registration_engine/loftr_engine.html#quetzal.engines.image_registration_engine.loftr_engine.LoFTREngine">LoFTREngine</a></li>
+<li><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine" href="vpr_engine/anyloc_engine.html#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine">AnyLocEngine</a></li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quetzal.engines.engine.AbstractEngine.__abstractmethods__"><code class="name">var <span class="ident">__abstractmethods__</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="quetzal.engines.engine.AbstractEngine._abc_impl"><code class="name">var <span class="ident">_abc_impl</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="quetzal.engines.engine.AbstractEngine.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Static methods</h3>
+<dl>
+<dt id="quetzal.engines.engine.AbstractEngine.is_video_analyzed"><code class="name flex">
+<span>def <span class="ident">is_video_analyzed</span></span>(<span>video) ‑> bool</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Static method to determine if a video requires further real-time analysis.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def is_video_analyzed(video) -&gt; bool:
+    &#34;&#34;&#34;Static method to determine if a video requires further real-time analysis.&#34;&#34;&#34;
+
+    return False</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quetzal.engines.engine.AbstractEngine.end"><code class="name flex">
+<span>def <span class="ident">end</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Abstract method called to signal that no more inputs will be processed.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def end(self):
+    &#34;&#34;&#34;Abstract method called to signal that no more inputs will be processed.&#34;&#34;&#34;
+    pass</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.engine.AbstractEngine.process"><code class="name flex">
+<span>def <span class="ident">process</span></span>(<span>self, file_path: Any) ‑> Any</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Abstract method to process a given file or list of files.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def process(self, file_path: Any) -&gt; Any:
+    &#34;&#34;&#34;Abstract method to process a given file or list of files.&#34;&#34;&#34;
+
+    pass</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.engine.AbstractEngine.save_state"><code class="name flex">
+<span>def <span class="ident">save_state</span></span>(<span>self, save_path: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Abstract method to save the current state or results of processing.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def save_state(self, save_path: str):
+    &#34;&#34;&#34;Abstract method to save the current state or results of processing.&#34;&#34;&#34;
+    pass</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="quetzal.engines.engine.AlignmentEngine"><code class="flex name class">
+<span>class <span class="ident">AlignmentEngine</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Abstract class for engines that perform alignment of video frames, typically used for matching or comparison tasks.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the alignment engine.</dd>
+</dl>
+<h2 id="methods">Methods</h2>
+<p>align_frame_list: Aligns frames from two videos, typically a database and a query video, and returns matched frames and any transformations applied.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class AlignmentEngine(ABC):
+    &#34;&#34;&#34;
+    Abstract class for engines that perform alignment of video frames, typically used for matching or comparison tasks.
+
+    Attributes:
+        name (str): Name of the alignment engine.
+
+    Methods:
+        align_frame_list: Aligns frames from two videos, typically a database and a query video, and returns matched frames and any transformations applied.
+    &#34;&#34;&#34;
+    name = &#34;Default Name&#34;
+
+    def __init__(self, device):
+        pass
+
+    @abstractmethod
+    def align_frame_list(
+        self, database_video, query_video, overlay
+    ) -&gt; tuple[FrameMatch, WarpedFrame]:
+        &#34;&#34;&#34;Aligns frames from two videos, typically a database and a query video, and returns matched frames and any transformations applied.&#34;&#34;&#34;
+        pass</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>abc.ABC</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="quetzal.engines.aligne_engine.dtw_engine.DTWEngine" href="aligne_engine/dtw_engine.html#quetzal.engines.aligne_engine.dtw_engine.DTWEngine">DTWEngine</a></li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quetzal.engines.engine.AlignmentEngine.__abstractmethods__"><code class="name">var <span class="ident">__abstractmethods__</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="quetzal.engines.engine.AlignmentEngine._abc_impl"><code class="name">var <span class="ident">_abc_impl</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="quetzal.engines.engine.AlignmentEngine.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quetzal.engines.engine.AlignmentEngine.__init__"><code class="name flex">
+<span>def <span class="ident">__init__</span></span>(<span>self, device)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initialize self.
+See help(type(self)) for accurate signature.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __init__(self, device):
+    pass</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.engine.AlignmentEngine.align_frame_list"><code class="name flex">
+<span>def <span class="ident">align_frame_list</span></span>(<span>self, database_video, query_video, overlay) ‑> tuple[quetzal.engines.engine.FrameMatch, quetzal.engines.engine.WarpedFrame]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Aligns frames from two videos, typically a database and a query video, and returns matched frames and any transformations applied.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def align_frame_list(
+    self, database_video, query_video, overlay
+) -&gt; tuple[FrameMatch, WarpedFrame]:
+    &#34;&#34;&#34;Aligns frames from two videos, typically a database and a query video, and returns matched frames and any transformations applied.&#34;&#34;&#34;
+    pass</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="quetzal.engines.engine.ObjectDetectionEngine"><code class="flex name class">
+<span>class <span class="ident">ObjectDetectionEngine</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Abstract class for engines performing object detection on images or video frames.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the object detection engine.</dd>
+</dl>
+<h2 id="methods">Methods</h2>
+<p>generate_masked_images: Processes an image to identify objects, applying masks and optionally saving the results.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ObjectDetectionEngine(ABC):
+    &#34;&#34;&#34;
+    Abstract class for engines performing object detection on images or video frames.
+
+    Attributes:
+        name (str): Name of the object detection engine.
+
+    Methods:
+        generate_masked_images: Processes an image to identify objects, applying masks and optionally saving the results.
+    &#34;&#34;&#34;
+    name = &#34;Default Name&#34;
+
+    def __init__(self, device):
+        pass
+
+    @abstractmethod
+    def generate_masked_images(
+        self, query_image, caption, save_file_path, box_threshold, text_threshold
+    ):
+        &#34;&#34;&#34;Processes an image to identify objects, applying masks and optionally saving the results.&#34;&#34;&#34;
+        pass</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>abc.ABC</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="quetzal.engines.detection_engine.grounding_sam_engine.GroundingSAMEngine" href="detection_engine/grounding_sam_engine.html#quetzal.engines.detection_engine.grounding_sam_engine.GroundingSAMEngine">GroundingSAMEngine</a></li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quetzal.engines.engine.ObjectDetectionEngine.__abstractmethods__"><code class="name">var <span class="ident">__abstractmethods__</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="quetzal.engines.engine.ObjectDetectionEngine._abc_impl"><code class="name">var <span class="ident">_abc_impl</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="quetzal.engines.engine.ObjectDetectionEngine.name"><code class="name">var <span class="ident">name</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quetzal.engines.engine.ObjectDetectionEngine.__init__"><code class="name flex">
+<span>def <span class="ident">__init__</span></span>(<span>self, device)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initialize self.
+See help(type(self)) for accurate signature.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __init__(self, device):
+    pass</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.engine.ObjectDetectionEngine.generate_masked_images"><code class="name flex">
+<span>def <span class="ident">generate_masked_images</span></span>(<span>self, query_image, caption, save_file_path, box_threshold, text_threshold)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Processes an image to identify objects, applying masks and optionally saving the results.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def generate_masked_images(
+    self, query_image, caption, save_file_path, box_threshold, text_threshold
+):
+    &#34;&#34;&#34;Processes an image to identify objects, applying masks and optionally saving the results.&#34;&#34;&#34;
+    pass</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="quetzal.engines" href="index.html">quetzal.engines</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="quetzal.engines.engine.AbstractEngine" href="#quetzal.engines.engine.AbstractEngine">AbstractEngine</a></code></h4>
+<ul class="two-column">
+<li><code><a title="quetzal.engines.engine.AbstractEngine.__abstractmethods__" href="#quetzal.engines.engine.AbstractEngine.__abstractmethods__">__abstractmethods__</a></code></li>
+<li><code><a title="quetzal.engines.engine.AbstractEngine._abc_impl" href="#quetzal.engines.engine.AbstractEngine._abc_impl">_abc_impl</a></code></li>
+<li><code><a title="quetzal.engines.engine.AbstractEngine.end" href="#quetzal.engines.engine.AbstractEngine.end">end</a></code></li>
+<li><code><a title="quetzal.engines.engine.AbstractEngine.is_video_analyzed" href="#quetzal.engines.engine.AbstractEngine.is_video_analyzed">is_video_analyzed</a></code></li>
+<li><code><a title="quetzal.engines.engine.AbstractEngine.name" href="#quetzal.engines.engine.AbstractEngine.name">name</a></code></li>
+<li><code><a title="quetzal.engines.engine.AbstractEngine.process" href="#quetzal.engines.engine.AbstractEngine.process">process</a></code></li>
+<li><code><a title="quetzal.engines.engine.AbstractEngine.save_state" href="#quetzal.engines.engine.AbstractEngine.save_state">save_state</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quetzal.engines.engine.AlignmentEngine" href="#quetzal.engines.engine.AlignmentEngine">AlignmentEngine</a></code></h4>
+<ul class="">
+<li><code><a title="quetzal.engines.engine.AlignmentEngine.__abstractmethods__" href="#quetzal.engines.engine.AlignmentEngine.__abstractmethods__">__abstractmethods__</a></code></li>
+<li><code><a title="quetzal.engines.engine.AlignmentEngine.__init__" href="#quetzal.engines.engine.AlignmentEngine.__init__">__init__</a></code></li>
+<li><code><a title="quetzal.engines.engine.AlignmentEngine._abc_impl" href="#quetzal.engines.engine.AlignmentEngine._abc_impl">_abc_impl</a></code></li>
+<li><code><a title="quetzal.engines.engine.AlignmentEngine.align_frame_list" href="#quetzal.engines.engine.AlignmentEngine.align_frame_list">align_frame_list</a></code></li>
+<li><code><a title="quetzal.engines.engine.AlignmentEngine.name" href="#quetzal.engines.engine.AlignmentEngine.name">name</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quetzal.engines.engine.ObjectDetectionEngine" href="#quetzal.engines.engine.ObjectDetectionEngine">ObjectDetectionEngine</a></code></h4>
+<ul class="">
+<li><code><a title="quetzal.engines.engine.ObjectDetectionEngine.__abstractmethods__" href="#quetzal.engines.engine.ObjectDetectionEngine.__abstractmethods__">__abstractmethods__</a></code></li>
+<li><code><a title="quetzal.engines.engine.ObjectDetectionEngine.__init__" href="#quetzal.engines.engine.ObjectDetectionEngine.__init__">__init__</a></code></li>
+<li><code><a title="quetzal.engines.engine.ObjectDetectionEngine._abc_impl" href="#quetzal.engines.engine.ObjectDetectionEngine._abc_impl">_abc_impl</a></code></li>
+<li><code><a title="quetzal.engines.engine.ObjectDetectionEngine.generate_masked_images" href="#quetzal.engines.engine.ObjectDetectionEngine.generate_masked_images">generate_masked_images</a></code></li>
+<li><code><a title="quetzal.engines.engine.ObjectDetectionEngine.name" href="#quetzal.engines.engine.ObjectDetectionEngine.name">name</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

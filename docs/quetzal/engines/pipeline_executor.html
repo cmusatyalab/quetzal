@@ -1,0 +1,1118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>quetzal.engines.pipeline_executor API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>quetzal.engines.pipeline_executor</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python"># Under Development
+
+import asyncio
+import logging
+import multiprocessing
+import os
+from queue import Queue
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from tqdm import tqdm
+from typing import Callable, Optional, Union, NewType, TypeAlias, Any
+from quetzal.engines.engine import AbstractEngine
+
+from . import engine
+
+StageInput = NewType(&#34;StageInput&#34;, Any)
+StageOuput = NewType(&#34;StageOuput&#34;, Any)
+
+class Stage:
+    &#34;&#34;&#34;
+    Represents a stage in a pipeline processing flow, managing the execution of tasks across multiple threads.
+    &#34;&#34;&#34;
+    
+    def __init__(
+        self,
+        engine_setup: Callable[[], AbstractEngine],
+        input_queue: Queue,
+        output_queue: Queue,
+        num_threads: int=1,
+        save_path: Optional[str]=None,
+        verbose: bool=False,
+        total_items: Optional[int]=None,
+        stage_num: int=0,
+    ):
+        &#34;&#34;&#34;
+        Attributes:
+            engine_setup (callable): A function that returns an instance of the engine to be used for processing.
+            input_queue (Queue): The queue from which input tasks are retrieved.
+            output_queue (Queue): The queue where processed tasks are placed.
+            num_threads (int): The number of threads allocated for task processing.
+            save_path (str, optional): Path to save any necessary data or results.
+            verbose (bool): Enables detailed logging if set to True.
+            total_items (int, optional): The total number of items expected to be processed. Useful for progress tracking.
+            stage_num (int): Identifier for the stage, typically used for logging and progress tracking.
+        &#34;&#34;&#34;
+        self.input_queue = input_queue
+        self.output_queue = output_queue
+        self.engines = [engine_setup() for _ in range(num_threads)]
+        self.threads = [
+            threading.Thread(target=self.run, args=(engine,)) for engine in self.engines
+        ]
+        self.save_path = save_path
+        self.verbose = verbose
+        self.total_items = total_items
+        self.pbar = None
+        self.stage_num = stage_num
+        self.processed = 0
+        self.running = False
+        self._lock = threading.Lock()
+
+    def start(self):
+        &#34;&#34;&#34;
+        Initializes and starts the threads for processing.
+        &#34;&#34;&#34;
+        self.running = True
+        for thread in self.threads:
+            thread.start()
+
+    def is_running(self) -&gt; bool:
+        &#34;&#34;&#34;
+        Checks if the stage is currently processing tasks.
+        &#34;&#34;&#34;
+        with self._lock:
+            return self.running
+
+    def end(self):
+        &#34;&#34;&#34;
+        Signals the end of input, allowing threads to terminate gracefully.
+        &#34;&#34;&#34;
+        self.input_queue.put(None)
+
+    def run(self, engine: engine.AbstractEngine):
+        &#34;&#34;&#34;
+        The main method executed by each thread, processing tasks from the input queue.
+        &#34;&#34;&#34;
+        if self.verbose and self.total_items is not None:
+            self.pbar = tqdm(
+                total=self.total_items,
+                position=self.stage_num,
+                desc=f&#34;Stage {self.stage_num + 1}: ({self.engines[0].name})&#34;,
+            )
+
+        while True:
+            file_path = self.input_queue.get()
+
+            if file_path is None:  # Sentinel value to stop processin
+                break
+
+            result = engine.process(file_path)
+            if result is not None:
+                self.output_queue.put(result)
+
+            self.processed += 1
+            if self.pbar:
+                self.pbar.update(1)
+
+            # for tasks that total_items are known, end the thread after processing all the tasks
+            if self.total_items is not None and (self.processed &gt;= self.total_items):
+                break
+
+            self.input_queue.task_done()
+
+        with self._lock:
+            if self.pbar:
+                self.pbar.close()
+
+            ## indicate end to the engine
+            rv = engine.end()
+            self.output_queue.put(rv)
+            self.input_queue.task_done()
+
+            ## Done by processing all items
+            graceful_end = True
+            while not self.input_queue.empty():
+                rv = self.input_queue.get()
+                if rv != None:
+                    logging.error(
+                        f&#34;Unexpected Tailing Input for Stage {self.stage_num}&#34;
+                    )
+                    graceful_end = False
+                self.input_queue.task_done()
+
+            ## Save state if the stage is endded correctely
+            if graceful_end:
+                engine.save_state(self.save_path)
+
+            ## Update running state
+            self.running = False
+
+
+class Pipeline:
+    &#34;&#34;&#34;
+    Orchestrates a sequence of processing stages, encapsulating them within a pipeline architecture powered by thread pools. This setup enables efficient task flow management through queues, facilitating a structured approach to complex data processing operations.
+
+    Workflow Overview:
+    Submissions enter through the `submit` method and are placed in the input queue. These submissions then traverse through each stage of the pipeline. Each stage operates in separate threads, consuming outputs from its predecessor and supplying its processed results to the next stage. The final outputs are collected in the Output Queue, accessible via the `get_result` method.
+
+    Pipeline Structure:
+    - Input (via `submit` method)
+    - Input Queue
+    - Stage #1 processing
+    - Stage #2 processing
+    - ...
+    - Output Queue
+    - Results retrieval (via `get_result` method)
+
+    Each stage runs in parallel threads, allowing for concurrent processing and efficient throughput from input to final results.
+    &#34;&#34;&#34;
+    
+    def __init__(
+        self, 
+        stages: list[tuple], 
+        queue_maxsize: int=128, 
+        verbose: bool=True
+    ):
+        &#34;&#34;&#34;
+        Attributes:
+            stages (list of tuples): Configuration for each stage, including the engine setup, number of threads, and total inputs.
+            queue_maxsize (int): The maximum size for the queues between stages, controlling flow and backpressure.
+            verbose (bool): If set to True, enables detailed logging across all stages.
+        &#34;&#34;&#34;
+        self.queues = [Queue(maxsize=queue_maxsize) for _ in range(len(stages) + 1)]
+        self.stages = [
+            Stage(
+                engine_setup,
+                self.queues[i],
+                self.queues[i + 1],
+                num_threads,
+                total_items=total_items,
+                verbose=verbose,
+                stage_num=i,
+            )
+            for i, (engine_setup, num_threads, total_items) in enumerate(stages)
+        ]
+
+        self.output_list = []
+        self._lock = threading.Lock()
+        self.executor = None
+
+    def start(self):
+        &#34;&#34;&#34;
+        Initializes and starts all stages in the pipeline.
+        &#34;&#34;&#34;
+        self.executor = ThreadPoolExecutor()
+        # with ThreadPoolExecutor() as executor:
+        for stage in self.stages:
+            self.executor.submit(stage.start)
+
+    def submit(self, file_paths: StageInput) -&gt; int:
+        &#34;&#34;&#34;
+        Submits a file or a list of files for processing through the pipeline.
+        &#34;&#34;&#34;
+        with self._lock:
+            if not self.stages[0].is_running():
+                logging.error(&#34;The pipeline stages are not running&#34;)
+                return 0
+
+            if isinstance(file_paths, (list, tuple)):
+                for file_path in file_paths:
+                    self.queues[0].put(file_path)
+                return len(file_paths)
+            else:
+                self.queues[0].put(file_paths)
+                return 1
+
+    def get_result(self, pbar: tqdm=None) -&gt; StageOuput:
+        &#34;&#34;&#34;Retrieves the next available result from the final output queue.&#34;&#34;&#34;
+        empty = True
+        result = None
+        with self._lock:
+            running_list = [stage for stage in self.stages if stage.is_running()]
+
+            empty = all(stage.input_queue.empty() for stage in running_list)
+
+            # Handle the case where last input is being processed
+            if empty and self.stages[-1].is_running():
+                self.stages[-1].input_queue.join()
+                empty = self.queues[-1].empty()
+
+            # when it is not empty, wait for next result()
+            if not empty:
+                result = self.queues[-1].get(block=True,timeout=30)
+                self.output_list.append(result)
+                self.queues[-1].task_done()
+                if pbar:
+                    pbar.update(1)
+
+            return result
+
+    def join_results(self):
+        &#34;&#34;&#34;Waits for all submitted tasks to complete and collects all results.&#34;&#34;&#34;
+        with self._lock:
+            running_list = [stage for stage in self.stages if stage.is_running()]
+            for stage in running_list:
+                stage.input_queue.join()
+
+            while not self.queues[-1].empty():
+                item = self.queues[-1].get()
+                self.output_list.append(item)
+                self.queues[-1].task_done()
+
+            return self.output_list
+
+    def end(self):
+        &#34;&#34;&#34;Gracefully terminates all stages and threads in the pipeline.&#34;&#34;&#34;
+        with self._lock:
+            if self.executor == None:
+                logging.error(
+                    &#34;You must first call start() to run the pipeline before you call end()&#34;
+                )
+                return -1
+
+            running_list = [stage for stage in self.stages if stage.is_running()]
+            for stage in running_list:
+                stage.input_queue.join()
+
+            running_list = [stage for stage in self.stages if stage.is_running()]
+            for stage in running_list:
+                stage.end()
+
+            for stage in running_list:
+                stage.input_queue.join()
+
+            self.executor.shutdown(wait=True)
+            self.executor = None
+
+            for q in self.queues:
+                with q.mutex:
+                    q.queue.clear()
+
+            return 0
+
+        # for stage in self.stages:
+        #     stage.input_queue.join()
+
+        # for stage in self.stages:
+        #     stage.input_queue.put(None)
+
+        #     # for _ in range(len(stage.threads)):
+        #     #     stage.input_queue.put(None)
+
+        # for stage in self.stages:
+        #     stage.input_queue.join()
+
+
+## LET pdoc3 to generate documentation for private methods 
+__pdoc__ = {name: True
+            for name, klass in globals().items()
+            if name.startswith(&#39;_&#39;) and isinstance(klass, type)}
+__pdoc__.update({f&#39;{name}.{member}&#39;: True
+                 for name, klass in globals().items()
+                 if isinstance(klass, type)
+                 for member in klass.__dict__.keys()
+                 if member not in {&#39;__module__&#39;, &#39;__dict__&#39;, 
+                                   &#39;__weakref__&#39;, &#39;__doc__&#39;}})</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="quetzal.engines.pipeline_executor.Pipeline"><code class="flex name class">
+<span>class <span class="ident">Pipeline</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Orchestrates a sequence of processing stages, encapsulating them within a pipeline architecture powered by thread pools. This setup enables efficient task flow management through queues, facilitating a structured approach to complex data processing operations.</p>
+<p>Workflow Overview:
+Submissions enter through the <code>submit</code> method and are placed in the input queue. These submissions then traverse through each stage of the pipeline. Each stage operates in separate threads, consuming outputs from its predecessor and supplying its processed results to the next stage. The final outputs are collected in the Output Queue, accessible via the <code>get_result</code> method.</p>
+<p>Pipeline Structure:
+- Input (via <code>submit</code> method)
+- Input Queue
+- Stage #1 processing
+- Stage #2 processing
+- &hellip;
+- Output Queue
+- Results retrieval (via <code>get_result</code> method)</p>
+<p>Each stage runs in parallel threads, allowing for concurrent processing and efficient throughput from input to final results.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>stages</code></strong> :&ensp;<code>list</code> of <code>tuples</code></dt>
+<dd>Configuration for each stage, including the engine setup, number of threads, and total inputs.</dd>
+<dt><strong><code>queue_maxsize</code></strong> :&ensp;<code>int</code></dt>
+<dd>The maximum size for the queues between stages, controlling flow and backpressure.</dd>
+<dt><strong><code>verbose</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If set to True, enables detailed logging across all stages.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Pipeline:
+    &#34;&#34;&#34;
+    Orchestrates a sequence of processing stages, encapsulating them within a pipeline architecture powered by thread pools. This setup enables efficient task flow management through queues, facilitating a structured approach to complex data processing operations.
+
+    Workflow Overview:
+    Submissions enter through the `submit` method and are placed in the input queue. These submissions then traverse through each stage of the pipeline. Each stage operates in separate threads, consuming outputs from its predecessor and supplying its processed results to the next stage. The final outputs are collected in the Output Queue, accessible via the `get_result` method.
+
+    Pipeline Structure:
+    - Input (via `submit` method)
+    - Input Queue
+    - Stage #1 processing
+    - Stage #2 processing
+    - ...
+    - Output Queue
+    - Results retrieval (via `get_result` method)
+
+    Each stage runs in parallel threads, allowing for concurrent processing and efficient throughput from input to final results.
+    &#34;&#34;&#34;
+    
+    def __init__(
+        self, 
+        stages: list[tuple], 
+        queue_maxsize: int=128, 
+        verbose: bool=True
+    ):
+        &#34;&#34;&#34;
+        Attributes:
+            stages (list of tuples): Configuration for each stage, including the engine setup, number of threads, and total inputs.
+            queue_maxsize (int): The maximum size for the queues between stages, controlling flow and backpressure.
+            verbose (bool): If set to True, enables detailed logging across all stages.
+        &#34;&#34;&#34;
+        self.queues = [Queue(maxsize=queue_maxsize) for _ in range(len(stages) + 1)]
+        self.stages = [
+            Stage(
+                engine_setup,
+                self.queues[i],
+                self.queues[i + 1],
+                num_threads,
+                total_items=total_items,
+                verbose=verbose,
+                stage_num=i,
+            )
+            for i, (engine_setup, num_threads, total_items) in enumerate(stages)
+        ]
+
+        self.output_list = []
+        self._lock = threading.Lock()
+        self.executor = None
+
+    def start(self):
+        &#34;&#34;&#34;
+        Initializes and starts all stages in the pipeline.
+        &#34;&#34;&#34;
+        self.executor = ThreadPoolExecutor()
+        # with ThreadPoolExecutor() as executor:
+        for stage in self.stages:
+            self.executor.submit(stage.start)
+
+    def submit(self, file_paths: StageInput) -&gt; int:
+        &#34;&#34;&#34;
+        Submits a file or a list of files for processing through the pipeline.
+        &#34;&#34;&#34;
+        with self._lock:
+            if not self.stages[0].is_running():
+                logging.error(&#34;The pipeline stages are not running&#34;)
+                return 0
+
+            if isinstance(file_paths, (list, tuple)):
+                for file_path in file_paths:
+                    self.queues[0].put(file_path)
+                return len(file_paths)
+            else:
+                self.queues[0].put(file_paths)
+                return 1
+
+    def get_result(self, pbar: tqdm=None) -&gt; StageOuput:
+        &#34;&#34;&#34;Retrieves the next available result from the final output queue.&#34;&#34;&#34;
+        empty = True
+        result = None
+        with self._lock:
+            running_list = [stage for stage in self.stages if stage.is_running()]
+
+            empty = all(stage.input_queue.empty() for stage in running_list)
+
+            # Handle the case where last input is being processed
+            if empty and self.stages[-1].is_running():
+                self.stages[-1].input_queue.join()
+                empty = self.queues[-1].empty()
+
+            # when it is not empty, wait for next result()
+            if not empty:
+                result = self.queues[-1].get(block=True,timeout=30)
+                self.output_list.append(result)
+                self.queues[-1].task_done()
+                if pbar:
+                    pbar.update(1)
+
+            return result
+
+    def join_results(self):
+        &#34;&#34;&#34;Waits for all submitted tasks to complete and collects all results.&#34;&#34;&#34;
+        with self._lock:
+            running_list = [stage for stage in self.stages if stage.is_running()]
+            for stage in running_list:
+                stage.input_queue.join()
+
+            while not self.queues[-1].empty():
+                item = self.queues[-1].get()
+                self.output_list.append(item)
+                self.queues[-1].task_done()
+
+            return self.output_list
+
+    def end(self):
+        &#34;&#34;&#34;Gracefully terminates all stages and threads in the pipeline.&#34;&#34;&#34;
+        with self._lock:
+            if self.executor == None:
+                logging.error(
+                    &#34;You must first call start() to run the pipeline before you call end()&#34;
+                )
+                return -1
+
+            running_list = [stage for stage in self.stages if stage.is_running()]
+            for stage in running_list:
+                stage.input_queue.join()
+
+            running_list = [stage for stage in self.stages if stage.is_running()]
+            for stage in running_list:
+                stage.end()
+
+            for stage in running_list:
+                stage.input_queue.join()
+
+            self.executor.shutdown(wait=True)
+            self.executor = None
+
+            for q in self.queues:
+                with q.mutex:
+                    q.queue.clear()
+
+            return 0
+
+        # for stage in self.stages:
+        #     stage.input_queue.join()
+
+        # for stage in self.stages:
+        #     stage.input_queue.put(None)
+
+        #     # for _ in range(len(stage.threads)):
+        #     #     stage.input_queue.put(None)
+
+        # for stage in self.stages:
+        #     stage.input_queue.join()</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="quetzal.engines.pipeline_executor.Pipeline.__init__"><code class="name flex">
+<span>def <span class="ident">__init__</span></span>(<span>self, stages: list[tuple], queue_maxsize: int = 128, verbose: bool = True)</span>
+</code></dt>
+<dd>
+<div class="desc"><h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>stages</code></strong> :&ensp;<code>list</code> of <code>tuples</code></dt>
+<dd>Configuration for each stage, including the engine setup, number of threads, and total inputs.</dd>
+<dt><strong><code>queue_maxsize</code></strong> :&ensp;<code>int</code></dt>
+<dd>The maximum size for the queues between stages, controlling flow and backpressure.</dd>
+<dt><strong><code>verbose</code></strong> :&ensp;<code>bool</code></dt>
+<dd>If set to True, enables detailed logging across all stages.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __init__(
+    self, 
+    stages: list[tuple], 
+    queue_maxsize: int=128, 
+    verbose: bool=True
+):
+    &#34;&#34;&#34;
+    Attributes:
+        stages (list of tuples): Configuration for each stage, including the engine setup, number of threads, and total inputs.
+        queue_maxsize (int): The maximum size for the queues between stages, controlling flow and backpressure.
+        verbose (bool): If set to True, enables detailed logging across all stages.
+    &#34;&#34;&#34;
+    self.queues = [Queue(maxsize=queue_maxsize) for _ in range(len(stages) + 1)]
+    self.stages = [
+        Stage(
+            engine_setup,
+            self.queues[i],
+            self.queues[i + 1],
+            num_threads,
+            total_items=total_items,
+            verbose=verbose,
+            stage_num=i,
+        )
+        for i, (engine_setup, num_threads, total_items) in enumerate(stages)
+    ]
+
+    self.output_list = []
+    self._lock = threading.Lock()
+    self.executor = None</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Pipeline.end"><code class="name flex">
+<span>def <span class="ident">end</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Gracefully terminates all stages and threads in the pipeline.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def end(self):
+    &#34;&#34;&#34;Gracefully terminates all stages and threads in the pipeline.&#34;&#34;&#34;
+    with self._lock:
+        if self.executor == None:
+            logging.error(
+                &#34;You must first call start() to run the pipeline before you call end()&#34;
+            )
+            return -1
+
+        running_list = [stage for stage in self.stages if stage.is_running()]
+        for stage in running_list:
+            stage.input_queue.join()
+
+        running_list = [stage for stage in self.stages if stage.is_running()]
+        for stage in running_list:
+            stage.end()
+
+        for stage in running_list:
+            stage.input_queue.join()
+
+        self.executor.shutdown(wait=True)
+        self.executor = None
+
+        for q in self.queues:
+            with q.mutex:
+                q.queue.clear()
+
+        return 0
+
+    # for stage in self.stages:
+    #     stage.input_queue.join()
+
+    # for stage in self.stages:
+    #     stage.input_queue.put(None)
+
+    #     # for _ in range(len(stage.threads)):
+    #     #     stage.input_queue.put(None)
+
+    # for stage in self.stages:
+    #     stage.input_queue.join()</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Pipeline.get_result"><code class="name flex">
+<span>def <span class="ident">get_result</span></span>(<span>self, pbar: tqdm.std.tqdm = None) ‑> quetzal.engines.pipeline_executor.StageOuput</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Retrieves the next available result from the final output queue.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_result(self, pbar: tqdm=None) -&gt; StageOuput:
+    &#34;&#34;&#34;Retrieves the next available result from the final output queue.&#34;&#34;&#34;
+    empty = True
+    result = None
+    with self._lock:
+        running_list = [stage for stage in self.stages if stage.is_running()]
+
+        empty = all(stage.input_queue.empty() for stage in running_list)
+
+        # Handle the case where last input is being processed
+        if empty and self.stages[-1].is_running():
+            self.stages[-1].input_queue.join()
+            empty = self.queues[-1].empty()
+
+        # when it is not empty, wait for next result()
+        if not empty:
+            result = self.queues[-1].get(block=True,timeout=30)
+            self.output_list.append(result)
+            self.queues[-1].task_done()
+            if pbar:
+                pbar.update(1)
+
+        return result</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Pipeline.join_results"><code class="name flex">
+<span>def <span class="ident">join_results</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Waits for all submitted tasks to complete and collects all results.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def join_results(self):
+    &#34;&#34;&#34;Waits for all submitted tasks to complete and collects all results.&#34;&#34;&#34;
+    with self._lock:
+        running_list = [stage for stage in self.stages if stage.is_running()]
+        for stage in running_list:
+            stage.input_queue.join()
+
+        while not self.queues[-1].empty():
+            item = self.queues[-1].get()
+            self.output_list.append(item)
+            self.queues[-1].task_done()
+
+        return self.output_list</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Pipeline.start"><code class="name flex">
+<span>def <span class="ident">start</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initializes and starts all stages in the pipeline.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def start(self):
+    &#34;&#34;&#34;
+    Initializes and starts all stages in the pipeline.
+    &#34;&#34;&#34;
+    self.executor = ThreadPoolExecutor()
+    # with ThreadPoolExecutor() as executor:
+    for stage in self.stages:
+        self.executor.submit(stage.start)</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Pipeline.submit"><code class="name flex">
+<span>def <span class="ident">submit</span></span>(<span>self, file_paths: quetzal.engines.pipeline_executor.StageInput) ‑> int</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Submits a file or a list of files for processing through the pipeline.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def submit(self, file_paths: StageInput) -&gt; int:
+    &#34;&#34;&#34;
+    Submits a file or a list of files for processing through the pipeline.
+    &#34;&#34;&#34;
+    with self._lock:
+        if not self.stages[0].is_running():
+            logging.error(&#34;The pipeline stages are not running&#34;)
+            return 0
+
+        if isinstance(file_paths, (list, tuple)):
+            for file_path in file_paths:
+                self.queues[0].put(file_path)
+            return len(file_paths)
+        else:
+            self.queues[0].put(file_paths)
+            return 1</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Stage"><code class="flex name class">
+<span>class <span class="ident">Stage</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Represents a stage in a pipeline processing flow, managing the execution of tasks across multiple threads.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>engine_setup</code></strong> :&ensp;<code>callable</code></dt>
+<dd>A function that returns an instance of the engine to be used for processing.</dd>
+<dt><strong><code>input_queue</code></strong> :&ensp;<code>Queue</code></dt>
+<dd>The queue from which input tasks are retrieved.</dd>
+<dt><strong><code>output_queue</code></strong> :&ensp;<code>Queue</code></dt>
+<dd>The queue where processed tasks are placed.</dd>
+<dt><strong><code>num_threads</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of threads allocated for task processing.</dd>
+<dt><strong><code>save_path</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Path to save any necessary data or results.</dd>
+<dt><strong><code>verbose</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Enables detailed logging if set to True.</dd>
+<dt><strong><code>total_items</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The total number of items expected to be processed. Useful for progress tracking.</dd>
+<dt><strong><code>stage_num</code></strong> :&ensp;<code>int</code></dt>
+<dd>Identifier for the stage, typically used for logging and progress tracking.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Stage:
+    &#34;&#34;&#34;
+    Represents a stage in a pipeline processing flow, managing the execution of tasks across multiple threads.
+    &#34;&#34;&#34;
+    
+    def __init__(
+        self,
+        engine_setup: Callable[[], AbstractEngine],
+        input_queue: Queue,
+        output_queue: Queue,
+        num_threads: int=1,
+        save_path: Optional[str]=None,
+        verbose: bool=False,
+        total_items: Optional[int]=None,
+        stage_num: int=0,
+    ):
+        &#34;&#34;&#34;
+        Attributes:
+            engine_setup (callable): A function that returns an instance of the engine to be used for processing.
+            input_queue (Queue): The queue from which input tasks are retrieved.
+            output_queue (Queue): The queue where processed tasks are placed.
+            num_threads (int): The number of threads allocated for task processing.
+            save_path (str, optional): Path to save any necessary data or results.
+            verbose (bool): Enables detailed logging if set to True.
+            total_items (int, optional): The total number of items expected to be processed. Useful for progress tracking.
+            stage_num (int): Identifier for the stage, typically used for logging and progress tracking.
+        &#34;&#34;&#34;
+        self.input_queue = input_queue
+        self.output_queue = output_queue
+        self.engines = [engine_setup() for _ in range(num_threads)]
+        self.threads = [
+            threading.Thread(target=self.run, args=(engine,)) for engine in self.engines
+        ]
+        self.save_path = save_path
+        self.verbose = verbose
+        self.total_items = total_items
+        self.pbar = None
+        self.stage_num = stage_num
+        self.processed = 0
+        self.running = False
+        self._lock = threading.Lock()
+
+    def start(self):
+        &#34;&#34;&#34;
+        Initializes and starts the threads for processing.
+        &#34;&#34;&#34;
+        self.running = True
+        for thread in self.threads:
+            thread.start()
+
+    def is_running(self) -&gt; bool:
+        &#34;&#34;&#34;
+        Checks if the stage is currently processing tasks.
+        &#34;&#34;&#34;
+        with self._lock:
+            return self.running
+
+    def end(self):
+        &#34;&#34;&#34;
+        Signals the end of input, allowing threads to terminate gracefully.
+        &#34;&#34;&#34;
+        self.input_queue.put(None)
+
+    def run(self, engine: engine.AbstractEngine):
+        &#34;&#34;&#34;
+        The main method executed by each thread, processing tasks from the input queue.
+        &#34;&#34;&#34;
+        if self.verbose and self.total_items is not None:
+            self.pbar = tqdm(
+                total=self.total_items,
+                position=self.stage_num,
+                desc=f&#34;Stage {self.stage_num + 1}: ({self.engines[0].name})&#34;,
+            )
+
+        while True:
+            file_path = self.input_queue.get()
+
+            if file_path is None:  # Sentinel value to stop processin
+                break
+
+            result = engine.process(file_path)
+            if result is not None:
+                self.output_queue.put(result)
+
+            self.processed += 1
+            if self.pbar:
+                self.pbar.update(1)
+
+            # for tasks that total_items are known, end the thread after processing all the tasks
+            if self.total_items is not None and (self.processed &gt;= self.total_items):
+                break
+
+            self.input_queue.task_done()
+
+        with self._lock:
+            if self.pbar:
+                self.pbar.close()
+
+            ## indicate end to the engine
+            rv = engine.end()
+            self.output_queue.put(rv)
+            self.input_queue.task_done()
+
+            ## Done by processing all items
+            graceful_end = True
+            while not self.input_queue.empty():
+                rv = self.input_queue.get()
+                if rv != None:
+                    logging.error(
+                        f&#34;Unexpected Tailing Input for Stage {self.stage_num}&#34;
+                    )
+                    graceful_end = False
+                self.input_queue.task_done()
+
+            ## Save state if the stage is endded correctely
+            if graceful_end:
+                engine.save_state(self.save_path)
+
+            ## Update running state
+            self.running = False</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="quetzal.engines.pipeline_executor.Stage.__init__"><code class="name flex">
+<span>def <span class="ident">__init__</span></span>(<span>self, engine_setup: Callable[[], <a title="quetzal.engines.engine.AbstractEngine" href="engine.html#quetzal.engines.engine.AbstractEngine">AbstractEngine</a>], input_queue: queue.Queue, output_queue: queue.Queue, num_threads: int = 1, save_path: Optional[str] = None, verbose: bool = False, total_items: Optional[int] = None, stage_num: int = 0)</span>
+</code></dt>
+<dd>
+<div class="desc"><h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>engine_setup</code></strong> :&ensp;<code>callable</code></dt>
+<dd>A function that returns an instance of the engine to be used for processing.</dd>
+<dt><strong><code>input_queue</code></strong> :&ensp;<code>Queue</code></dt>
+<dd>The queue from which input tasks are retrieved.</dd>
+<dt><strong><code>output_queue</code></strong> :&ensp;<code>Queue</code></dt>
+<dd>The queue where processed tasks are placed.</dd>
+<dt><strong><code>num_threads</code></strong> :&ensp;<code>int</code></dt>
+<dd>The number of threads allocated for task processing.</dd>
+<dt><strong><code>save_path</code></strong> :&ensp;<code>str</code>, optional</dt>
+<dd>Path to save any necessary data or results.</dd>
+<dt><strong><code>verbose</code></strong> :&ensp;<code>bool</code></dt>
+<dd>Enables detailed logging if set to True.</dd>
+<dt><strong><code>total_items</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>The total number of items expected to be processed. Useful for progress tracking.</dd>
+<dt><strong><code>stage_num</code></strong> :&ensp;<code>int</code></dt>
+<dd>Identifier for the stage, typically used for logging and progress tracking.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __init__(
+    self,
+    engine_setup: Callable[[], AbstractEngine],
+    input_queue: Queue,
+    output_queue: Queue,
+    num_threads: int=1,
+    save_path: Optional[str]=None,
+    verbose: bool=False,
+    total_items: Optional[int]=None,
+    stage_num: int=0,
+):
+    &#34;&#34;&#34;
+    Attributes:
+        engine_setup (callable): A function that returns an instance of the engine to be used for processing.
+        input_queue (Queue): The queue from which input tasks are retrieved.
+        output_queue (Queue): The queue where processed tasks are placed.
+        num_threads (int): The number of threads allocated for task processing.
+        save_path (str, optional): Path to save any necessary data or results.
+        verbose (bool): Enables detailed logging if set to True.
+        total_items (int, optional): The total number of items expected to be processed. Useful for progress tracking.
+        stage_num (int): Identifier for the stage, typically used for logging and progress tracking.
+    &#34;&#34;&#34;
+    self.input_queue = input_queue
+    self.output_queue = output_queue
+    self.engines = [engine_setup() for _ in range(num_threads)]
+    self.threads = [
+        threading.Thread(target=self.run, args=(engine,)) for engine in self.engines
+    ]
+    self.save_path = save_path
+    self.verbose = verbose
+    self.total_items = total_items
+    self.pbar = None
+    self.stage_num = stage_num
+    self.processed = 0
+    self.running = False
+    self._lock = threading.Lock()</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Stage.end"><code class="name flex">
+<span>def <span class="ident">end</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Signals the end of input, allowing threads to terminate gracefully.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def end(self):
+    &#34;&#34;&#34;
+    Signals the end of input, allowing threads to terminate gracefully.
+    &#34;&#34;&#34;
+    self.input_queue.put(None)</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Stage.is_running"><code class="name flex">
+<span>def <span class="ident">is_running</span></span>(<span>self) ‑> bool</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Checks if the stage is currently processing tasks.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def is_running(self) -&gt; bool:
+    &#34;&#34;&#34;
+    Checks if the stage is currently processing tasks.
+    &#34;&#34;&#34;
+    with self._lock:
+        return self.running</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Stage.run"><code class="name flex">
+<span>def <span class="ident">run</span></span>(<span>self, engine: <a title="quetzal.engines.engine.AbstractEngine" href="engine.html#quetzal.engines.engine.AbstractEngine">AbstractEngine</a>)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>The main method executed by each thread, processing tasks from the input queue.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def run(self, engine: engine.AbstractEngine):
+    &#34;&#34;&#34;
+    The main method executed by each thread, processing tasks from the input queue.
+    &#34;&#34;&#34;
+    if self.verbose and self.total_items is not None:
+        self.pbar = tqdm(
+            total=self.total_items,
+            position=self.stage_num,
+            desc=f&#34;Stage {self.stage_num + 1}: ({self.engines[0].name})&#34;,
+        )
+
+    while True:
+        file_path = self.input_queue.get()
+
+        if file_path is None:  # Sentinel value to stop processin
+            break
+
+        result = engine.process(file_path)
+        if result is not None:
+            self.output_queue.put(result)
+
+        self.processed += 1
+        if self.pbar:
+            self.pbar.update(1)
+
+        # for tasks that total_items are known, end the thread after processing all the tasks
+        if self.total_items is not None and (self.processed &gt;= self.total_items):
+            break
+
+        self.input_queue.task_done()
+
+    with self._lock:
+        if self.pbar:
+            self.pbar.close()
+
+        ## indicate end to the engine
+        rv = engine.end()
+        self.output_queue.put(rv)
+        self.input_queue.task_done()
+
+        ## Done by processing all items
+        graceful_end = True
+        while not self.input_queue.empty():
+            rv = self.input_queue.get()
+            if rv != None:
+                logging.error(
+                    f&#34;Unexpected Tailing Input for Stage {self.stage_num}&#34;
+                )
+                graceful_end = False
+            self.input_queue.task_done()
+
+        ## Save state if the stage is endded correctely
+        if graceful_end:
+            engine.save_state(self.save_path)
+
+        ## Update running state
+        self.running = False</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.pipeline_executor.Stage.start"><code class="name flex">
+<span>def <span class="ident">start</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initializes and starts the threads for processing.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def start(self):
+    &#34;&#34;&#34;
+    Initializes and starts the threads for processing.
+    &#34;&#34;&#34;
+    self.running = True
+    for thread in self.threads:
+        thread.start()</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="quetzal.engines" href="index.html">quetzal.engines</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="quetzal.engines.pipeline_executor.Pipeline" href="#quetzal.engines.pipeline_executor.Pipeline">Pipeline</a></code></h4>
+<ul class="two-column">
+<li><code><a title="quetzal.engines.pipeline_executor.Pipeline.__init__" href="#quetzal.engines.pipeline_executor.Pipeline.__init__">__init__</a></code></li>
+<li><code><a title="quetzal.engines.pipeline_executor.Pipeline.end" href="#quetzal.engines.pipeline_executor.Pipeline.end">end</a></code></li>
+<li><code><a title="quetzal.engines.pipeline_executor.Pipeline.get_result" href="#quetzal.engines.pipeline_executor.Pipeline.get_result">get_result</a></code></li>
+<li><code><a title="quetzal.engines.pipeline_executor.Pipeline.join_results" href="#quetzal.engines.pipeline_executor.Pipeline.join_results">join_results</a></code></li>
+<li><code><a title="quetzal.engines.pipeline_executor.Pipeline.start" href="#quetzal.engines.pipeline_executor.Pipeline.start">start</a></code></li>
+<li><code><a title="quetzal.engines.pipeline_executor.Pipeline.submit" href="#quetzal.engines.pipeline_executor.Pipeline.submit">submit</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="quetzal.engines.pipeline_executor.Stage" href="#quetzal.engines.pipeline_executor.Stage">Stage</a></code></h4>
+<ul class="">
+<li><code><a title="quetzal.engines.pipeline_executor.Stage.__init__" href="#quetzal.engines.pipeline_executor.Stage.__init__">__init__</a></code></li>
+<li><code><a title="quetzal.engines.pipeline_executor.Stage.end" href="#quetzal.engines.pipeline_executor.Stage.end">end</a></code></li>
+<li><code><a title="quetzal.engines.pipeline_executor.Stage.is_running" href="#quetzal.engines.pipeline_executor.Stage.is_running">is_running</a></code></li>
+<li><code><a title="quetzal.engines.pipeline_executor.Stage.run" href="#quetzal.engines.pipeline_executor.Stage.run">run</a></code></li>
+<li><code><a title="quetzal.engines.pipeline_executor.Stage.start" href="#quetzal.engines.pipeline_executor.Stage.start">start</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

@@ -110,6 +110,9 @@ class AnyLocEngine(AbstractEngine):
         self.register_query_video(query_video, mode)
         
     def load_models(self):
+        """
+        loads DinoV2 extractor and VLAD extractor
+        """
         desc_layer: int = 31
         desc_facet: Literal["query", "key", "value", "token"] = "value"
         num_c: int = 32
@@ -244,6 +247,16 @@ class AnyLocEngine(AbstractEngine):
 
     @staticmethod
     def _migrate_db_to_query(query_video: Video):
+        """
+        Migrate query vlad features for given Video from the database vlad features. This should be called after the database vlad feature is generated. 
+
+        Args:
+            query_video (Video): The query video which vlad features will be generated
+
+        Note:
+            This method does not immediately compute VLAD features for the query video unless the mode is "vpr".
+        """
+        
         if query_video is None:
             return
         
@@ -455,3 +468,15 @@ class AnyLocEngine(AbstractEngine):
 
 if __name__ == "__main__":
     engine = AnyLocEngine()
+
+
+## LET pdoc3 to generate documentation for private methods 
+__pdoc__ = {name: True
+            for name, klass in globals().items()
+            if name.startswith('_') and isinstance(klass, type)}
+__pdoc__.update({f'{name}.{member}': True
+                 for name, klass in globals().items()
+                 if isinstance(klass, type)
+                 for member in klass.__dict__.keys()
+                 if member not in {'__module__', '__dict__', 
+                                   '__weakref__', '__doc__'}})

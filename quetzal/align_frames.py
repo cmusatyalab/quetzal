@@ -63,6 +63,19 @@ Match: TypeAlias = tuple[QueryIdx, DatabaseIdx]
 def align_video_frames(
     database_video: Video, query_video: Video, torch_device
 ) -> list[Match]:
+    """
+    Aligns video frames between a database video and a query video using Dynamic Time Warping (DTW) and VLAD features.
+    The function computes VLAD descriptors for both videos, creates FAISS indexes for efficient similarity search,
+    performs DTW to find the best alignment, and then smooths the frame alignment results.
+
+    Args:
+        database_video (Video): The database video against which the query video is aligned.
+        query_video (Video): The query video to be aligned with the database video.
+        torch_device: The PyTorch device (CPU or CUDA) used for computations.
+
+    Returns:
+        list[Match]: A list of matched frame indices between the database and query videos.
+    """
     anylocEngine = AnyLocEngine(
         database_video=database_video, query_video=query_video, device=torch_device
     )
@@ -110,6 +123,20 @@ def align_frame_pairs(
     torch_device,
     engine: Literal["ransac-flow", "loftr"] = "loftr",
 ) -> tuple[list[Match], list[str]]:
+    """
+    Aligns individual frame pairs between a database video and a query video. Depending on the specified engine,
+    this function can use either RANSAC Flow or LoFTR for frame alignment. The function generates a list of matched
+    frame indices and a list of paths to the aligned (warped) query frames.
+
+    Args:
+        database_video (Video): The database video against which the query video is aligned.
+        query_video (Video): The query video to be aligned with the database video.
+        torch_device: The PyTorch device (CPU or CUDA) used for computations.
+        engine (Literal["ransac-flow", "loftr"]): The engine used for frame alignment; defaults to "loftr".
+
+    Returns:
+        tuple[list[Match], list[str]]: A tuple containing a list of matched frame indices and a list of paths to aligned query frames.
+    """
     logger.info("Loading Videos")
 
     if engine == "loftr":

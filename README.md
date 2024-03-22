@@ -67,6 +67,8 @@ IMPORTANT!! if you have cuda installed in your custom path, edit line 7 of [setu
 export CUDA_HOME=/path/to/cuda
 ```
 
+## Generate Documentation
+run ./mkdocs.sh on root dir
 
 ## Running the Web Server with GUI
 

@@ -7,13 +7,15 @@ import cv2
 from functools import lru_cache
 import logging
 from quetzal.dtos.video import Video
-from typing import Literal, List
+from typing import Literal, List, NewType
 from quetzal.engines.engine import AbstractEngine
 
 
 logging.basicConfig()
 logger = logging.getLogger("LoFTR_Engine")
 logger.setLevel(logging.DEBUG)
+
+FilePath = NewType("FilePath", str)
 
 
 class LoFTREngine(AbstractEngine):
@@ -46,8 +48,21 @@ class LoFTREngine(AbstractEngine):
         pass
             
     def _generate_aligned_images(
-        self, query_image, database_image, save_file_path
+        self, query_image: FilePath, database_image: FilePath, save_file_path: FilePath
     ):
+        """
+        Aligns a query image with a corresponding image from the database using the LoFTR model and saves the aligned image.
+
+        The method reads both query and database images, converts them to grayscale, and resizes them to be divisible by 8,
+        as required by the LoFTR model. It then performs feature matching and geometric transformation to align the query image
+        with the database image. The aligned image is resized back to the original dimensions of the query image if necessary
+        and saved to the specified path.
+
+        Args:
+            query_image (FilePath): The file path of the query image to be aligned.
+            database_image (FilePath): The file path of the corresponding database image.
+            save_file_path (FilePath): The file path where the aligned query image should be saved.
+        """
         img0_raw = cv2.imread(query_image)
         img1_raw = cv2.imread(database_image)
         orig_w, orig_h = img0_raw.shape[1], img0_raw.shape[0]
@@ -83,7 +98,7 @@ class LoFTREngine(AbstractEngine):
         cv2.imwrite(save_file_path, aligned_img)
 
     @lru_cache(maxsize=None)
-    def process(self, file_path: tuple):
+    def process(self, file_path: tuple[FilePath, FilePath]):
         """Process list of files in file_path
 
         Return an resulting file."""
@@ -115,9 +130,21 @@ class LoFTREngine(AbstractEngine):
         """Save state in save_path."""
         return None
 
-    def save_state(self, save_path):
+    def save_state(self, save_path: FilePath):
         return None
 
 
 if __name__ == "__main__":
     engine = LoFTREngine()
+
+
+## LET pdoc3 to generate documentation for private methods 
+__pdoc__ = {name: True
+            for name, klass in globals().items()
+            if name.startswith('_') and isinstance(klass, type)}
+__pdoc__.update({f'{name}.{member}': True
+                 for name, klass in globals().items()
+                 if isinstance(klass, type)
+                 for member in klass.__dict__.keys()
+                 if member not in {'__module__', '__dict__', 
+                                   '__weakref__', '__doc__'}})

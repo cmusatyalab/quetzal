@@ -44,6 +44,19 @@ GROUNDING_DINO_CHECKPOINT_URL = "https://github.com/IDEA-Research/GroundingDINO/
 
 
 class GroundingSAMEngine(ObjectDetectionEngine):
+    """
+    GroundingSAMEngine integrates both GroundingDINO and SAM (Segment Anything Model) to perform object detection
+    and segmentation based on textual descriptions. This engine loads pretrained weights for GroundingDINO and SAM,
+    applies text-based object detection using GroundingDINO, and leverages SAM for accurate segmentation of detected objects.
+
+    Attributes:
+        device (torch.device): The device on which the models will be loaded and inference will be performed.
+        save_dir (str): Directory where temporary files or results may be saved.
+
+    Methods:
+        generate_masked_images: Processes an input image using a textual description to detect and segment objects, 
+                                saving the resulting image with annotations.
+    """
     name = "grounding_sam"
     
     def __init__(
@@ -51,7 +64,10 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         device: torch.device = torch.device("cuda:0"),
     ):
         """
-        Assumes Using GPU (cuda)
+        Initializes the GroundingSAMEngine with the specified device for computation.
+
+        Args:
+            device (torch.device): Specifies the device (e.g., CPU, GPU) for model computation. Defaults to GPU.
         """
 
         self.save_dir = join(current_file_dir, "../../../tmp")
@@ -86,6 +102,17 @@ class GroundingSAMEngine(ObjectDetectionEngine):
     def _segment(
         self, sam_predictor: SamPredictor, image: np.ndarray, xyxy: np.ndarray
     ) -> np.ndarray:
+        """
+        Uses SAM to segment the specified regions in an image.
+
+        Args:
+            sam_predictor (SamPredictor): The SAM predictor for performing segmentation.
+            image (np.ndarray): The input image as a NumPy array.
+            xyxy (np.ndarray): An array of bounding boxes, where each box is defined by [x1, y1, x2, y2].
+
+        Returns:
+            np.ndarray: An array of segmented masks corresponding to the input bounding boxes.
+        """
         sam_predictor.set_image(image)
         result_masks = []
         for box in xyxy:
@@ -97,6 +124,13 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         return np.array(result_masks)
 
     def _download_weight(self, path, url):
+        """
+        Downloads a model weight file from a specified URL to a given path.
+
+        Args:
+            path (str): The local file path where the weight should be saved.
+            url (str): The URL from which the weight file will be downloaded.
+        """
         os.makedirs(weight_dir, exist_ok=True)
         os.chdir(weight_dir)
 
@@ -110,6 +144,20 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         box_threshold: float = BOX_TRESHOLD,
         text_threshold: float = TEXT_TRESHOLD,
     ):
+        """
+        Generates an image with detected objects based on the provided captions masked and annotated. 
+        Detected objects are based on textual descriptions and segmented using SAM.
+
+        Args:
+            query_image (str): Path to the input image.
+            caption (list[str]): A list of captions (textual descriptions) for object detection.
+            save_file_path (str): Path where the annotated image will be saved.
+            box_threshold (float, optional): Threshold for object detection bounding boxes. Defaults to BOX_TRESHOLD.
+            text_threshold (float, optional): Threshold for textual descriptions. Defaults to TEXT_TRESHOLD.
+        
+        Returns:
+            np.ndarray: The annotated image with detected and segmented objects based on captions.
+        """
         caption = " . ".join(caption)
 
         image = cv2.imread(query_image)
@@ -143,3 +191,15 @@ class GroundingSAMEngine(ObjectDetectionEngine):
 
 if __name__ == "__main__":
     engine = GroundingSAMEngine()
+
+
+## LET pdoc3 to generate documentation for private methods 
+__pdoc__ = {name: True
+            for name, klass in globals().items()
+            if name.startswith('_') and isinstance(klass, type)}
+__pdoc__.update({f'{name}.{member}': True
+                 for name, klass in globals().items()
+                 if isinstance(klass, type)
+                 for member in klass.__dict__.keys()
+                 if member not in {'__module__', '__dict__', 
+                                   '__weakref__', '__doc__'}})

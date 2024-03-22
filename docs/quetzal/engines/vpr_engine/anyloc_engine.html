@@ -1,0 +1,1786 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>quetzal.engines.vpr_engine.anyloc_engine API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>quetzal.engines.vpr_engine.anyloc_engine</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import os
+from os.path import join
+import numpy as np
+import torch
+from torchvision import transforms as tvf
+from torchvision.transforms import functional as T
+from quetzal.external.AnyLoc.utilities import DinoV2ExtractFeatures
+from quetzal.external.AnyLoc.utilities import VLAD
+from quetzal.dtos.video import Video, DatabaseVideo
+from typing import Literal, List
+from tqdm import tqdm
+from stqdm import stqdm
+from PIL import Image
+from functools import lru_cache
+import logging
+
+from quetzal.engines.engine import AbstractEngine
+from torch.nn import functional as F
+import faiss
+
+_ex = lambda x: os.path.realpath(os.path.expanduser(x))
+current_file_path = os.path.abspath(__file__)
+current_file_dir = os.path.dirname(current_file_path)
+anyloc_dir = join(current_file_dir, &#34;../../external/AnyLoc&#34;)
+cache_dir: str = _ex(join(anyloc_dir, &#34;cache&#34;))
+
+logging.basicConfig()
+logger = logging.getLogger(&#34;AnyLoc_Engine&#34;)
+logger.setLevel(logging.DEBUG)
+
+class AnyLocEngine(AbstractEngine):
+    def __init__(
+        self,
+        database_video: Video = None,  # database_video may be None. Can later register using register_db_video()
+        query_video: Video = None,  # query_video may be None. Can later register using register_query_video()
+        max_img_size: int = 512,
+        device=torch.device(&#34;cuda:0&#34;),
+
+        domain: Literal[&#34;aerial&#34;, &#34;indoor&#34;, &#34;urban&#34;] = &#34;aerial&#34;,
+        mode: Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;] = &#34;lazy&#34;,
+    ):
+        &#34;&#34;&#34;
+        Initializes the AnyLocEngine with optional database and query videos.
+
+        Args:
+            database_video (Video, optional): The database video for analysis.
+            query_video (Video, optional): The query video for analysis.
+            max_img_size (int, optional): Maximum size of the images during processing.
+            device (torch.device, optional): The computational device (CPU/GPU).
+            domain (Literal[&#34;aerial&#34;, &#34;indoor&#34;, &#34;urban&#34;], optional): The domain type of the videos.
+            mode (Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;], optional): The operational mode of the engine.
+
+        Attributes:
+            name (str): Name of the engine.
+            db_video (Video): The database video.
+            query_video (Video): The query video.
+            db_index (faiss.IndexFlatIP): FAISS index for the database VLAD vectors.
+            query_vlad (np.ndarray): The VLAD vectors for the query video.
+
+        Notes:
+            &#34;vpr&#34;: This mode is optimized for retrieval of the closest database frames from a query image. It pre-computes both database and query VLAD features and prepares a database FAISS index for quick retrieval.
+            &#34;realtime&#34;: This mode is optimized for real-time frame retrieval and does not pre-computes the query VLAD features, assuming that not all of the frames are ready.  Suitable for scenarios where per frames based real-time processing is required
+            &#34;lazy&#34;: This mode is optimized for computing entire VLAD features of each Video in a blocking manner. In this mode, VLAD features for both the query and database videos are not computed during initialization. Instead, the computation is deferred until the user explicitly calls the get_vlad_features() method. Calling process() method for VPR will be disabled.
+            
+            The `domain` parameter in the `AnyLocEngine` class is used to specify the domaintype of the videos being processed. It is a literal type that can take one of three values: &#34;aerial&#34;, &#34;indoor&#34;, or &#34;urban&#34;. This parameter is used to determine the location of the cluster centers file, which is required for VLAD feature aggregation. The cluster centers file is stored in the cache directory, and the path to the file is constructed based on the specified domain type.
+        &#34;&#34;&#34;
+        self.name = &#34;Frame Matching - AnyLoc&#34;
+
+        ## Video Frames ##
+        self.db_video = None
+        self.query_video = None
+
+        ## Check Model Cache ##
+        if os.path.isdir(cache_dir):
+            logger.info(&#34;Anyloc cache folder already exists!&#34;)
+        else:
+            self._download_cache()
+        
+        
+
+        ## DINOv2 Extractor ##
+        self.max_img_size = max_img_size
+        self.device = device
+        self.domain = domain
+        self.model_loaded = False
+
+        if mode != &#34;lazy&#34;:
+            if query_video:
+                db_version = DatabaseVideo(
+                    path=query_video._path,
+                    root_dir=query_video._root_dir,
+                    metadata_dir=query_video._metadata_dir,
+                    user=query_video._user,
+                    home=query_video._home,
+                )
+            else:
+                db_version = None
+                
+            vlad_ready = self.is_video_analyzed(database_video) and (self.is_video_analyzed(query_video) or self.is_video_analyzed(db_version))
+            if not vlad_ready:
+                self.load_models()
+
+        ## Initialize VLAD features ##
+        self.db_index = None
+        self.query_vlad = None
+        self.query_vlad_cache = []
+
+        ## Register Videos ##
+        self.register_db_video(database_video, mode)
+        self.register_query_video(query_video, mode)
+        
+    def load_models(self):
+        &#34;&#34;&#34;
+        loads DinoV2 extractor and VLAD extractor
+        &#34;&#34;&#34;
+        desc_layer: int = 31
+        desc_facet: Literal[&#34;query&#34;, &#34;key&#34;, &#34;value&#34;, &#34;token&#34;] = &#34;value&#34;
+        num_c: int = 32
+        # Domain for use case (deployment environment)
+        domain: Literal[&#34;aerial&#34;, &#34;indoor&#34;, &#34;urban&#34;] = self.domain
+
+        self.extractor = DinoV2ExtractFeatures(
+            &#34;dinov2_vitg14&#34;, desc_layer, desc_facet, device=self.device
+        )
+        self.base_tf = tvf.Compose(
+            [
+                tvf.ToTensor(),
+                tvf.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
+            ]
+        )
+        
+        ext_specifier = f&#34;dinov2_vitg14/l{desc_layer}_{desc_facet}_c{num_c}&#34;
+        c_centers_file = os.path.join(
+            cache_dir, &#34;vocabulary&#34;, ext_specifier, domain, &#34;c_centers.pt&#34;
+        )
+        assert os.path.isfile(c_centers_file), &#34;Cluster centers not cached!&#34;
+        c_centers = torch.load(c_centers_file)
+        assert c_centers.shape[0] == num_c, &#34;Wrong number of clusters!&#34;
+
+        self.vlad = VLAD(
+            num_c, desc_dim=None, cache_dir=os.path.dirname(c_centers_file)
+        )
+        # Fit (load) the cluster centers (this&#39;ll also load the desc_dim)
+        self.vlad.fit(None)
+        
+        self.model_loaded = True
+        
+
+    @staticmethod
+    def is_video_analyzed(video: Video) -&gt; bool:
+        &#34;&#34;&#34;
+        Checks if the VLAD features are already computed for a given video.
+
+        Args:
+            video (Video): The video object to check for precomputed VLAD features.
+
+        Returns:
+            bool: True if the VLAD features are precomputed, False otherwise.
+        &#34;&#34;&#34;
+        return (
+            os.path.isfile(f&#34;{video.dataset_dir}/vlads.npy&#34;) if video else False
+        )
+    
+    def analyze_video(self, video: Video):
+        &#34;&#34;&#34;Return True if no further real-time analysis required&#34;&#34;&#34;
+        if video.video_type == &#34;query&#34;:
+            AnyLocEngine._migrate_db_to_query(video)
+            return self._get_vlad_set(video)
+        elif video.video_type == &#34;database&#34;:
+            return self._get_vlad_set(video)
+
+    
+    def register_db_video(
+        self, database_video: Video, mode: Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;] = &#34;vpr&#34;
+    ):
+        &#34;&#34;&#34;
+        Registers a database video in the engine and initializes its VLAD features.
+
+        Args:
+            database_video (Video): The video to be registered as a database video.
+            mode (Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;], optional): The mode of operation for VLAD feature computation.
+
+        Note:
+            This method initializes the FAISS index for the database VLAD vectors if the mode is &#34;vpr&#34; or &#34;realtime&#34;.
+        &#34;&#34;&#34;
+
+        if self.db_video:
+            logger.info(&#34;Database Video Already Registered&#34;)
+            return
+
+        self.db_video = database_video
+        self.db_img_frames = (
+            database_video.get_frames(verbose=False) if database_video else []
+        )
+
+        ## Initialize Database VLAD Features ##
+        if database_video and mode in [&#34;vpr&#34;, &#34;realtime&#34;]:
+            db_vlad = self._get_vlad_set(self.db_video)
+            db_vlad = F.normalize(db_vlad)
+            D = db_vlad.shape[1]
+            self.db_index = faiss.IndexFlatIP(D)
+            res = faiss.StandardGpuResources()
+            self.db_index = faiss.index_cpu_to_gpu(res, 0, self.db_index)
+            self.db_index.add(db_vlad.numpy())
+
+    def register_query_video(
+        self, query_video: Video, mode: Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;] = &#34;vpr&#34;
+    ):
+        &#34;&#34;&#34;
+        Registers a query video in the engine.
+
+        Args:
+            query_video (Video): The video to be registered as a query video.
+            mode (Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;], optional): The mode of operation for VLAD feature computation.
+
+        Note:
+            This method does not immediately compute VLAD features for the query video unless the mode is &#34;vpr&#34;.
+        &#34;&#34;&#34;
+
+        if self.query_video:
+            logger.info(&#34;Query Video Already Registered&#34;)
+            return
+        
+        self._migrate_db_to_query(query_video)
+        
+        self.query_video = query_video
+        self.query_img_frames = (
+            query_video.get_frames(verbose=False) if query_video else []
+        )
+
+        ## Initialize Query VLAD Features ##
+        if query_video:
+            if mode == &#34;vpr&#34;:
+                self.query_vlad = self._get_vlad_set(self.query_video)
+            elif mode == &#34;realtime&#34;:
+                ## Load Cached query_vlad features if exist ##
+                if query_video and os.path.isfile(
+                    f&#34;{query_video.dataset_dir}/vlads.npy&#34;
+                ):
+                    self.query_vlad = np.load(
+                        f&#34;{query_video.dataset_dir}/vlads.npy&#34;
+                    )
+                else:
+                    self.query_vlad = None
+
+    @staticmethod
+    def _migrate_db_to_query(query_video: Video):
+        &#34;&#34;&#34;
+        Migrate query vlad features for given Video from the database vlad features. This should be called after the database vlad feature is generated. 
+
+        Args:
+            query_video (Video): The query video which vlad features will be generated
+
+        Note:
+            This method does not immediately compute VLAD features for the query video unless the mode is &#34;vpr&#34;.
+        &#34;&#34;&#34;
+        
+        if query_video is None:
+            return
+        
+        db_version = DatabaseVideo(
+            path=query_video._path,
+            root_dir=query_video._root_dir,
+            metadata_dir=query_video._metadata_dir, 
+            user=query_video._user,
+            home=query_video._home,
+        )
+        
+        if not AnyLocEngine.is_video_analyzed(query_video) and AnyLocEngine.is_video_analyzed(db_version):
+            print(&#34;Converting VLAD from db&#34;)
+            db_vlad = np.load(f&#34;{db_version.dataset_dir}/vlads.npy&#34;)
+            query_vlad = db_vlad[::3]
+            os.makedirs(query_video.dataset_dir, exist_ok=True)
+            np.save(f&#34;{query_video.dataset_dir}/vlads.npy&#34;, query_vlad)
+            
+
+    def get_query_vlad(self) -&gt; np.ndarray:
+        &#34;&#34;&#34;
+        Retrieves the VLAD features for the registered query video.
+
+        Returns:
+            np.ndarray: The VLAD features of the query video.
+        &#34;&#34;&#34;
+        
+        self._migrate_db_to_query(self.query_video)
+        
+        return self._get_vlad_set(self.query_video) if self.query_video else None
+
+    def get_database_vlad(self) -&gt; np.ndarray:
+        &#34;&#34;&#34;
+        Retrieves the VLAD features for the registered database video.
+
+        Returns:
+            np.ndarray: The VLAD features of the database video.
+        &#34;&#34;&#34;
+        return self._get_vlad_set(self.db_video) if self.db_video else None
+
+    def _get_vlad_set(self, video: Video) -&gt; np.ndarray:
+        &#34;&#34;&#34;
+        Computes and retrieves VLAD features for a given video.
+
+        Args:
+            video (Video): The video for which to compute VLAD features.
+
+        Returns:
+            np.ndarray: The computed VLAD features for the video.
+        &#34;&#34;&#34;
+        dataset_folder = video.dataset_dir
+        max_img_size = self.max_img_size
+
+        if not os.path.isfile(f&#34;{dataset_folder}/vlads.npy&#34;):
+            logger.info(f&#34;Generating VLAD features for the Video {video._path.name}&#34;)
+
+            if not self.model_loaded:
+                self.load_models()
+
+            patch_descs = []
+            img_frames = video.get_frames(verbose=False)
+
+            for img_fname in stqdm(
+                img_frames, backend=True, mininterval=1,
+                desc=f&#34;Generating VLAD features for the Video {video._path.name}&#34;
+            ):
+                # DINO features
+                with torch.no_grad():
+                    pil_img = Image.open(img_fname).convert(&#34;RGB&#34;)
+                    img_pt = self.base_tf(pil_img).to(self.device)
+                    if max(img_pt.shape[-2:]) &gt;= max_img_size:
+                        c, h, w = img_pt.shape
+                        # Maintain aspect ratio
+                        if h == max(img_pt.shape[-2:]):
+                            w = int(w * max_img_size / h)
+                            h = max_img_size
+                        else:
+                            h = int(h * max_img_size / w)
+                            w = max_img_size
+                        img_pt = T.resize(
+                            img_pt, (h, w), interpolation=T.InterpolationMode.BICUBIC
+                        )
+                    # Make image patchable (14, 14 patches)
+                    c, h, w = img_pt.shape
+                    h_new, w_new = (h // 14) * 14, (w // 14) * 14
+                    img_pt = tvf.CenterCrop((h_new, w_new))(img_pt)[None, ...]
+                    ret = self.extractor(img_pt)  # [1, num_patches, desc_dim]
+                    patch_descs.append(ret.cpu())
+
+            with torch.no_grad():
+                patch_descs = torch.cat(patch_descs, dim=0)
+                img_names = [None] * len(img_frames)
+                vlads: torch.Tensor = self.vlad.generate_multi(patch_descs, img_names)
+            del patch_descs
+            np.save(f&#34;{dataset_folder}/vlads.npy&#34;, vlads)
+
+        else:
+            vlads = np.load(f&#34;{dataset_folder}/vlads.npy&#34;)
+            vlads = torch.from_numpy(vlads)
+
+        return vlads
+
+    def _get_vlad(self, frame: str) -&gt; np.ndarray:
+        &#34;&#34;&#34;
+        Computes the VLAD feature for a single frame.
+
+        Args:
+            frame (str): The path to the frame image file.
+
+        Returns:
+            np.ndarray: The computed VLAD feature for the frame.
+        &#34;&#34;&#34;
+        assert self.model_loaded
+        max_img_size = self.max_img_size
+
+        # DINO features
+        with torch.no_grad():
+            pil_img = Image.open(frame).convert(&#34;RGB&#34;)
+            img_pt = self.base_tf(pil_img).to(self.device)
+            if max(img_pt.shape[-2:]) &gt; self.max_img_size:
+                c, h, w = img_pt.shape
+                # Maintain aspect ratio
+                if h == max(img_pt.shape[-2:]):
+                    w = int(w * max_img_size / h)
+                    h = max_img_size
+                else:
+                    h = int(h * max_img_size / w)
+                    w = max_img_size
+                img_pt = T.resize(
+                    img_pt, (h, w), interpolation=T.InterpolationMode.BICUBIC
+                )
+            # Make image patchable (14, 14 patches)
+            c, h, w = img_pt.shape
+            h_new, w_new = (h // 14) * 14, (w // 14) * 14
+            img_pt = tvf.CenterCrop((h_new, w_new))(img_pt)[None, ...]
+            # Extract descriptor
+            ret = self.extractor(img_pt)  # [1, num_patches, desc_dim]
+        # VLAD global descriptor
+        gd = self.vlad.generate(ret.cpu().squeeze())  # VLAD: shape [agg_dim]
+        gd_np = gd.numpy()[np.newaxis, ...]  # shape: [1, agg_dim]
+
+        return gd_np
+
+    def _download_cache(self):
+        &#34;&#34;&#34;
+        Downloads and sets up the cache folder necessary for the AnyLoc engine, including DINOv2 model and VLAD cluster centers.
+        &#34;&#34;&#34;
+        from quetzal.external.AnyLoc.utilities import od_down_links
+        from onedrivedownloader import download
+
+        # Link
+        ln = od_down_links[&#34;cache&#34;]
+
+        # Download and unzip
+        logger.info(&#34;Downloading the cache folder&#34;)
+        download(
+            ln, filename=&#34;cache.zip&#34;, unzip=True, unzip_path=_ex(anyloc_dir), clean=True
+        )
+        logger.info(&#34;Cache folder downloaded&#34;)
+
+    @lru_cache(maxsize=None)
+    def process(self, file_path: str):
+        &#34;&#34;&#34;
+        Processes a given file to find its matching frame in the database video.
+
+        Args:
+            file_path (str): The path to the query file.
+
+        Returns:
+            Tuple[str, str]: A tuple containing the file path and the path to its matching frame in the database.
+        &#34;&#34;&#34;
+        if self.query_vlad is not None:
+            idx = self.query_video.get_frame_idx(file_path)
+            query = self.query_vlad[idx]
+            query = query[np.newaxis, ...]
+
+        else:
+            query = self._get_vlad(file_path)
+            self.query_vlad_cache.append(query)
+
+        _distances, indices = self.db_index.search(query, max([1]))
+        match_image = self.db_img_frames[indices[0][0]]
+
+        return (file_path, match_image)
+
+    def end(self):
+        &#34;&#34;&#34;
+        Concludes the processing and performs necessary cleanup.
+        &#34;&#34;&#34;
+        self.save_state()
+        return None
+
+    def save_state(self, save_path: str):
+        &#34;&#34;&#34;
+        Saves the current state of the engine, including cached VLAD features.
+
+        Args:
+            save_path (str): The path where the state should be saved.
+        &#34;&#34;&#34;
+        self._save_query_vlad()
+
+    def _save_query_vlad(self):
+        if self.query_video.frame_len == len(self.query_vlad_cache):
+            dataset_folder = self.query_video.dataset_dir
+            query_vlad = np.concatenate(self.query_vlad_cache, axis=0)
+            np.save(f&#34;{dataset_folder}/vlads.npy&#34;, query_vlad)
+            self.query_vlad = query_vlad
+
+
+if __name__ == &#34;__main__&#34;:
+    engine = AnyLocEngine()
+
+
+## LET pdoc3 to generate documentation for private methods 
+__pdoc__ = {name: True
+            for name, klass in globals().items()
+            if name.startswith(&#39;_&#39;) and isinstance(klass, type)}
+__pdoc__.update({f&#39;{name}.{member}&#39;: True
+                 for name, klass in globals().items()
+                 if isinstance(klass, type)
+                 for member in klass.__dict__.keys()
+                 if member not in {&#39;__module__&#39;, &#39;__dict__&#39;, 
+                                   &#39;__weakref__&#39;, &#39;__doc__&#39;}})</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine"><code class="flex name class">
+<span>class <span class="ident">AnyLocEngine</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>An abstract base class for defining processing engines to be used within a Pipeline Stage.
+Engines derived from this class can perform various types of data or file processing.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>The name of the engine, used for logging and identification.</dd>
+</dl>
+<h2 id="methods">Methods</h2>
+<p>is_video_analyzed: Static method to determine if a video requires further real-time analysis.
+process: Abstract method to process a given file or list of files.
+end: Abstract method called to signal that no more inputs will be processed.
+save_state: Abstract method to save the current state or results of processing.</p>
+<p>Initializes the AnyLocEngine with optional database and query videos.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>database_video</code></strong> :&ensp;<code>Video</code>, optional</dt>
+<dd>The database video for analysis.</dd>
+<dt><strong><code>query_video</code></strong> :&ensp;<code>Video</code>, optional</dt>
+<dd>The query video for analysis.</dd>
+<dt><strong><code>max_img_size</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Maximum size of the images during processing.</dd>
+<dt><strong><code>device</code></strong> :&ensp;<code>torch.device</code>, optional</dt>
+<dd>The computational device (CPU/GPU).</dd>
+</dl>
+<p>domain (Literal["aerial", "indoor", "urban"], optional): The domain type of the videos.
+mode (Literal["vpr", "realtime", "lazy"], optional): The operational mode of the engine.</p>
+<h2 id="attributes_1">Attributes</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the engine.</dd>
+<dt><strong><code>db_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The database video.</dd>
+<dt><strong><code>query_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The query video.</dd>
+<dt><strong><code>db_index</code></strong> :&ensp;<code>faiss.IndexFlatIP</code></dt>
+<dd>FAISS index for the database VLAD vectors.</dd>
+<dt><strong><code>query_vlad</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>The VLAD vectors for the query video.</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>"vpr": This mode is optimized for retrieval of the closest database frames from a query image. It pre-computes both database and query VLAD features and prepares a database FAISS index for quick retrieval.
+"realtime": This mode is optimized for real-time frame retrieval and does not pre-computes the query VLAD features, assuming that not all of the frames are ready.
+Suitable for scenarios where per frames based real-time processing is required
+"lazy": This mode is optimized for computing entire VLAD features of each Video in a blocking manner. In this mode, VLAD features for both the query and database videos are not computed during initialization. Instead, the computation is deferred until the user explicitly calls the get_vlad_features() method. Calling process() method for VPR will be disabled.</p>
+<p>The <code>domain</code> parameter in the <code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine">AnyLocEngine</a></code> class is used to specify the domaintype of the videos being processed. It is a literal type that can take one of three values: "aerial", "indoor", or "urban". This parameter is used to determine the location of the cluster centers file, which is required for VLAD feature aggregation. The cluster centers file is stored in the cache directory, and the path to the file is constructed based on the specified domain type.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class AnyLocEngine(AbstractEngine):
+    def __init__(
+        self,
+        database_video: Video = None,  # database_video may be None. Can later register using register_db_video()
+        query_video: Video = None,  # query_video may be None. Can later register using register_query_video()
+        max_img_size: int = 512,
+        device=torch.device(&#34;cuda:0&#34;),
+
+        domain: Literal[&#34;aerial&#34;, &#34;indoor&#34;, &#34;urban&#34;] = &#34;aerial&#34;,
+        mode: Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;] = &#34;lazy&#34;,
+    ):
+        &#34;&#34;&#34;
+        Initializes the AnyLocEngine with optional database and query videos.
+
+        Args:
+            database_video (Video, optional): The database video for analysis.
+            query_video (Video, optional): The query video for analysis.
+            max_img_size (int, optional): Maximum size of the images during processing.
+            device (torch.device, optional): The computational device (CPU/GPU).
+            domain (Literal[&#34;aerial&#34;, &#34;indoor&#34;, &#34;urban&#34;], optional): The domain type of the videos.
+            mode (Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;], optional): The operational mode of the engine.
+
+        Attributes:
+            name (str): Name of the engine.
+            db_video (Video): The database video.
+            query_video (Video): The query video.
+            db_index (faiss.IndexFlatIP): FAISS index for the database VLAD vectors.
+            query_vlad (np.ndarray): The VLAD vectors for the query video.
+
+        Notes:
+            &#34;vpr&#34;: This mode is optimized for retrieval of the closest database frames from a query image. It pre-computes both database and query VLAD features and prepares a database FAISS index for quick retrieval.
+            &#34;realtime&#34;: This mode is optimized for real-time frame retrieval and does not pre-computes the query VLAD features, assuming that not all of the frames are ready.  Suitable for scenarios where per frames based real-time processing is required
+            &#34;lazy&#34;: This mode is optimized for computing entire VLAD features of each Video in a blocking manner. In this mode, VLAD features for both the query and database videos are not computed during initialization. Instead, the computation is deferred until the user explicitly calls the get_vlad_features() method. Calling process() method for VPR will be disabled.
+            
+            The `domain` parameter in the `AnyLocEngine` class is used to specify the domaintype of the videos being processed. It is a literal type that can take one of three values: &#34;aerial&#34;, &#34;indoor&#34;, or &#34;urban&#34;. This parameter is used to determine the location of the cluster centers file, which is required for VLAD feature aggregation. The cluster centers file is stored in the cache directory, and the path to the file is constructed based on the specified domain type.
+        &#34;&#34;&#34;
+        self.name = &#34;Frame Matching - AnyLoc&#34;
+
+        ## Video Frames ##
+        self.db_video = None
+        self.query_video = None
+
+        ## Check Model Cache ##
+        if os.path.isdir(cache_dir):
+            logger.info(&#34;Anyloc cache folder already exists!&#34;)
+        else:
+            self._download_cache()
+        
+        
+
+        ## DINOv2 Extractor ##
+        self.max_img_size = max_img_size
+        self.device = device
+        self.domain = domain
+        self.model_loaded = False
+
+        if mode != &#34;lazy&#34;:
+            if query_video:
+                db_version = DatabaseVideo(
+                    path=query_video._path,
+                    root_dir=query_video._root_dir,
+                    metadata_dir=query_video._metadata_dir,
+                    user=query_video._user,
+                    home=query_video._home,
+                )
+            else:
+                db_version = None
+                
+            vlad_ready = self.is_video_analyzed(database_video) and (self.is_video_analyzed(query_video) or self.is_video_analyzed(db_version))
+            if not vlad_ready:
+                self.load_models()
+
+        ## Initialize VLAD features ##
+        self.db_index = None
+        self.query_vlad = None
+        self.query_vlad_cache = []
+
+        ## Register Videos ##
+        self.register_db_video(database_video, mode)
+        self.register_query_video(query_video, mode)
+        
+    def load_models(self):
+        &#34;&#34;&#34;
+        loads DinoV2 extractor and VLAD extractor
+        &#34;&#34;&#34;
+        desc_layer: int = 31
+        desc_facet: Literal[&#34;query&#34;, &#34;key&#34;, &#34;value&#34;, &#34;token&#34;] = &#34;value&#34;
+        num_c: int = 32
+        # Domain for use case (deployment environment)
+        domain: Literal[&#34;aerial&#34;, &#34;indoor&#34;, &#34;urban&#34;] = self.domain
+
+        self.extractor = DinoV2ExtractFeatures(
+            &#34;dinov2_vitg14&#34;, desc_layer, desc_facet, device=self.device
+        )
+        self.base_tf = tvf.Compose(
+            [
+                tvf.ToTensor(),
+                tvf.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
+            ]
+        )
+        
+        ext_specifier = f&#34;dinov2_vitg14/l{desc_layer}_{desc_facet}_c{num_c}&#34;
+        c_centers_file = os.path.join(
+            cache_dir, &#34;vocabulary&#34;, ext_specifier, domain, &#34;c_centers.pt&#34;
+        )
+        assert os.path.isfile(c_centers_file), &#34;Cluster centers not cached!&#34;
+        c_centers = torch.load(c_centers_file)
+        assert c_centers.shape[0] == num_c, &#34;Wrong number of clusters!&#34;
+
+        self.vlad = VLAD(
+            num_c, desc_dim=None, cache_dir=os.path.dirname(c_centers_file)
+        )
+        # Fit (load) the cluster centers (this&#39;ll also load the desc_dim)
+        self.vlad.fit(None)
+        
+        self.model_loaded = True
+        
+
+    @staticmethod
+    def is_video_analyzed(video: Video) -&gt; bool:
+        &#34;&#34;&#34;
+        Checks if the VLAD features are already computed for a given video.
+
+        Args:
+            video (Video): The video object to check for precomputed VLAD features.
+
+        Returns:
+            bool: True if the VLAD features are precomputed, False otherwise.
+        &#34;&#34;&#34;
+        return (
+            os.path.isfile(f&#34;{video.dataset_dir}/vlads.npy&#34;) if video else False
+        )
+    
+    def analyze_video(self, video: Video):
+        &#34;&#34;&#34;Return True if no further real-time analysis required&#34;&#34;&#34;
+        if video.video_type == &#34;query&#34;:
+            AnyLocEngine._migrate_db_to_query(video)
+            return self._get_vlad_set(video)
+        elif video.video_type == &#34;database&#34;:
+            return self._get_vlad_set(video)
+
+    
+    def register_db_video(
+        self, database_video: Video, mode: Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;] = &#34;vpr&#34;
+    ):
+        &#34;&#34;&#34;
+        Registers a database video in the engine and initializes its VLAD features.
+
+        Args:
+            database_video (Video): The video to be registered as a database video.
+            mode (Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;], optional): The mode of operation for VLAD feature computation.
+
+        Note:
+            This method initializes the FAISS index for the database VLAD vectors if the mode is &#34;vpr&#34; or &#34;realtime&#34;.
+        &#34;&#34;&#34;
+
+        if self.db_video:
+            logger.info(&#34;Database Video Already Registered&#34;)
+            return
+
+        self.db_video = database_video
+        self.db_img_frames = (
+            database_video.get_frames(verbose=False) if database_video else []
+        )
+
+        ## Initialize Database VLAD Features ##
+        if database_video and mode in [&#34;vpr&#34;, &#34;realtime&#34;]:
+            db_vlad = self._get_vlad_set(self.db_video)
+            db_vlad = F.normalize(db_vlad)
+            D = db_vlad.shape[1]
+            self.db_index = faiss.IndexFlatIP(D)
+            res = faiss.StandardGpuResources()
+            self.db_index = faiss.index_cpu_to_gpu(res, 0, self.db_index)
+            self.db_index.add(db_vlad.numpy())
+
+    def register_query_video(
+        self, query_video: Video, mode: Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;] = &#34;vpr&#34;
+    ):
+        &#34;&#34;&#34;
+        Registers a query video in the engine.
+
+        Args:
+            query_video (Video): The video to be registered as a query video.
+            mode (Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;], optional): The mode of operation for VLAD feature computation.
+
+        Note:
+            This method does not immediately compute VLAD features for the query video unless the mode is &#34;vpr&#34;.
+        &#34;&#34;&#34;
+
+        if self.query_video:
+            logger.info(&#34;Query Video Already Registered&#34;)
+            return
+        
+        self._migrate_db_to_query(query_video)
+        
+        self.query_video = query_video
+        self.query_img_frames = (
+            query_video.get_frames(verbose=False) if query_video else []
+        )
+
+        ## Initialize Query VLAD Features ##
+        if query_video:
+            if mode == &#34;vpr&#34;:
+                self.query_vlad = self._get_vlad_set(self.query_video)
+            elif mode == &#34;realtime&#34;:
+                ## Load Cached query_vlad features if exist ##
+                if query_video and os.path.isfile(
+                    f&#34;{query_video.dataset_dir}/vlads.npy&#34;
+                ):
+                    self.query_vlad = np.load(
+                        f&#34;{query_video.dataset_dir}/vlads.npy&#34;
+                    )
+                else:
+                    self.query_vlad = None
+
+    @staticmethod
+    def _migrate_db_to_query(query_video: Video):
+        &#34;&#34;&#34;
+        Migrate query vlad features for given Video from the database vlad features. This should be called after the database vlad feature is generated. 
+
+        Args:
+            query_video (Video): The query video which vlad features will be generated
+
+        Note:
+            This method does not immediately compute VLAD features for the query video unless the mode is &#34;vpr&#34;.
+        &#34;&#34;&#34;
+        
+        if query_video is None:
+            return
+        
+        db_version = DatabaseVideo(
+            path=query_video._path,
+            root_dir=query_video._root_dir,
+            metadata_dir=query_video._metadata_dir, 
+            user=query_video._user,
+            home=query_video._home,
+        )
+        
+        if not AnyLocEngine.is_video_analyzed(query_video) and AnyLocEngine.is_video_analyzed(db_version):
+            print(&#34;Converting VLAD from db&#34;)
+            db_vlad = np.load(f&#34;{db_version.dataset_dir}/vlads.npy&#34;)
+            query_vlad = db_vlad[::3]
+            os.makedirs(query_video.dataset_dir, exist_ok=True)
+            np.save(f&#34;{query_video.dataset_dir}/vlads.npy&#34;, query_vlad)
+            
+
+    def get_query_vlad(self) -&gt; np.ndarray:
+        &#34;&#34;&#34;
+        Retrieves the VLAD features for the registered query video.
+
+        Returns:
+            np.ndarray: The VLAD features of the query video.
+        &#34;&#34;&#34;
+        
+        self._migrate_db_to_query(self.query_video)
+        
+        return self._get_vlad_set(self.query_video) if self.query_video else None
+
+    def get_database_vlad(self) -&gt; np.ndarray:
+        &#34;&#34;&#34;
+        Retrieves the VLAD features for the registered database video.
+
+        Returns:
+            np.ndarray: The VLAD features of the database video.
+        &#34;&#34;&#34;
+        return self._get_vlad_set(self.db_video) if self.db_video else None
+
+    def _get_vlad_set(self, video: Video) -&gt; np.ndarray:
+        &#34;&#34;&#34;
+        Computes and retrieves VLAD features for a given video.
+
+        Args:
+            video (Video): The video for which to compute VLAD features.
+
+        Returns:
+            np.ndarray: The computed VLAD features for the video.
+        &#34;&#34;&#34;
+        dataset_folder = video.dataset_dir
+        max_img_size = self.max_img_size
+
+        if not os.path.isfile(f&#34;{dataset_folder}/vlads.npy&#34;):
+            logger.info(f&#34;Generating VLAD features for the Video {video._path.name}&#34;)
+
+            if not self.model_loaded:
+                self.load_models()
+
+            patch_descs = []
+            img_frames = video.get_frames(verbose=False)
+
+            for img_fname in stqdm(
+                img_frames, backend=True, mininterval=1,
+                desc=f&#34;Generating VLAD features for the Video {video._path.name}&#34;
+            ):
+                # DINO features
+                with torch.no_grad():
+                    pil_img = Image.open(img_fname).convert(&#34;RGB&#34;)
+                    img_pt = self.base_tf(pil_img).to(self.device)
+                    if max(img_pt.shape[-2:]) &gt;= max_img_size:
+                        c, h, w = img_pt.shape
+                        # Maintain aspect ratio
+                        if h == max(img_pt.shape[-2:]):
+                            w = int(w * max_img_size / h)
+                            h = max_img_size
+                        else:
+                            h = int(h * max_img_size / w)
+                            w = max_img_size
+                        img_pt = T.resize(
+                            img_pt, (h, w), interpolation=T.InterpolationMode.BICUBIC
+                        )
+                    # Make image patchable (14, 14 patches)
+                    c, h, w = img_pt.shape
+                    h_new, w_new = (h // 14) * 14, (w // 14) * 14
+                    img_pt = tvf.CenterCrop((h_new, w_new))(img_pt)[None, ...]
+                    ret = self.extractor(img_pt)  # [1, num_patches, desc_dim]
+                    patch_descs.append(ret.cpu())
+
+            with torch.no_grad():
+                patch_descs = torch.cat(patch_descs, dim=0)
+                img_names = [None] * len(img_frames)
+                vlads: torch.Tensor = self.vlad.generate_multi(patch_descs, img_names)
+            del patch_descs
+            np.save(f&#34;{dataset_folder}/vlads.npy&#34;, vlads)
+
+        else:
+            vlads = np.load(f&#34;{dataset_folder}/vlads.npy&#34;)
+            vlads = torch.from_numpy(vlads)
+
+        return vlads
+
+    def _get_vlad(self, frame: str) -&gt; np.ndarray:
+        &#34;&#34;&#34;
+        Computes the VLAD feature for a single frame.
+
+        Args:
+            frame (str): The path to the frame image file.
+
+        Returns:
+            np.ndarray: The computed VLAD feature for the frame.
+        &#34;&#34;&#34;
+        assert self.model_loaded
+        max_img_size = self.max_img_size
+
+        # DINO features
+        with torch.no_grad():
+            pil_img = Image.open(frame).convert(&#34;RGB&#34;)
+            img_pt = self.base_tf(pil_img).to(self.device)
+            if max(img_pt.shape[-2:]) &gt; self.max_img_size:
+                c, h, w = img_pt.shape
+                # Maintain aspect ratio
+                if h == max(img_pt.shape[-2:]):
+                    w = int(w * max_img_size / h)
+                    h = max_img_size
+                else:
+                    h = int(h * max_img_size / w)
+                    w = max_img_size
+                img_pt = T.resize(
+                    img_pt, (h, w), interpolation=T.InterpolationMode.BICUBIC
+                )
+            # Make image patchable (14, 14 patches)
+            c, h, w = img_pt.shape
+            h_new, w_new = (h // 14) * 14, (w // 14) * 14
+            img_pt = tvf.CenterCrop((h_new, w_new))(img_pt)[None, ...]
+            # Extract descriptor
+            ret = self.extractor(img_pt)  # [1, num_patches, desc_dim]
+        # VLAD global descriptor
+        gd = self.vlad.generate(ret.cpu().squeeze())  # VLAD: shape [agg_dim]
+        gd_np = gd.numpy()[np.newaxis, ...]  # shape: [1, agg_dim]
+
+        return gd_np
+
+    def _download_cache(self):
+        &#34;&#34;&#34;
+        Downloads and sets up the cache folder necessary for the AnyLoc engine, including DINOv2 model and VLAD cluster centers.
+        &#34;&#34;&#34;
+        from quetzal.external.AnyLoc.utilities import od_down_links
+        from onedrivedownloader import download
+
+        # Link
+        ln = od_down_links[&#34;cache&#34;]
+
+        # Download and unzip
+        logger.info(&#34;Downloading the cache folder&#34;)
+        download(
+            ln, filename=&#34;cache.zip&#34;, unzip=True, unzip_path=_ex(anyloc_dir), clean=True
+        )
+        logger.info(&#34;Cache folder downloaded&#34;)
+
+    @lru_cache(maxsize=None)
+    def process(self, file_path: str):
+        &#34;&#34;&#34;
+        Processes a given file to find its matching frame in the database video.
+
+        Args:
+            file_path (str): The path to the query file.
+
+        Returns:
+            Tuple[str, str]: A tuple containing the file path and the path to its matching frame in the database.
+        &#34;&#34;&#34;
+        if self.query_vlad is not None:
+            idx = self.query_video.get_frame_idx(file_path)
+            query = self.query_vlad[idx]
+            query = query[np.newaxis, ...]
+
+        else:
+            query = self._get_vlad(file_path)
+            self.query_vlad_cache.append(query)
+
+        _distances, indices = self.db_index.search(query, max([1]))
+        match_image = self.db_img_frames[indices[0][0]]
+
+        return (file_path, match_image)
+
+    def end(self):
+        &#34;&#34;&#34;
+        Concludes the processing and performs necessary cleanup.
+        &#34;&#34;&#34;
+        self.save_state()
+        return None
+
+    def save_state(self, save_path: str):
+        &#34;&#34;&#34;
+        Saves the current state of the engine, including cached VLAD features.
+
+        Args:
+            save_path (str): The path where the state should be saved.
+        &#34;&#34;&#34;
+        self._save_query_vlad()
+
+    def _save_query_vlad(self):
+        if self.query_video.frame_len == len(self.query_vlad_cache):
+            dataset_folder = self.query_video.dataset_dir
+            query_vlad = np.concatenate(self.query_vlad_cache, axis=0)
+            np.save(f&#34;{dataset_folder}/vlads.npy&#34;, query_vlad)
+            self.query_vlad = query_vlad</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="quetzal.engines.engine.AbstractEngine" href="../engine.html#quetzal.engines.engine.AbstractEngine">AbstractEngine</a></li>
+<li>abc.ABC</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.__abstractmethods__"><code class="name">var <span class="ident">__abstractmethods__</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._abc_impl"><code class="name">var <span class="ident">_abc_impl</span></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Static methods</h3>
+<dl>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._migrate_db_to_query"><code class="name flex">
+<span>def <span class="ident">_migrate_db_to_query</span></span>(<span>query_video: <a title="quetzal.dtos.video.Video" href="../../dtos/video.html#quetzal.dtos.video.Video">Video</a>)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Migrate query vlad features for given Video from the database vlad features. This should be called after the database vlad feature is generated. </p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>query_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The query video which vlad features will be generated</dd>
+</dl>
+<h2 id="note">Note</h2>
+<p>This method does not immediately compute VLAD features for the query video unless the mode is "vpr".</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def _migrate_db_to_query(query_video: Video):
+    &#34;&#34;&#34;
+    Migrate query vlad features for given Video from the database vlad features. This should be called after the database vlad feature is generated. 
+
+    Args:
+        query_video (Video): The query video which vlad features will be generated
+
+    Note:
+        This method does not immediately compute VLAD features for the query video unless the mode is &#34;vpr&#34;.
+    &#34;&#34;&#34;
+    
+    if query_video is None:
+        return
+    
+    db_version = DatabaseVideo(
+        path=query_video._path,
+        root_dir=query_video._root_dir,
+        metadata_dir=query_video._metadata_dir, 
+        user=query_video._user,
+        home=query_video._home,
+    )
+    
+    if not AnyLocEngine.is_video_analyzed(query_video) and AnyLocEngine.is_video_analyzed(db_version):
+        print(&#34;Converting VLAD from db&#34;)
+        db_vlad = np.load(f&#34;{db_version.dataset_dir}/vlads.npy&#34;)
+        query_vlad = db_vlad[::3]
+        os.makedirs(query_video.dataset_dir, exist_ok=True)
+        np.save(f&#34;{query_video.dataset_dir}/vlads.npy&#34;, query_vlad)</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.is_video_analyzed"><code class="name flex">
+<span>def <span class="ident">is_video_analyzed</span></span>(<span>video: <a title="quetzal.dtos.video.Video" href="../../dtos/video.html#quetzal.dtos.video.Video">Video</a>) ‑> bool</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Checks if the VLAD features are already computed for a given video.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The video object to check for precomputed VLAD features.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>bool</code></dt>
+<dd>True if the VLAD features are precomputed, False otherwise.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def is_video_analyzed(video: Video) -&gt; bool:
+    &#34;&#34;&#34;
+    Checks if the VLAD features are already computed for a given video.
+
+    Args:
+        video (Video): The video object to check for precomputed VLAD features.
+
+    Returns:
+        bool: True if the VLAD features are precomputed, False otherwise.
+    &#34;&#34;&#34;
+    return (
+        os.path.isfile(f&#34;{video.dataset_dir}/vlads.npy&#34;) if video else False
+    )</code></pre>
+</details>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.__init__"><code class="name flex">
+<span>def <span class="ident">__init__</span></span>(<span>self, database_video: <a title="quetzal.dtos.video.Video" href="../../dtos/video.html#quetzal.dtos.video.Video">Video</a> = None, query_video: <a title="quetzal.dtos.video.Video" href="../../dtos/video.html#quetzal.dtos.video.Video">Video</a> = None, max_img_size: int = 512, device=device(type='cuda', index=0), domain: Literal['aerial', 'indoor', 'urban'] = 'aerial', mode: Literal['vpr', 'realtime', 'lazy'] = 'lazy')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Initializes the AnyLocEngine with optional database and query videos.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>database_video</code></strong> :&ensp;<code>Video</code>, optional</dt>
+<dd>The database video for analysis.</dd>
+<dt><strong><code>query_video</code></strong> :&ensp;<code>Video</code>, optional</dt>
+<dd>The query video for analysis.</dd>
+<dt><strong><code>max_img_size</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Maximum size of the images during processing.</dd>
+<dt><strong><code>device</code></strong> :&ensp;<code>torch.device</code>, optional</dt>
+<dd>The computational device (CPU/GPU).</dd>
+</dl>
+<p>domain (Literal["aerial", "indoor", "urban"], optional): The domain type of the videos.
+mode (Literal["vpr", "realtime", "lazy"], optional): The operational mode of the engine.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>name</code></strong> :&ensp;<code>str</code></dt>
+<dd>Name of the engine.</dd>
+<dt><strong><code>db_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The database video.</dd>
+<dt><strong><code>query_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The query video.</dd>
+<dt><strong><code>db_index</code></strong> :&ensp;<code>faiss.IndexFlatIP</code></dt>
+<dd>FAISS index for the database VLAD vectors.</dd>
+<dt><strong><code>query_vlad</code></strong> :&ensp;<code>np.ndarray</code></dt>
+<dd>The VLAD vectors for the query video.</dd>
+</dl>
+<h2 id="notes">Notes</h2>
+<p>"vpr": This mode is optimized for retrieval of the closest database frames from a query image. It pre-computes both database and query VLAD features and prepares a database FAISS index for quick retrieval.
+"realtime": This mode is optimized for real-time frame retrieval and does not pre-computes the query VLAD features, assuming that not all of the frames are ready.
+Suitable for scenarios where per frames based real-time processing is required
+"lazy": This mode is optimized for computing entire VLAD features of each Video in a blocking manner. In this mode, VLAD features for both the query and database videos are not computed during initialization. Instead, the computation is deferred until the user explicitly calls the get_vlad_features() method. Calling process() method for VPR will be disabled.</p>
+<p>The <code>domain</code> parameter in the <code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine">AnyLocEngine</a></code> class is used to specify the domaintype of the videos being processed. It is a literal type that can take one of three values: "aerial", "indoor", or "urban". This parameter is used to determine the location of the cluster centers file, which is required for VLAD feature aggregation. The cluster centers file is stored in the cache directory, and the path to the file is constructed based on the specified domain type.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def __init__(
+    self,
+    database_video: Video = None,  # database_video may be None. Can later register using register_db_video()
+    query_video: Video = None,  # query_video may be None. Can later register using register_query_video()
+    max_img_size: int = 512,
+    device=torch.device(&#34;cuda:0&#34;),
+
+    domain: Literal[&#34;aerial&#34;, &#34;indoor&#34;, &#34;urban&#34;] = &#34;aerial&#34;,
+    mode: Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;] = &#34;lazy&#34;,
+):
+    &#34;&#34;&#34;
+    Initializes the AnyLocEngine with optional database and query videos.
+
+    Args:
+        database_video (Video, optional): The database video for analysis.
+        query_video (Video, optional): The query video for analysis.
+        max_img_size (int, optional): Maximum size of the images during processing.
+        device (torch.device, optional): The computational device (CPU/GPU).
+        domain (Literal[&#34;aerial&#34;, &#34;indoor&#34;, &#34;urban&#34;], optional): The domain type of the videos.
+        mode (Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;], optional): The operational mode of the engine.
+
+    Attributes:
+        name (str): Name of the engine.
+        db_video (Video): The database video.
+        query_video (Video): The query video.
+        db_index (faiss.IndexFlatIP): FAISS index for the database VLAD vectors.
+        query_vlad (np.ndarray): The VLAD vectors for the query video.
+
+    Notes:
+        &#34;vpr&#34;: This mode is optimized for retrieval of the closest database frames from a query image. It pre-computes both database and query VLAD features and prepares a database FAISS index for quick retrieval.
+        &#34;realtime&#34;: This mode is optimized for real-time frame retrieval and does not pre-computes the query VLAD features, assuming that not all of the frames are ready.  Suitable for scenarios where per frames based real-time processing is required
+        &#34;lazy&#34;: This mode is optimized for computing entire VLAD features of each Video in a blocking manner. In this mode, VLAD features for both the query and database videos are not computed during initialization. Instead, the computation is deferred until the user explicitly calls the get_vlad_features() method. Calling process() method for VPR will be disabled.
+        
+        The `domain` parameter in the `AnyLocEngine` class is used to specify the domaintype of the videos being processed. It is a literal type that can take one of three values: &#34;aerial&#34;, &#34;indoor&#34;, or &#34;urban&#34;. This parameter is used to determine the location of the cluster centers file, which is required for VLAD feature aggregation. The cluster centers file is stored in the cache directory, and the path to the file is constructed based on the specified domain type.
+    &#34;&#34;&#34;
+    self.name = &#34;Frame Matching - AnyLoc&#34;
+
+    ## Video Frames ##
+    self.db_video = None
+    self.query_video = None
+
+    ## Check Model Cache ##
+    if os.path.isdir(cache_dir):
+        logger.info(&#34;Anyloc cache folder already exists!&#34;)
+    else:
+        self._download_cache()
+    
+    
+
+    ## DINOv2 Extractor ##
+    self.max_img_size = max_img_size
+    self.device = device
+    self.domain = domain
+    self.model_loaded = False
+
+    if mode != &#34;lazy&#34;:
+        if query_video:
+            db_version = DatabaseVideo(
+                path=query_video._path,
+                root_dir=query_video._root_dir,
+                metadata_dir=query_video._metadata_dir,
+                user=query_video._user,
+                home=query_video._home,
+            )
+        else:
+            db_version = None
+            
+        vlad_ready = self.is_video_analyzed(database_video) and (self.is_video_analyzed(query_video) or self.is_video_analyzed(db_version))
+        if not vlad_ready:
+            self.load_models()
+
+    ## Initialize VLAD features ##
+    self.db_index = None
+    self.query_vlad = None
+    self.query_vlad_cache = []
+
+    ## Register Videos ##
+    self.register_db_video(database_video, mode)
+    self.register_query_video(query_video, mode)</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._download_cache"><code class="name flex">
+<span>def <span class="ident">_download_cache</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Downloads and sets up the cache folder necessary for the AnyLoc engine, including DINOv2 model and VLAD cluster centers.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _download_cache(self):
+    &#34;&#34;&#34;
+    Downloads and sets up the cache folder necessary for the AnyLoc engine, including DINOv2 model and VLAD cluster centers.
+    &#34;&#34;&#34;
+    from quetzal.external.AnyLoc.utilities import od_down_links
+    from onedrivedownloader import download
+
+    # Link
+    ln = od_down_links[&#34;cache&#34;]
+
+    # Download and unzip
+    logger.info(&#34;Downloading the cache folder&#34;)
+    download(
+        ln, filename=&#34;cache.zip&#34;, unzip=True, unzip_path=_ex(anyloc_dir), clean=True
+    )
+    logger.info(&#34;Cache folder downloaded&#34;)</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._get_vlad"><code class="name flex">
+<span>def <span class="ident">_get_vlad</span></span>(<span>self, frame: str) ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes the VLAD feature for a single frame.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>frame</code></strong> :&ensp;<code>str</code></dt>
+<dd>The path to the frame image file.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.ndarray</code></dt>
+<dd>The computed VLAD feature for the frame.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _get_vlad(self, frame: str) -&gt; np.ndarray:
+    &#34;&#34;&#34;
+    Computes the VLAD feature for a single frame.
+
+    Args:
+        frame (str): The path to the frame image file.
+
+    Returns:
+        np.ndarray: The computed VLAD feature for the frame.
+    &#34;&#34;&#34;
+    assert self.model_loaded
+    max_img_size = self.max_img_size
+
+    # DINO features
+    with torch.no_grad():
+        pil_img = Image.open(frame).convert(&#34;RGB&#34;)
+        img_pt = self.base_tf(pil_img).to(self.device)
+        if max(img_pt.shape[-2:]) &gt; self.max_img_size:
+            c, h, w = img_pt.shape
+            # Maintain aspect ratio
+            if h == max(img_pt.shape[-2:]):
+                w = int(w * max_img_size / h)
+                h = max_img_size
+            else:
+                h = int(h * max_img_size / w)
+                w = max_img_size
+            img_pt = T.resize(
+                img_pt, (h, w), interpolation=T.InterpolationMode.BICUBIC
+            )
+        # Make image patchable (14, 14 patches)
+        c, h, w = img_pt.shape
+        h_new, w_new = (h // 14) * 14, (w // 14) * 14
+        img_pt = tvf.CenterCrop((h_new, w_new))(img_pt)[None, ...]
+        # Extract descriptor
+        ret = self.extractor(img_pt)  # [1, num_patches, desc_dim]
+    # VLAD global descriptor
+    gd = self.vlad.generate(ret.cpu().squeeze())  # VLAD: shape [agg_dim]
+    gd_np = gd.numpy()[np.newaxis, ...]  # shape: [1, agg_dim]
+
+    return gd_np</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._get_vlad_set"><code class="name flex">
+<span>def <span class="ident">_get_vlad_set</span></span>(<span>self, video: <a title="quetzal.dtos.video.Video" href="../../dtos/video.html#quetzal.dtos.video.Video">Video</a>) ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Computes and retrieves VLAD features for a given video.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The video for which to compute VLAD features.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.ndarray</code></dt>
+<dd>The computed VLAD features for the video.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _get_vlad_set(self, video: Video) -&gt; np.ndarray:
+    &#34;&#34;&#34;
+    Computes and retrieves VLAD features for a given video.
+
+    Args:
+        video (Video): The video for which to compute VLAD features.
+
+    Returns:
+        np.ndarray: The computed VLAD features for the video.
+    &#34;&#34;&#34;
+    dataset_folder = video.dataset_dir
+    max_img_size = self.max_img_size
+
+    if not os.path.isfile(f&#34;{dataset_folder}/vlads.npy&#34;):
+        logger.info(f&#34;Generating VLAD features for the Video {video._path.name}&#34;)
+
+        if not self.model_loaded:
+            self.load_models()
+
+        patch_descs = []
+        img_frames = video.get_frames(verbose=False)
+
+        for img_fname in stqdm(
+            img_frames, backend=True, mininterval=1,
+            desc=f&#34;Generating VLAD features for the Video {video._path.name}&#34;
+        ):
+            # DINO features
+            with torch.no_grad():
+                pil_img = Image.open(img_fname).convert(&#34;RGB&#34;)
+                img_pt = self.base_tf(pil_img).to(self.device)
+                if max(img_pt.shape[-2:]) &gt;= max_img_size:
+                    c, h, w = img_pt.shape
+                    # Maintain aspect ratio
+                    if h == max(img_pt.shape[-2:]):
+                        w = int(w * max_img_size / h)
+                        h = max_img_size
+                    else:
+                        h = int(h * max_img_size / w)
+                        w = max_img_size
+                    img_pt = T.resize(
+                        img_pt, (h, w), interpolation=T.InterpolationMode.BICUBIC
+                    )
+                # Make image patchable (14, 14 patches)
+                c, h, w = img_pt.shape
+                h_new, w_new = (h // 14) * 14, (w // 14) * 14
+                img_pt = tvf.CenterCrop((h_new, w_new))(img_pt)[None, ...]
+                ret = self.extractor(img_pt)  # [1, num_patches, desc_dim]
+                patch_descs.append(ret.cpu())
+
+        with torch.no_grad():
+            patch_descs = torch.cat(patch_descs, dim=0)
+            img_names = [None] * len(img_frames)
+            vlads: torch.Tensor = self.vlad.generate_multi(patch_descs, img_names)
+        del patch_descs
+        np.save(f&#34;{dataset_folder}/vlads.npy&#34;, vlads)
+
+    else:
+        vlads = np.load(f&#34;{dataset_folder}/vlads.npy&#34;)
+        vlads = torch.from_numpy(vlads)
+
+    return vlads</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._save_query_vlad"><code class="name flex">
+<span>def <span class="ident">_save_query_vlad</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def _save_query_vlad(self):
+    if self.query_video.frame_len == len(self.query_vlad_cache):
+        dataset_folder = self.query_video.dataset_dir
+        query_vlad = np.concatenate(self.query_vlad_cache, axis=0)
+        np.save(f&#34;{dataset_folder}/vlads.npy&#34;, query_vlad)
+        self.query_vlad = query_vlad</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.analyze_video"><code class="name flex">
+<span>def <span class="ident">analyze_video</span></span>(<span>self, video: <a title="quetzal.dtos.video.Video" href="../../dtos/video.html#quetzal.dtos.video.Video">Video</a>)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Return True if no further real-time analysis required</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def analyze_video(self, video: Video):
+    &#34;&#34;&#34;Return True if no further real-time analysis required&#34;&#34;&#34;
+    if video.video_type == &#34;query&#34;:
+        AnyLocEngine._migrate_db_to_query(video)
+        return self._get_vlad_set(video)
+    elif video.video_type == &#34;database&#34;:
+        return self._get_vlad_set(video)</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.end"><code class="name flex">
+<span>def <span class="ident">end</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Concludes the processing and performs necessary cleanup.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def end(self):
+    &#34;&#34;&#34;
+    Concludes the processing and performs necessary cleanup.
+    &#34;&#34;&#34;
+    self.save_state()
+    return None</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.get_database_vlad"><code class="name flex">
+<span>def <span class="ident">get_database_vlad</span></span>(<span>self) ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Retrieves the VLAD features for the registered database video.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.ndarray</code></dt>
+<dd>The VLAD features of the database video.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_database_vlad(self) -&gt; np.ndarray:
+    &#34;&#34;&#34;
+    Retrieves the VLAD features for the registered database video.
+
+    Returns:
+        np.ndarray: The VLAD features of the database video.
+    &#34;&#34;&#34;
+    return self._get_vlad_set(self.db_video) if self.db_video else None</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.get_query_vlad"><code class="name flex">
+<span>def <span class="ident">get_query_vlad</span></span>(<span>self) ‑> numpy.ndarray</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Retrieves the VLAD features for the registered query video.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>np.ndarray</code></dt>
+<dd>The VLAD features of the query video.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_query_vlad(self) -&gt; np.ndarray:
+    &#34;&#34;&#34;
+    Retrieves the VLAD features for the registered query video.
+
+    Returns:
+        np.ndarray: The VLAD features of the query video.
+    &#34;&#34;&#34;
+    
+    self._migrate_db_to_query(self.query_video)
+    
+    return self._get_vlad_set(self.query_video) if self.query_video else None</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.load_models"><code class="name flex">
+<span>def <span class="ident">load_models</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>loads DinoV2 extractor and VLAD extractor</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load_models(self):
+    &#34;&#34;&#34;
+    loads DinoV2 extractor and VLAD extractor
+    &#34;&#34;&#34;
+    desc_layer: int = 31
+    desc_facet: Literal[&#34;query&#34;, &#34;key&#34;, &#34;value&#34;, &#34;token&#34;] = &#34;value&#34;
+    num_c: int = 32
+    # Domain for use case (deployment environment)
+    domain: Literal[&#34;aerial&#34;, &#34;indoor&#34;, &#34;urban&#34;] = self.domain
+
+    self.extractor = DinoV2ExtractFeatures(
+        &#34;dinov2_vitg14&#34;, desc_layer, desc_facet, device=self.device
+    )
+    self.base_tf = tvf.Compose(
+        [
+            tvf.ToTensor(),
+            tvf.Normalize(
+                mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            ),
+        ]
+    )
+    
+    ext_specifier = f&#34;dinov2_vitg14/l{desc_layer}_{desc_facet}_c{num_c}&#34;
+    c_centers_file = os.path.join(
+        cache_dir, &#34;vocabulary&#34;, ext_specifier, domain, &#34;c_centers.pt&#34;
+    )
+    assert os.path.isfile(c_centers_file), &#34;Cluster centers not cached!&#34;
+    c_centers = torch.load(c_centers_file)
+    assert c_centers.shape[0] == num_c, &#34;Wrong number of clusters!&#34;
+
+    self.vlad = VLAD(
+        num_c, desc_dim=None, cache_dir=os.path.dirname(c_centers_file)
+    )
+    # Fit (load) the cluster centers (this&#39;ll also load the desc_dim)
+    self.vlad.fit(None)
+    
+    self.model_loaded = True</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.process"><code class="name flex">
+<span>def <span class="ident">process</span></span>(<span>self, file_path: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Processes a given file to find its matching frame in the database video.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>file_path</code></strong> :&ensp;<code>str</code></dt>
+<dd>The path to the query file.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Tuple[str, str]</code></dt>
+<dd>A tuple containing the file path and the path to its matching frame in the database.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@lru_cache(maxsize=None)
+def process(self, file_path: str):
+    &#34;&#34;&#34;
+    Processes a given file to find its matching frame in the database video.
+
+    Args:
+        file_path (str): The path to the query file.
+
+    Returns:
+        Tuple[str, str]: A tuple containing the file path and the path to its matching frame in the database.
+    &#34;&#34;&#34;
+    if self.query_vlad is not None:
+        idx = self.query_video.get_frame_idx(file_path)
+        query = self.query_vlad[idx]
+        query = query[np.newaxis, ...]
+
+    else:
+        query = self._get_vlad(file_path)
+        self.query_vlad_cache.append(query)
+
+    _distances, indices = self.db_index.search(query, max([1]))
+    match_image = self.db_img_frames[indices[0][0]]
+
+    return (file_path, match_image)</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.register_db_video"><code class="name flex">
+<span>def <span class="ident">register_db_video</span></span>(<span>self, database_video: <a title="quetzal.dtos.video.Video" href="../../dtos/video.html#quetzal.dtos.video.Video">Video</a>, mode: Literal['vpr', 'realtime', 'lazy'] = 'vpr')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Registers a database video in the engine and initializes its VLAD features.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>database_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The video to be registered as a database video.</dd>
+</dl>
+<p>mode (Literal["vpr", "realtime", "lazy"], optional): The mode of operation for VLAD feature computation.</p>
+<h2 id="note">Note</h2>
+<p>This method initializes the FAISS index for the database VLAD vectors if the mode is "vpr" or "realtime".</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def register_db_video(
+    self, database_video: Video, mode: Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;] = &#34;vpr&#34;
+):
+    &#34;&#34;&#34;
+    Registers a database video in the engine and initializes its VLAD features.
+
+    Args:
+        database_video (Video): The video to be registered as a database video.
+        mode (Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;], optional): The mode of operation for VLAD feature computation.
+
+    Note:
+        This method initializes the FAISS index for the database VLAD vectors if the mode is &#34;vpr&#34; or &#34;realtime&#34;.
+    &#34;&#34;&#34;
+
+    if self.db_video:
+        logger.info(&#34;Database Video Already Registered&#34;)
+        return
+
+    self.db_video = database_video
+    self.db_img_frames = (
+        database_video.get_frames(verbose=False) if database_video else []
+    )
+
+    ## Initialize Database VLAD Features ##
+    if database_video and mode in [&#34;vpr&#34;, &#34;realtime&#34;]:
+        db_vlad = self._get_vlad_set(self.db_video)
+        db_vlad = F.normalize(db_vlad)
+        D = db_vlad.shape[1]
+        self.db_index = faiss.IndexFlatIP(D)
+        res = faiss.StandardGpuResources()
+        self.db_index = faiss.index_cpu_to_gpu(res, 0, self.db_index)
+        self.db_index.add(db_vlad.numpy())</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.register_query_video"><code class="name flex">
+<span>def <span class="ident">register_query_video</span></span>(<span>self, query_video: <a title="quetzal.dtos.video.Video" href="../../dtos/video.html#quetzal.dtos.video.Video">Video</a>, mode: Literal['vpr', 'realtime', 'lazy'] = 'vpr')</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Registers a query video in the engine.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>query_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The video to be registered as a query video.</dd>
+</dl>
+<p>mode (Literal["vpr", "realtime", "lazy"], optional): The mode of operation for VLAD feature computation.</p>
+<h2 id="note">Note</h2>
+<p>This method does not immediately compute VLAD features for the query video unless the mode is "vpr".</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def register_query_video(
+    self, query_video: Video, mode: Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;] = &#34;vpr&#34;
+):
+    &#34;&#34;&#34;
+    Registers a query video in the engine.
+
+    Args:
+        query_video (Video): The video to be registered as a query video.
+        mode (Literal[&#34;vpr&#34;, &#34;realtime&#34;, &#34;lazy&#34;], optional): The mode of operation for VLAD feature computation.
+
+    Note:
+        This method does not immediately compute VLAD features for the query video unless the mode is &#34;vpr&#34;.
+    &#34;&#34;&#34;
+
+    if self.query_video:
+        logger.info(&#34;Query Video Already Registered&#34;)
+        return
+    
+    self._migrate_db_to_query(query_video)
+    
+    self.query_video = query_video
+    self.query_img_frames = (
+        query_video.get_frames(verbose=False) if query_video else []
+    )
+
+    ## Initialize Query VLAD Features ##
+    if query_video:
+        if mode == &#34;vpr&#34;:
+            self.query_vlad = self._get_vlad_set(self.query_video)
+        elif mode == &#34;realtime&#34;:
+            ## Load Cached query_vlad features if exist ##
+            if query_video and os.path.isfile(
+                f&#34;{query_video.dataset_dir}/vlads.npy&#34;
+            ):
+                self.query_vlad = np.load(
+                    f&#34;{query_video.dataset_dir}/vlads.npy&#34;
+                )
+            else:
+                self.query_vlad = None</code></pre>
+</details>
+</dd>
+<dt id="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.save_state"><code class="name flex">
+<span>def <span class="ident">save_state</span></span>(<span>self, save_path: str)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Saves the current state of the engine, including cached VLAD features.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>save_path</code></strong> :&ensp;<code>str</code></dt>
+<dd>The path where the state should be saved.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def save_state(self, save_path: str):
+    &#34;&#34;&#34;
+    Saves the current state of the engine, including cached VLAD features.
+
+    Args:
+        save_path (str): The path where the state should be saved.
+    &#34;&#34;&#34;
+    self._save_query_vlad()</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="quetzal.engines.vpr_engine" href="index.html">quetzal.engines.vpr_engine</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine">AnyLocEngine</a></code></h4>
+<ul class="">
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.__abstractmethods__" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.__abstractmethods__">__abstractmethods__</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.__init__" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.__init__">__init__</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._abc_impl" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._abc_impl">_abc_impl</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._download_cache" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._download_cache">_download_cache</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._get_vlad" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._get_vlad">_get_vlad</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._get_vlad_set" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._get_vlad_set">_get_vlad_set</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._migrate_db_to_query" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._migrate_db_to_query">_migrate_db_to_query</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._save_query_vlad" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine._save_query_vlad">_save_query_vlad</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.analyze_video" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.analyze_video">analyze_video</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.end" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.end">end</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.get_database_vlad" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.get_database_vlad">get_database_vlad</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.get_query_vlad" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.get_query_vlad">get_query_vlad</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.is_video_analyzed" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.is_video_analyzed">is_video_analyzed</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.load_models" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.load_models">load_models</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.process" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.process">process</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.register_db_video" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.register_db_video">register_db_video</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.register_query_video" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.register_query_video">register_query_video</a></code></li>
+<li><code><a title="quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.save_state" href="#quetzal.engines.vpr_engine.anyloc_engine.AnyLocEngine.save_state">save_state</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

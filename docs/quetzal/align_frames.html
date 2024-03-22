@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>quetzal.align_frames API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>quetzal.align_frames</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">from quetzal.dtos.video import QueryVideo, DatabaseVideo, Video
+import logging
+from quetzal.engines.vpr_engine.anyloc_engine import AnyLocEngine
+from quetzal.engines.image_registration_engine.loftr_engine import LoFTREngine
+from quetzal.utils.dtw_vlad import (
+    create_FAISS_indexes,
+    dtw,
+    extract_unique_dtw_pairs,
+    smooth_frame_intervals,
+)
+import numpy as np
+import torch.nn.functional as F
+from typing import TypeAlias, NewType, Literal
+from pathlib import Path
+
+import torch
+import sys
+
+# generate_aligned_images
+logging.basicConfig()
+logger = logging.getLogger(&#34;generate_aligned_images&#34;)
+logger.setLevel(logging.DEBUG)
+from stqdm import stqdm
+
+import argparse
+
+dataset_layout_help = &#34;&#34;&#34;
+Your dataset directory will be structured as following
+Place your desired video files in dataset_root/route_name/raw_videos/
+    
+    Dataset structure:
+    dataset_root/
+    |
+    ├── route_name/
+    |   ├── raw_video/
+    |   |   ├── video_name.mp4
+    |   |   └── ...
+    |   |
+    |   ├── database/
+    |   |   ├── video_name/
+    |   |   |   ├── frames_{fps}_{resolution}/
+    |   |   |   |   ├── frame_%05d.jpg
+    |   |   |   |   └── ...
+    |   |   |   └── ...
+    |   |   └── ...
+    |   |
+    |   ├── query/
+    |   |   ├── video_name/
+    |   |   |   ├── frames_{fps}_{resolution}/
+    |   |   |   |   ├── frame_%05d.jpg
+    |   |   |   |   └── ...
+    |   |   |   └── ...
+    |   |   └── ...
+    |   └── ...
+    └── ...
+    &#34;&#34;&#34;
+
+QueryIdx = NewType(&#34;QueryIdx&#34;, int)
+DatabaseIdx = NewType(&#34;DatabaseIdx&#34;, int)
+Match: TypeAlias = tuple[QueryIdx, DatabaseIdx]
+
+
+def align_video_frames(
+    database_video: Video, query_video: Video, torch_device
+) -&gt; list[Match]:
+    &#34;&#34;&#34;
+    Aligns video frames between a database video and a query video using Dynamic Time Warping (DTW) and VLAD features.
+    The function computes VLAD descriptors for both videos, creates FAISS indexes for efficient similarity search,
+    performs DTW to find the best alignment, and then smooths the frame alignment results.
+
+    Args:
+        database_video (Video): The database video against which the query video is aligned.
+        query_video (Video): The query video to be aligned with the database video.
+        torch_device: The PyTorch device (CPU or CUDA) used for computations.
+
+    Returns:
+        list[Match]: A list of matched frame indices between the database and query videos.
+    &#34;&#34;&#34;
+    anylocEngine = AnyLocEngine(
+        database_video=database_video, query_video=query_video, device=torch_device
+    )
+
+    db_vlad = anylocEngine.get_database_vlad()
+    query_vlad = anylocEngine.get_query_vlad()
+
+    del anylocEngine
+
+    # Normalize and prepare x and y for FAISS
+    db_vlad = F.normalize(db_vlad)
+    query_vlad = F.normalize(query_vlad)
+    cuda = torch_device != torch.device(&#34;cpu&#34;)
+    try:
+        db_indexes = create_FAISS_indexes(db_vlad.numpy(), cuda=cuda)
+    except:
+        db_indexes = create_FAISS_indexes(db_vlad.numpy(), cuda=False)
+
+    ## Run DTW Algorithm using VLAD features ##
+    _, _, D1, path = dtw(query_vlad.numpy(), db_vlad, db_indexes)
+    matches = extract_unique_dtw_pairs(path, D1)
+
+    # Smooth the frame alignment Results
+    query_fps = query_video.fps
+    db_fps = database_video.fps
+
+    diff = 1
+    count = 0
+    k = 3
+    while diff and count &lt; 100:
+        time_diff = [
+            database_video.get_frame_time(d) - query_video.get_frame_time(q)
+            for q, d in matches
+        ]
+        mv_avg = np.convolve(time_diff, np.ones(k) / k, mode=&#34;same&#34;)
+        mv_avg = {k[0]: v for k, v in zip(matches, mv_avg)}
+        matches, diff = smooth_frame_intervals(matches, mv_avg, query_fps, db_fps)
+        count += 1
+    return matches
+
+
+def align_frame_pairs(
+    database_video: Video,
+    query_video: Video,
+    torch_device,
+    engine: Literal[&#34;ransac-flow&#34;, &#34;loftr&#34;] = &#34;loftr&#34;,
+) -&gt; tuple[list[Match], list[str]]:
+    &#34;&#34;&#34;
+    Aligns individual frame pairs between a database video and a query video. Depending on the specified engine,
+    this function can use either RANSAC Flow or LoFTR for frame alignment. The function generates a list of matched
+    frame indices and a list of paths to the aligned (warped) query frames.
+
+    Args:
+        database_video (Video): The database video against which the query video is aligned.
+        query_video (Video): The query video to be aligned with the database video.
+        torch_device: The PyTorch device (CPU or CUDA) used for computations.
+        engine (Literal[&#34;ransac-flow&#34;, &#34;loftr&#34;]): The engine used for frame alignment; defaults to &#34;loftr&#34;.
+
+    Returns:
+        tuple[list[Match], list[str]]: A tuple containing a list of matched frame indices and a list of paths to aligned query frames.
+    &#34;&#34;&#34;
+    logger.info(&#34;Loading Videos&#34;)
+
+    if engine == &#34;loftr&#34;:
+        engine = LoFTREngine(
+            query_video,
+            device=torch_device,
+            db_name=database_video.full_path.stem,
+        )
+
+    matches = align_video_frames(
+        database_video=database_video,
+        query_video=query_video,
+        torch_device=torch_device,
+    )
+    query_frame_list = query_video.get_frames()
+    db_frame_list = database_video.get_frames()
+
+    aligned_frame_list = list()
+    for query_idx, db_idx in stqdm(
+        matches, desc=&#34;Generating Overlay frames&#34;, backend=True
+    ):
+        query_frame = query_frame_list[query_idx]
+        db_frame = db_frame_list[db_idx]
+        aligned_frame_list.append(engine.process((query_frame, db_frame))[0])
+
+    del engine
+
+    return matches, aligned_frame_list
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter,
+        description=&#34;This program computes  &#34;,
+        epilog=dataset_layout_help,
+    )
+    # ... add arguments to parser ...
+    parser.add_argument(
+        &#34;--dataset-root&#34;, default=&#34;../data&#34;, help=&#34;Root directory of datasets&#34;
+    )
+    parser.add_argument(&#34;--route-name&#34;, required=True, help=&#34;Name of the route&#34;)
+    parser.add_argument(&#34;--database-video&#34;, help=&#34;Database video file name&#34;)
+    parser.add_argument(&#34;--query-video&#34;, help=&#34;Query video file name&#34;)
+    parser.add_argument(
+        &#34;--cuda&#34;, action=&#34;store_true&#34;, help=&#34;Enable cuda&#34;, default=False
+    )
+    parser.add_argument(&#34;--cuda_device&#34;, help=&#34;Select cuda device&#34;, default=0, type=int)
+
+    args = parser.parse_args()
+
+    if not (args.database_video or args.query_video):
+        parser.print_usage()
+        print(&#34;Error: Either --database-video or --query-video must be provided.&#34;)
+        sys.exit(1)
+
+    device = torch.device(&#34;cpu&#34;)
+    available_gpus = torch.cuda.device_count()
+    if args.cuda and available_gpus &gt; 0:
+        cuda_device = args.cuda_device if args.cuda_device &lt; available_gpus else 0
+        device = torch.device(&#34;cuda:&#34; + str(cuda_device))
+
+    ## Initialize System
+
+    # Load Video frames
+    logger.info(&#34;Loading Videos&#34;)
+    database_video, query_video = None, None
+
+    if args.database_video:
+        database_video = DatabaseVideo(
+            path=Path(args.route_name) / Path(args.database_video),
+            root_dir=args.dataset_root,
+        )
+    if args.query_video:
+        query_video = QueryVideo(
+            path=Path(args.route_name) / Path(args.query_video),
+            root_dir=args.dataset_root,
+        )
+
+    align_frame_pairs(database_video, query_video, device)
+
+
+if __name__ == &#34;__main__&#34;:
+    main()</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="quetzal.align_frames.align_frame_pairs"><code class="name flex">
+<span>def <span class="ident">align_frame_pairs</span></span>(<span>database_video: <a title="quetzal.dtos.video.Video" href="dtos/video.html#quetzal.dtos.video.Video">Video</a>, query_video: <a title="quetzal.dtos.video.Video" href="dtos/video.html#quetzal.dtos.video.Video">Video</a>, torch_device, engine: Literal['ransac-flow', 'loftr'] = 'loftr') ‑> tuple[list[tuple[quetzal.align_frames.QueryIdx, quetzal.align_frames.DatabaseIdx]], list[str]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Aligns individual frame pairs between a database video and a query video. Depending on the specified engine,
+this function can use either RANSAC Flow or LoFTR for frame alignment. The function generates a list of matched
+frame indices and a list of paths to the aligned (warped) query frames.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>database_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The database video against which the query video is aligned.</dd>
+<dt><strong><code>query_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The query video to be aligned with the database video.</dd>
+<dt><strong><code>torch_device</code></strong></dt>
+<dd>The PyTorch device (CPU or CUDA) used for computations.</dd>
+</dl>
+<p>engine (Literal["ransac-flow", "loftr"]): The engine used for frame alignment; defaults to "loftr".</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple[list[Match], list[str]]</code></dt>
+<dd>A tuple containing a list of matched frame indices and a list of paths to aligned query frames.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def align_frame_pairs(
+    database_video: Video,
+    query_video: Video,
+    torch_device,
+    engine: Literal[&#34;ransac-flow&#34;, &#34;loftr&#34;] = &#34;loftr&#34;,
+) -&gt; tuple[list[Match], list[str]]:
+    &#34;&#34;&#34;
+    Aligns individual frame pairs between a database video and a query video. Depending on the specified engine,
+    this function can use either RANSAC Flow or LoFTR for frame alignment. The function generates a list of matched
+    frame indices and a list of paths to the aligned (warped) query frames.
+
+    Args:
+        database_video (Video): The database video against which the query video is aligned.
+        query_video (Video): The query video to be aligned with the database video.
+        torch_device: The PyTorch device (CPU or CUDA) used for computations.
+        engine (Literal[&#34;ransac-flow&#34;, &#34;loftr&#34;]): The engine used for frame alignment; defaults to &#34;loftr&#34;.
+
+    Returns:
+        tuple[list[Match], list[str]]: A tuple containing a list of matched frame indices and a list of paths to aligned query frames.
+    &#34;&#34;&#34;
+    logger.info(&#34;Loading Videos&#34;)
+
+    if engine == &#34;loftr&#34;:
+        engine = LoFTREngine(
+            query_video,
+            device=torch_device,
+            db_name=database_video.full_path.stem,
+        )
+
+    matches = align_video_frames(
+        database_video=database_video,
+        query_video=query_video,
+        torch_device=torch_device,
+    )
+    query_frame_list = query_video.get_frames()
+    db_frame_list = database_video.get_frames()
+
+    aligned_frame_list = list()
+    for query_idx, db_idx in stqdm(
+        matches, desc=&#34;Generating Overlay frames&#34;, backend=True
+    ):
+        query_frame = query_frame_list[query_idx]
+        db_frame = db_frame_list[db_idx]
+        aligned_frame_list.append(engine.process((query_frame, db_frame))[0])
+
+    del engine
+
+    return matches, aligned_frame_list</code></pre>
+</details>
+</dd>
+<dt id="quetzal.align_frames.align_video_frames"><code class="name flex">
+<span>def <span class="ident">align_video_frames</span></span>(<span>database_video: <a title="quetzal.dtos.video.Video" href="dtos/video.html#quetzal.dtos.video.Video">Video</a>, query_video: <a title="quetzal.dtos.video.Video" href="dtos/video.html#quetzal.dtos.video.Video">Video</a>, torch_device) ‑> list[tuple[quetzal.align_frames.QueryIdx, quetzal.align_frames.DatabaseIdx]]</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Aligns video frames between a database video and a query video using Dynamic Time Warping (DTW) and VLAD features.
+The function computes VLAD descriptors for both videos, creates FAISS indexes for efficient similarity search,
+performs DTW to find the best alignment, and then smooths the frame alignment results.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>database_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The database video against which the query video is aligned.</dd>
+<dt><strong><code>query_video</code></strong> :&ensp;<code>Video</code></dt>
+<dd>The query video to be aligned with the database video.</dd>
+<dt><strong><code>torch_device</code></strong></dt>
+<dd>The PyTorch device (CPU or CUDA) used for computations.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>list[Match]</code></dt>
+<dd>A list of matched frame indices between the database and query videos.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def align_video_frames(
+    database_video: Video, query_video: Video, torch_device
+) -&gt; list[Match]:
+    &#34;&#34;&#34;
+    Aligns video frames between a database video and a query video using Dynamic Time Warping (DTW) and VLAD features.
+    The function computes VLAD descriptors for both videos, creates FAISS indexes for efficient similarity search,
+    performs DTW to find the best alignment, and then smooths the frame alignment results.
+
+    Args:
+        database_video (Video): The database video against which the query video is aligned.
+        query_video (Video): The query video to be aligned with the database video.
+        torch_device: The PyTorch device (CPU or CUDA) used for computations.
+
+    Returns:
+        list[Match]: A list of matched frame indices between the database and query videos.
+    &#34;&#34;&#34;
+    anylocEngine = AnyLocEngine(
+        database_video=database_video, query_video=query_video, device=torch_device
+    )
+
+    db_vlad = anylocEngine.get_database_vlad()
+    query_vlad = anylocEngine.get_query_vlad()
+
+    del anylocEngine
+
+    # Normalize and prepare x and y for FAISS
+    db_vlad = F.normalize(db_vlad)
+    query_vlad = F.normalize(query_vlad)
+    cuda = torch_device != torch.device(&#34;cpu&#34;)
+    try:
+        db_indexes = create_FAISS_indexes(db_vlad.numpy(), cuda=cuda)
+    except:
+        db_indexes = create_FAISS_indexes(db_vlad.numpy(), cuda=False)
+
+    ## Run DTW Algorithm using VLAD features ##
+    _, _, D1, path = dtw(query_vlad.numpy(), db_vlad, db_indexes)
+    matches = extract_unique_dtw_pairs(path, D1)
+
+    # Smooth the frame alignment Results
+    query_fps = query_video.fps
+    db_fps = database_video.fps
+
+    diff = 1
+    count = 0
+    k = 3
+    while diff and count &lt; 100:
+        time_diff = [
+            database_video.get_frame_time(d) - query_video.get_frame_time(q)
+            for q, d in matches
+        ]
+        mv_avg = np.convolve(time_diff, np.ones(k) / k, mode=&#34;same&#34;)
+        mv_avg = {k[0]: v for k, v in zip(matches, mv_avg)}
+        matches, diff = smooth_frame_intervals(matches, mv_avg, query_fps, db_fps)
+        count += 1
+    return matches</code></pre>
+</details>
+</dd>
+<dt id="quetzal.align_frames.main"><code class="name flex">
+<span>def <span class="ident">main</span></span>(<span>)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def main():
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter,
+        description=&#34;This program computes  &#34;,
+        epilog=dataset_layout_help,
+    )
+    # ... add arguments to parser ...
+    parser.add_argument(
+        &#34;--dataset-root&#34;, default=&#34;../data&#34;, help=&#34;Root directory of datasets&#34;
+    )
+    parser.add_argument(&#34;--route-name&#34;, required=True, help=&#34;Name of the route&#34;)
+    parser.add_argument(&#34;--database-video&#34;, help=&#34;Database video file name&#34;)
+    parser.add_argument(&#34;--query-video&#34;, help=&#34;Query video file name&#34;)
+    parser.add_argument(
+        &#34;--cuda&#34;, action=&#34;store_true&#34;, help=&#34;Enable cuda&#34;, default=False
+    )
+    parser.add_argument(&#34;--cuda_device&#34;, help=&#34;Select cuda device&#34;, default=0, type=int)
+
+    args = parser.parse_args()
+
+    if not (args.database_video or args.query_video):
+        parser.print_usage()
+        print(&#34;Error: Either --database-video or --query-video must be provided.&#34;)
+        sys.exit(1)
+
+    device = torch.device(&#34;cpu&#34;)
+    available_gpus = torch.cuda.device_count()
+    if args.cuda and available_gpus &gt; 0:
+        cuda_device = args.cuda_device if args.cuda_device &lt; available_gpus else 0
+        device = torch.device(&#34;cuda:&#34; + str(cuda_device))
+
+    ## Initialize System
+
+    # Load Video frames
+    logger.info(&#34;Loading Videos&#34;)
+    database_video, query_video = None, None
+
+    if args.database_video:
+        database_video = DatabaseVideo(
+            path=Path(args.route_name) / Path(args.database_video),
+            root_dir=args.dataset_root,
+        )
+    if args.query_video:
+        query_video = QueryVideo(
+            path=Path(args.route_name) / Path(args.query_video),
+            root_dir=args.dataset_root,
+        )
+
+    align_frame_pairs(database_video, query_video, device)</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="quetzal" href="index.html">quetzal</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="quetzal.align_frames.align_frame_pairs" href="#quetzal.align_frames.align_frame_pairs">align_frame_pairs</a></code></li>
+<li><code><a title="quetzal.align_frames.align_video_frames" href="#quetzal.align_frames.align_video_frames">align_video_frames</a></code></li>
+<li><code><a title="quetzal.align_frames.main" href="#quetzal.align_frames.main">main</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>

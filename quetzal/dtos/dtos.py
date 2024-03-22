@@ -23,9 +23,15 @@ ADMIN_ID = "admin"
 UserId = NewType("UserId", str)
 
 class User:
+    """Represents a user, identified by a unique identifier."""
     GuestId = None
 
     def __init__(self, id: Union[UserId, "User"] = None):
+        """Initializes a User instance.
+        
+        Args:
+            id (Optional[UserId]): The unique identifier for the user. Defaults to None, representing a guest.
+        """
         match id:
             case User() as user:
                 self._id = user._id
@@ -34,13 +40,16 @@ class User:
 
     @property
     def id(self) -> UserId:
+        """Gets the user's unique identifier."""
         return self._id
 
     @id.setter
     def id(self, value):
+        """Sets the user's unique identifier."""
         self._id = value
 
     def __eq__(self, other):
+        """Checks equality with another User instance or a string id."""
         match other:
             case User():
                 return self._id == other._id
@@ -50,30 +59,34 @@ class User:
                 return NotImplemented
 
     def __repr__(self):
+        """Represents the User instance as a string."""
         match self._id:
             case User.GuestId:
                 return "Guest"
             case _:
                 return f"<User: {str(self._id)}>"
 
-
 class Permission(Enum):
+    """Defines access permissions for files."""
     READ_ONLY = "read_only"
     POST_ONLY = "post_only"
     FULL_WRITE = "full_write"
 
 
 class Visibility(Enum):
+    """Defines visibility settings for files."""
     SHARED = "shared"
     PRIVATE = "private"
 
 
 class FileType(Enum):
+    """Defines the type of a file system object."""
     FILE = "file"
     DIRECTORY = "directory"
 
 
 class AnalysisProgress(Enum):
+    """Represents the progress of analysis on a file."""
     FULL = "full"
     HALF = "half"
     NONE = "none"
@@ -113,8 +126,8 @@ MetaData: TypeAlias = Union[
     Permission, Visibility, FileType, AnalysisProgress, CreatedBy, SpecificType
 ]
 
-
 class Action(Enum):
+    """Defines possible actions that can be performed on files."""
     NEW_DIR = "new_dir"
     UPLOAD_FILE = "upload_file"
     RENAME = "rename"
@@ -129,17 +142,37 @@ class Action(Enum):
 
 
 class AccessMode(Enum):
+    """Defines access modes based on user relation to the file."""
     OTHERS = "others"
     OWNER = "owner"
 
 
-def getCopyName(path: Path) -> Path:
-    return appendText(path, "_copy")
-
-
 def appendText(path: Path, text: str) -> Path:
-    """Append "text" at the end of the file name, before the first suffix"""
+    """Appends text to the file name, before the file extension.
+
+    Args:
+        path (Path): The original file path.
+        text (str): The text to append.
+
+    Returns:
+        Path: The new file path with the text appended.
+    """
     return path.with_name(path.stem + text + path.suffix)
+
+
+def getCopyName(path: Path) -> Path:
+    """The function iteratively appends '_copy' to the base name, before the file extension, of the provided path
+    until a non-existing path is generated.
+
+    Args:
+        path: A Path object representing the original file or directory.
+
+    Returns:
+        A Path object representing the new, unique path with '_copy' appended.
+    """
+    while path.exists():
+        path = appendText(path, "_copy")
+    return path
 
 
 DATABASE_ROOT = "database"
@@ -149,6 +182,15 @@ reserved_names = [DATABASE_ROOT, QUERY_ROOT]
 
 
 class QuetzalFile:
+    """
+    Represents a file or directory within the Quetzal file system, facilitating operations such as creation,
+    renaming, sharing, and metadata management. This class serves as a base for specialized file types within Quetzal,
+    providing a structured approach to handle common file-related tasks.
+
+    Subclasses of `QuetzalFile` may implement custom behaviors for specific operations (e.g., copying, analyzing,
+    sharing) by overriding the internal methods designed for these purposes. For example, see the `Video` class
+    for implementations that tailor these operations to the needs of video file management within Quetzal.
+    """
     
     FILE_DEFAULT_DESCRIPTION = "Uploader::= default\nRecorded Date (MM/DD/YYYY)::= default\nTime-of-day::= default\nWeather Condition::= default\nDescription::= default"
     PROJECT_DEFAULT_DESCRIPTION = "Route Location::= default\nLast Update (MM/DD/YYYY)::= default\nLast Edit by::= default\nDescription::= default"
@@ -174,6 +216,16 @@ class QuetzalFile:
         metadata: Optional[dict[str, MetaData]] = None,
         parent: 'QuetzalFile' = None,
     ):
+        """        
+        Args:
+            path (Path): The path of the file or directory, relative to the root directory.
+            root_dir (Path): The root directory path of the Quetzal file system.
+            metadata_dir (Path): The directory path where metadata files are stored.
+            user (User): The user who is interacting with the file.
+            home (Path): The base home directory path (relative to rood directory). Defaults to "./".
+            metadata (Optional[Dict[str, MetaData]]): The metadata associated with the file.
+            parent (Optional[QuetzalFile]): The parent directory of the current file.
+        """
         self._path = Path(path)
         self._root_dir = Path(root_dir)
         self._metadata_dir = Path(metadata_dir)
@@ -237,54 +289,74 @@ class QuetzalFile:
 
     @property
     def path(self) -> Path:
-        """The path component, relative to "home" """
+        """Relative path to the file or directory from the "home" directory."""
         return self._path.relative_to(self._home)
 
     @property
     def name(self) -> str:
-        """The final path component, if any."""
+        """The name of the file or directory."""
         return self._path.name
 
     @property
     def type(self) -> FileType:
+        """The type of the file, either FILE or DIRECTORY."""
         return self._type
 
     @property
     def full_path(self) -> Path:
-        """The full absolute path of the files."""
+        """The full filesystem path to the file or directory."""
         return self._root_dir / self._path
 
     @property
     def analysis_progress(self) -> AnalysisProgress:
+        """The current progress of any ongoing analysis."""
         return self._analysis_progress
 
     @property
     def visibility(self) -> Visibility:
+        """The visibility setting of the file, either SHARED or PRIVATE."""
         return self._visibility
 
     @property
     def permission(self) -> Permission:
+        """The access permissions of the file."""
         return self._permission
 
     @property
     def createdBy(self) -> User:
+        """The user who created the file."""
         return self._created_by.id
 
     @property
     def user(self) -> User:
+        """The current user interacting with the file."""
         return self._user.id
 
     @property
     def home(self) -> Path:
+        """The base home directory path."""
         return self._home
 
     @property
     def mode(self) -> AccessMode:
+        """The access mode, indicating if the current user is the OWNER or OTHERS."""
         return self._mode
 
     @staticmethod
-    def fromFile(file: "QuetzalFile", path, home=None) -> "QuetzalFile":
-        if home is None:
+    def fromFile(file: "QuetzalFile", path: Union[str, Path], home: Optional[Union[str, Path]]=None) -> "QuetzalFile":
+        """
+        Creates a new instance of QuetzalFile based on an existing instance.
+
+        Args:
+            file: The QuetzalFile instance to base the new instance on.
+            path: The path for the new QuetzalFile instance. Actual path relative to the root_dir will be "./home/path".
+            home: The home directory for the new instance. If None, the home of the 'file' is used.
+
+        Returns:
+            A new QuetzalFile instance based on the provided file and path.
+        """
+        
+        if home is None:    
             home = file._home
         else:
             home = Path(home)
@@ -296,89 +368,29 @@ class QuetzalFile:
             home=home
         )
 
-    @staticmethod
-    def _instantiateFile(
-        path: Path,
-        root_dir: Path,
-        metadata_dir: Path,
-        user: User,
-        home: Path,
-        metadata: dict[str, MetaData],
-        parent: 'QuetzalFile',
-    ) -> "QuetzalFile":
-        
-        specific_file_class = None
-        specific_type = metadata.get("SpecificType", None)
-        
-        if specific_type:
-            module = importlib.import_module(f"quetzal.dtos.{specific_type.lower()}")
-            specific_file_class = getattr(module, specific_type)
-
-        if specific_file_class and issubclass(specific_file_class, QuetzalFile):
-            return specific_file_class(
-                path=path,
-                root_dir=root_dir,
-                metadata_dir=metadata_dir,
-                user=user,
-                home=home,
-                metadata=metadata,
-                parent=parent,
-            )
-        else:
-            return QuetzalFile(
-                path=path,
-                root_dir=root_dir,
-                metadata_dir=metadata_dir,
-                user=user,
-                home=home,
-                metadata=metadata,
-                parent=parent
-            )
-            
-    def loadMetaData(self, file) -> dict[str, MetaData]:
+    def loadMetaData(self, file: Union[str, Path]) -> dict[str, MetaData]:
+        """
+        Loads and returns the metadata for the specified file.
+        """
         metadata_path = self.getMetaDataPath(file)
         return self._loadMetaData(metadata_path)
-
-    @staticmethod
-    def _loadMetaData(metadata_path: Path) -> dict[str, MetaData]:
-
-        if not os.path.exists(metadata_path):
-            raise FileNotFoundError
-
-        with open(metadata_path, "r") as file:
-            data = file.read().splitlines()
-        metadata = {
-            line.split("::=")[0].strip(): line.split("::=")[1].strip()
-            for line in data
-            if line.strip()
-        }
-
-        metadata["CreatedBy"] = CreatedBy(User(metadata.get("CreatedBy", None)))
-        metadata["FileType"] = FileType(metadata.get("FileType", "file"))
-        metadata["Visibility"] = Visibility(metadata.get("Visibility", "private"))
-        metadata["AnalysisProgress"] = AnalysisProgress(
-            metadata.get("AnalysisProgress", "none")
-        )
-        metadata["Permission"] = Permission(metadata.get("Permission", "full_write"))
-        metadata["SpecificType"] = SpecificType(metadata.get("SpecificType", None))
-
-        return metadata
-
-    def _parseMetadata(self, metadata: Optional[dict[str, MetaData]]):
-        if metadata is None:
-            metadata = self.loadMetaData(self._path)
-
-        self._created_by = metadata["CreatedBy"]
-        self._type = metadata["FileType"]
-        self._visibility = metadata["Visibility"]
-        self._analysis_progress = metadata["AnalysisProgress"]
-        self._permission = metadata["Permission"]
-
+    
     def iterdir(
         self,
         sharedOnly=False,
         directoryOnly=False,
     ) -> list["QuetzalFile"]:
+        """
+        Lists the contents of the directory represented by this QuetzalFile.
+
+        Args:
+            sharedOnly: If True, only shared files/directories are listed.
+            directoryOnly: If True, only directories are listed.
+
+        Returns:
+            A list of QuetzalFile objects representing the contents of the directory.
+        """
+        
         assert self._type == FileType.DIRECTORY
         
         if self._iterdir:
@@ -425,6 +437,17 @@ class QuetzalFile:
         return self._iterdir
 
     def perform(self, action: Action, input: dict):
+        """
+        Performs the specified "Action" on this QuetzalFile object.
+
+        Args:
+            action: The action to perform, as defined by the Action enum.
+            input: A dictionary containing the input parameters required for the action.
+
+        Returns:
+            A string message indicating the outcome of the action, or None if no action was performed.
+        """
+        
         self._iterdir = None
         if self._parent:
             self._parent._iterdir = None
@@ -450,7 +473,122 @@ class QuetzalFile:
             case _:
                 raise NotImplemented("No Action Implemneted")
     
-    def _updateMetaForRename(self, new_path):
+    @staticmethod
+    def _instantiateFile(
+        path: Path,
+        root_dir: Path,
+        metadata_dir: Path,
+        user: User,
+        home: Path,
+        metadata: dict[str, MetaData],
+        parent: 'QuetzalFile',
+    ) -> "QuetzalFile":
+        """
+        Instantiate a file into "Specific Type", one of subclass of QuetzalFile.
+        
+        Args:
+            path (Path): The path of the file or directory, relative to the root directory.
+            root_dir (Path): The root directory path of the Quetzal file system.
+            metadata_dir (Path): The directory path where metadata files are stored.
+            user (User): The user who is interacting with the file.
+            home (Path): The base home directory path (relative to rood directory). Defaults to "./".
+            metadata (Optional[Dict[str, MetaData]]): The metadata associated with the file.
+            parent (Optional[QuetzalFile]): The parent directory of the current file.
+        
+        Returns:
+            Instance of "Specific Type" (subclass of QuetzalFile)
+        """
+        
+        specific_file_class = None
+        specific_type = metadata.get("SpecificType", None)
+        
+        if specific_type:
+            module = importlib.import_module(f"quetzal.dtos.{specific_type.lower()}")
+            specific_file_class = getattr(module, specific_type)
+
+        if specific_file_class and issubclass(specific_file_class, QuetzalFile):
+            return specific_file_class(
+                path=path,
+                root_dir=root_dir,
+                metadata_dir=metadata_dir,
+                user=user,
+                home=home,
+                metadata=metadata,
+                parent=parent,
+            )
+        else:
+            return QuetzalFile(
+                path=path,
+                root_dir=root_dir,
+                metadata_dir=metadata_dir,
+                user=user,
+                home=home,
+                metadata=metadata,
+                parent=parent
+            )
+            
+    @staticmethod
+    def _loadMetaData(metadata_path: Path) -> dict[str, MetaData]:
+        """
+        Load Queztalfile metadata from the given path
+        
+        Args:
+            metadata_dir (Path): The directory path where metadata files are stored.
+        
+        Returns:
+            dict[str, MetaData]
+        """
+        if not os.path.exists(metadata_path):
+            raise FileNotFoundError
+
+        with open(metadata_path, "r") as file:
+            data = file.read().splitlines()
+        metadata = {
+            line.split("::=")[0].strip(): line.split("::=")[1].strip()
+            for line in data
+            if line.strip()
+        }
+
+        metadata["CreatedBy"] = CreatedBy(User(metadata.get("CreatedBy", None)))
+        metadata["FileType"] = FileType(metadata.get("FileType", "file"))
+        metadata["Visibility"] = Visibility(metadata.get("Visibility", "private"))
+        metadata["AnalysisProgress"] = AnalysisProgress(
+            metadata.get("AnalysisProgress", "none")
+        )
+        metadata["Permission"] = Permission(metadata.get("Permission", "full_write"))
+        metadata["SpecificType"] = SpecificType(metadata.get("SpecificType", None))
+
+        return metadata
+
+    def _parseMetadata(self, metadata: Optional[dict[str, MetaData]]):
+        """
+        Assign Queztalfile metadata into attribute variables
+        
+        Args:
+            metadata (Optional[dict[str, MetaData]]): metadata
+        """
+        if metadata is None:
+            metadata = self.loadMetaData(self._path)
+
+        self._created_by = metadata["CreatedBy"]
+        self._type = metadata["FileType"]
+        self._visibility = metadata["Visibility"]
+        self._analysis_progress = metadata["AnalysisProgress"]
+        self._permission = metadata["Permission"]
+
+    
+    
+    def _updateMetaForRename(self, new_path: Union[str, Path]):
+        """
+        Updates the metadata and description files' paths for the current QuetzalFile
+        instance to reflect a change in the file or directory's name (rename action).
+
+        This method is invoked internally to handle the renaming of metadata and description
+        files associated with the QuetzalFile, ensuring consistency within the filesystem.
+
+        Args:
+            new_path (Union[str, Path]): The new path (name) for the file or directory, reflecting the rename.
+        """
         orig_path_full = self._metadata_dir / self._path
         new_path_full = self._metadata_dir / new_path
         
@@ -486,7 +624,21 @@ class QuetzalFile:
                 )
     
     
-    def _rename(self, new_file_name: Union[str, Path]):
+    def _rename(self, new_file_name: Union[str, Path]) -> str:
+        """
+        Renames the current QuetzalFile (file or directory) to the new specified name and updates
+        the metadata accordingly.
+        
+        For given new_file_name, only the name of the file will be considered. Parent_name, and suffix of the name
+        will be modified to match the original file.
+
+        Args:
+            new_file_name (Union[str, Path]): The new name for the file or directory.
+
+        Returns:
+            A confirmation message indicating the successful rename.
+        """
+        
         new_file_name = Path(new_file_name)
         assert (
             self._mode == AccessMode.OWNER or self._permission == Permission.FULL_WRITE
@@ -515,8 +667,19 @@ class QuetzalFile:
 
 
     def _updateMetaForNewFile(
-        self, target_path: Path, file_name: Path, meta_data: str, description: str, isDir=False
+        self, target_path: Path, file_name: Path, meta_data: str, description: str, isDir: bool=False
     ):
+        """
+        Creates and updates the metadata and description for a new file or directory
+        that is being added to the filesystem.
+
+        Args:
+            target_path (Path): The target path where the new file or directory is located.
+            file_name (Path): The name of the new file or directory.
+            meta_data (str): The metadata to be written for the new file or directory.
+            description (str): The description to be written for the new file or directory.
+            isDir (bool): A flag indicating whether the new entity is a directory. Defaults to False.
+        """
         # Crate New Meta Data, Description, and Directory
         new_file_metadata = self._metadata_dir / target_path / file_name
         if isDir:
@@ -531,7 +694,17 @@ class QuetzalFile:
             file.write(description)
 
 
-    def _newDirectory(self, dir_name: Union[str, Path]):
+    def _newDirectory(self, dir_name: Union[str, Path]) -> str:
+        """
+        Creates a new directory under the current QuetzalFile path and updates the metadata and
+        description for it.
+
+        Args:
+            dir_name (Union[str, Path]): The name of the new directory to create.
+
+        Returns:
+            A confirmation message indicating the successful creation of the directory.
+        """
         dir_name = Path(dir_name)
         assert (
             self._mode == AccessMode.OWNER or self._permission != Permission.READ_ONLY
@@ -559,7 +732,19 @@ class QuetzalFile:
         return f'"{dir_name}" Created'
     
 
-    def _upload(self, uploaded_files):
+    def _upload(self, uploaded_files: Union[str, Path]) -> str:
+        """
+        Uploads and saves the specified files to the current QuetzalFile directory, updating
+        the metadata for each uploaded file.
+        
+        The method should fail when called on QuetzalFile with "File" filetype.
+
+        Args:
+            uploaded_files (Union[str, Path]): The files to be uploaded.
+
+        Returns:
+            A confirmation message indicating the number of files successfully uploaded.
+        """
         assert self._mode == AccessMode.OWNER or self._permission != Permission.READ_ONLY
         assert self._type == FileType.DIRECTORY
         
@@ -588,6 +773,14 @@ class QuetzalFile:
 
 
     def _updateMetaForShare(self, shared: Visibility, permission: Permission):
+        """
+        Updates the metadata for the QuetzalFile (file or directory) to reflect new sharing settings,
+        including visibility and permissions.
+
+        Args:
+            shared (Visibility): The new visibility setting for the file or directory.
+            permission (Permission): The new permission setting for the file or directory.
+        """
         metadata_path = self.getMetaDataPath(self._path)
         if os.path.exists(metadata_path):
             with open(metadata_path, "r+") as file:
@@ -608,7 +801,18 @@ class QuetzalFile:
         self._permission = permission
 
 
-    def _share(self, shared: Visibility, permission: Permission):
+    def _share(self, shared: Visibility, permission: Permission) -> str:
+        """
+        Applies new sharing settings to the file or directory, affecting its visibility
+        and access permissions, and updates the metadata accordingly.
+
+        Args:
+            shared (Visibility): The new visibility setting.
+            permission (Permission): The new access permission setting.
+
+        Returns:
+            A confirmation message indicating the updated sharing settings.
+        """
         assert (
             self._mode == AccessMode.OWNER or self._permission == Permission.FULL_WRITE
         )
@@ -628,6 +832,10 @@ class QuetzalFile:
         return f'"{self.name}" Sharing Setting Updated'
 
     def _updateMetaForDelete(self):
+        """
+        Cleans up the metadata and description files associated with the file or directory
+        that is being deleted.
+        """
         orig_path_full = self._metadata_dir / self._path
         metadata_path = self._getMetaDataPath(orig_path_full)
         description_path = self._getDescriptionPath(orig_path_full)
@@ -639,7 +847,14 @@ class QuetzalFile:
         if orig_path_full.exists():
             shutil.rmtree(orig_path_full)
 
-    def _delete(self):
+    def _delete(self) -> str:
+        """
+        Deletes the current file or directory and cleans up its associated metadata
+        and description files.
+
+        Returns:
+            A confirmation message indicating the successful deletion.
+        """
         assert (
             self._mode == AccessMode.OWNER or self._permission == Permission.FULL_WRITE
         )
@@ -656,6 +871,13 @@ class QuetzalFile:
         return f'"{self.name}" Deleted'
 
     def _updateMetaForAnalyze(self, new_progress: AnalysisProgress):
+        """
+        Updates the metadata for the file to reflect a new state of analysis progress.
+
+        Args:
+            new_progress (AnalysisProgress): The new analysis progress state to update the metadata with.
+        """
+        
         orig_path_full = self._metadata_dir / self._path
         metadata_path = self._getMetaDataPath(orig_path_full)
 
@@ -671,11 +893,28 @@ class QuetzalFile:
                 file.truncate()
 
     def _syncAnalysisState(self):
+        """
+        Synchronizes the analysis state of the file with the current status in the
+        analysis engine or database, updating the metadata as necessary.
+        """
         assert self._type == FileType.FILE
         
         return
 
-    def _analyze(self, option: AnalysisProgress, engine=None, device=None):
+    def _analyze(self, option: AnalysisProgress, engine=None, device=None) -> str:
+        """
+        Initiat es analysis of the video file with the specified options, using the
+        given analysis engine and device.
+
+        Args:
+            option (AnalysisProgress): The desired level of analysis to be performed.
+            engine: The analysis engine to use for the analysis. Defaults to None.
+            device: The cuda device to perform the analysis on. Defaults to None.
+
+        Returns:
+            A confirmation message indicating the completion of the analysis.
+        """     
+        
         assert (
             self._mode == AccessMode.OWNER or self._permission != Permission.READ_ONLY
         )
@@ -687,7 +926,16 @@ class QuetzalFile:
         return f'"{self.name}" Analysis Done'
 
 
-    def _editDescription(self, value):
+    def _editDescription(self, value: str) -> str:
+        """
+        Updates the description for the file or directory with the given value.
+
+        Args:
+            value (str): The new description to be applied to the file or directory.
+
+        Returns:
+            A confirmation message indicating the successful update of the description.
+        """
         assert (
             self._mode == AccessMode.OWNER or self._permission == Permission.FULL_WRITE
         )
@@ -702,13 +950,13 @@ class QuetzalFile:
         return f'"{self.name}" Edit Success'
 
     
-    def getCopyName(self, dest):
-        while dest.exists():
-            dest = appendText(dest, "_copy")
-        return dest
-    
-    
     def _updateMetaForCopy(self, dest: Path):
+        """
+        Updates the metadata for a file or directory when it is copied to a new location.
+
+        Args:
+            dest: The destination path where the file or directory has been copied.
+        """
         source_metadata = self._metadata_dir / self._path
         dest_metadata = self._metadata_dir / dest
         
@@ -724,7 +972,20 @@ class QuetzalFile:
         shutil.copy2(source_desc_path, dest_desc_path)
         
     
-    def _copy(self, dest_dir: "QuetzalFile"):
+    def _copy(self, dest_dir: "QuetzalFile") -> str:
+        """
+        Copies the current file or directory to a new destination within the Quetzal file system, updating metadata
+        accordingly.
+
+        This method copies the file/directory represented by this instance to the specified destination directory,
+        also handling metadata and description files to reflect the new location.
+
+        Args:
+            dest_dir (QueztalFile): The destination `QuetzalFile` directory where this file/directory is to be copied.
+
+        Returns:
+            A string message indicating the successful copy operation.
+        """
         debug(f"{self.name} called on copy to ", dest_dir)
         assert dest_dir._type == FileType.DIRECTORY
 
@@ -733,7 +994,7 @@ class QuetzalFile:
         dest_dir: Path = destination_path.relative_to(self._root_dir.absolute())
 
         # Rename destination if it is duplicates
-        dest = self.getCopyName(self._root_dir / dest_dir / self._path.name)
+        dest = getCopyName(self._root_dir / dest_dir / self._path.name)
         
         # Copy target File
         source = self._root_dir / self._path
@@ -749,6 +1010,15 @@ class QuetzalFile:
             
 
     def _updateMetaForMove(self, dest_dir: Path):
+        """
+        Updates the metadata for a file or directory when it is moved to a new location.
+
+        This includes moving the metadata and description files to reflect the new file path and updating any
+        directory-specific metadata if the moved entity is a directory.
+
+        Args:
+            dest_dir (Path): The destination path where the file or directory has been moved.
+        """
         source_metadata = self._metadata_dir / self._path
         
         if self._type == FileType.DIRECTORY:
@@ -766,7 +1036,21 @@ class QuetzalFile:
         shutil.move(source_desc_path, dest_desc_path)
         
     
-    def _move(self, dest_dir: "QuetzalFile"):
+    def _move(self, dest_dir: "QuetzalFile") -> str:
+        """
+        Moves the current file or directory to a new destination within the Quetzal file system, updating metadata
+        accordingly.
+
+        This method moves the file/directory represented by this instance to the specified destination directory,
+        handling metadata and description files to reflect the new location. It also ensures that the move does not
+        violate any system rules, such as moving into a subdirectory of itself.
+
+        Args:
+            dest_dir (QuetzalFile): The destination `QuetzalFile` directory where this file/directory is to be moved.
+
+        Returns:
+            A string message indicating the successful move operation.
+        """
         assert (
             self._mode == AccessMode.OWNER or self._permission == Permission.FULL_WRITE
         )
@@ -803,19 +1087,65 @@ class QuetzalFile:
 
     @staticmethod
     def _getMetaDataPath(path: Path) -> Path:
+        """
+        Constructs and returns the full path to the metadata file for a given absolute file or directory path.
+
+        Args:
+            path (Path): The path to the file or directory whose metadata path is to be constructed.
+
+        Returns:
+            The full `Path` object pointing to the metadata file.
+        """
         return path.with_name(path.name + META_SUFFIX)
 
     @staticmethod
     def _getDescriptionPath(path: Path) -> Path:
+        """
+        Constructs and returns the full path to the description file for a given file or directory path.
+
+        Args:
+            path (Path): The path to the file or directory whose description path is to be constructed.
+
+        Returns:
+            The full `Path` object pointing to the description file.
+        """
         return path.with_name(path.name + INFO_SUFFIX)
 
     def getMetaDataPath(self, path: Path) -> Path:
+        """
+        Retrieves the full path to the metadata file associated with a given file or directory path, 
+        based on current QuetzalFile configuration.
+
+        Args:
+            path (Path): The path to the file or directory whose metadata file path is to be retrieved.
+
+        Returns:
+            The full `Path` object pointing to the metadata file.
+        """
         return self._getMetaDataPath(self._metadata_dir / path)
 
     def getDescriptionPath(self, path: Path):
+        """
+        Retrieves the full path to the description file associated with a given file or directory path, 
+        based on current QuetzalFile configuration.
+
+        Args:
+            path (Path): The path to the file or directory whose description file path is to be retrieved.
+
+        Returns:
+            The full `Path` object pointing to the description file.
+        """
         return self._getDescriptionPath(self._metadata_dir / path)
 
-    def _makeDefaultDescription(self, path):
+    def _makeDefaultDescription(self, path: Union[str, Path]):
+        """
+        Creates a default description file for a file or directory if one does not already exist.
+
+        This method is typically called when a new file or directory is added to ensure that it has a basic description.
+
+        Args:
+            path: The path to the file or directory for which a default description is to be created.
+        """
         if self._type == FileType.DIRECTORY:
             default_content = self.PROJECT_DEFAULT_DESCRIPTION
         else:
@@ -824,7 +1154,15 @@ class QuetzalFile:
         with open(path, "w") as file:
             file.write(default_content)
 
-    def getDescription(self):
+    def getDescription(self) -> str:
+        """
+        Retrieves the description of the current file or directory.
+
+        If a description file does not exist, a default description is created and then retrieved.
+
+        Returns:
+            The description text of the file or directory.
+        """
         description_file_path = self.getDescriptionPath(self._path)
 
         # if not os.path.exists(description_file_path):
@@ -865,3 +1203,15 @@ class QuetzalFile:
             )
             + "\n"
         )
+
+
+## LET pdoc3 to generate documentation for private methods 
+__pdoc__ = {name: True
+            for name, klass in globals().items()
+            if name.startswith('_') and isinstance(klass, type)}
+__pdoc__.update({f'{name}.{member}': True
+                 for name, klass in globals().items()
+                 if isinstance(klass, type)
+                 for member in klass.__dict__.keys()
+                 if member not in {'__module__', '__dict__', 
+                                   '__weakref__', '__doc__'}})
