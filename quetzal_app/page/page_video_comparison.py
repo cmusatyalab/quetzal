@@ -13,6 +13,7 @@ from quetzal_app.page.video_comparison_controller import (
     Controller,
     PlaybackController,
     ObjectDetectController,
+    ObjectAnnotationController,
     PLAY_IDX_KEY,
 )
 from pathlib import Path
@@ -32,6 +33,7 @@ PLAYBACK_TIME_TXT = "Playback Time: {}/{}"
 controller_dict: dict[str, Controller] = {
     PlaybackController.name: PlaybackController,
     ObjectDetectController.name: ObjectDetectController,
+    ObjectAnnotationController.name: ObjectAnnotationController,
 }
 
 
@@ -61,6 +63,9 @@ class VideoComparisonPage(Page):
             {
                 PlaybackController.name: PlaybackController.initState(root_state),
                 ObjectDetectController.name: ObjectDetectController.initState(
+                    root_state
+                ),
+                ObjectAnnotationController.name: ObjectAnnotationController.initState(
                     root_state
                 ),
                 PLAY_IDX_KEY: 0,
@@ -217,23 +222,32 @@ class FrameDisplay:
     def __init__(self, page_state):
         self.page_state = page_state
 
-    def display_frame(self, label, images, frame_len, idx, fps):
-        total_time, show_hours = format_time(
-            frame_len / fps, show_hours=False, final_time=True
-        )
-        curr_time, _ = format_time(idx / fps, show_hours)
+    def display_frame(self, labels, images, frame_lens, idxs, fps):
+            total_times, curr_times = [], []
+            for i in range(len(frame_lens)):
+                curr_total_time, curr_show_hours = format_time(
+                    frame_lens[i] / fps[i], show_hours=False, final_time=True
+                )
+                curr_time, _ = format_time(idxs[i] / fps[i], curr_show_hours)
 
-        image_frame(
-            image_urls=images,
-            captions=[
-                FRAME_IDX_TXT.format(idx, frame_len),
-                PLAYBACK_TIME_TXT.format(curr_time, total_time),
-            ],
-            label=label,
-            starting_point=0,
-            dark_mode=False,
-            key="image_comparison" + str(fps),
-        )
+                total_times.append(curr_total_time)
+                curr_times.append(curr_time)
+
+            captions = []
+            for j in range(len(idxs)):
+                captions.append([FRAME_IDX_TXT.format(idxs[j], frame_lens[j]),
+                                PLAYBACK_TIME_TXT.format(curr_times[j], total_times[j])])
+                
+            # keys = ["image_comparison" + str(fps[k]) for k in range(len(fps))]
+
+            image_frame(
+                image_urls=images,
+                captions= captions,
+                labels=labels,
+                starting_point=0,
+                dark_mode=False,
+                key="image_comparison" + str(fps[0]) + str(fps[1])
+            )
 
     def render(self):
         match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]
@@ -251,6 +265,11 @@ class FrameDisplay:
             ] == ss.slider:
                 query_img = self.page_state.annotated_frame["query"]
                 database_img = self.page_state.annotated_frame["db"]
+            case ObjectAnnotationController.name if self.page_state.annotated_frame[
+                "idx"
+            ] == ss.slider:
+                query_img = self.page_state.annotated_frame["query"]
+                database_img = self.page_state.annotated_frame["db"]
             case _:
                 query_img = self.page_state.query_frames[query_idx]
                 database_img = self.page_state.db_frames[db_idx]
@@ -258,24 +277,19 @@ class FrameDisplay:
         query_img_base64 = f"data:image/jpeg;base64,{get_base64(query_img)}"
         db_img_base64 = f"data:image/jpeg;base64,{get_base64(database_img)}"
 
-        imgc1, imgc2 = st.columns([1, 1], gap="small")
-        with imgc1:
-            self.display_frame(
-                label="Query Frame: " + query.name,
-                images=[query_img_base64],
-                frame_len=len(self.page_state.query_frames),
-                idx=query_idx,
-                fps=QueryVideo.FPS,
-            )
+        labels = ["Query Frame: " + query.name,"Aligned Database Frame: " + database.name]
+        images = [[query_img_base64], [query_img_base64, db_img_base64]]
+        frame_lens = [len(self.page_state.query_frames), len(self.page_state.db_frames)]
+        idxs = [query_idx, db_idx]
+        fps = [QueryVideo.FPS, DatabaseVideo.FPS]
 
-        with imgc2:
+        with st.empty():
             self.display_frame(
-                label="Aligned Database Frame: " + database.name,
-                images=[query_img_base64, db_img_base64],
-                frame_len=len(self.page_state.db_frames),
-                idx=db_idx,
-                fps=DatabaseVideo.FPS,
-            )
+                labels=labels, 
+                images=images, 
+                frame_lens=frame_lens, 
+                idxs=idxs, 
+                fps=fps)
 
 
 class ControllerOptions:
@@ -328,6 +342,9 @@ class ControllerOptions:
             MuiToggleButton(PlaybackController.name, "PlayArrow", "Playback Control"),
             MuiToggleButton(
                 ObjectDetectController.name, "CenterFocusStrong", "Object Detection"
+            ),
+            MuiToggleButton(
+                ObjectAnnotationController.name, "CenterFocusStrong", "Object Annotation"
             ),
         ]
 

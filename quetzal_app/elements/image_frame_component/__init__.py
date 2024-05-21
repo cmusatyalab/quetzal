@@ -1,9 +1,9 @@
 import streamlit.components.v1 as components
 from pathlib import Path
 
-def image_frame(image_urls=[], 
-                captions=[],
-                label="",
+def image_frame(image_urls=[[]], 
+                captions=[[]],
+                labels=[[]],
                 starting_point=30,
                 border=True, 
                 padding="0px 8px", 
@@ -12,6 +12,7 @@ def image_frame(image_urls=[],
                 image_border_radius="0.65rem",
                 dark_mode=False,
                 key=None):
+
     _image_frame = components.declare_component(
         name='image_frame',
         path=str(Path(__file__).parent)
@@ -29,7 +30,7 @@ def image_frame(image_urls=[],
     return _image_frame(
         image_urls=image_urls, 
         captions=captions, 
-        label=label,
+        labels=labels,
         border_width = border_width,
         starting_point=starting_point, 
         padding=padding, 

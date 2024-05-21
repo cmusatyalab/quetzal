@@ -455,3 +455,186 @@ class ObjectDetectController(Controller):
                 format=f"%0.2f",
                 key=SLIDER_TXT_TH_KEY,
             )
+
+
+
+class ObjectAnnotationController(Controller):
+    name = "object_annotate"
+    select_dict = {model.name: num for num, model in enumerate(detector_list)}
+
+    @staticmethod
+    def initState(root_state) -> dict:
+        values = {
+            SLIDER_BOX_TH_KEY: DEFAULT_BOX_TH,
+            SLIDER_TXT_TH_KEY: DEFAULT_TEXT_TH,
+            CLASS_PROMT_KEY: DEFAULT_OBJECT_PROMPT,
+            "torch_device": root_state.torch_device,
+            DETECTOR_KEY: None,
+            DETECTOR_NAME_KEY: GroundingSAMEngine.name,
+        }
+        return values
+
+    @staticmethod
+    def storeState(page_state):
+        page_state[SLIDER_BOX_TH_KEY] = ss[SLIDER_BOX_TH_KEY]
+        page_state[SLIDER_TXT_TH_KEY] = ss[SLIDER_TXT_TH_KEY]
+        page_state[CLASS_PROMT_KEY] = ss[CLASS_PROMT_KEY]
+
+    @staticmethod
+    def loadState(page_state):
+        ss[SLIDER_BOX_TH_KEY] = page_state[SLIDER_BOX_TH_KEY]
+        ss[SLIDER_TXT_TH_KEY] = page_state[SLIDER_TXT_TH_KEY]
+        ss[CLASS_PROMT_KEY] = page_state[CLASS_PROMT_KEY]
+        if page_state[DETECTOR_KEY] is None:
+            page_state[DETECTOR_KEY] = getDetectionEngine(
+                page_state[DETECTOR_NAME_KEY], page_state["torch_device"]
+            )
+        elif page_state[DETECTOR_KEY].name != page_state[DETECTOR_NAME_KEY]:
+            page_state[DETECTOR_KEY] = getDetectionEngine(
+                page_state[DETECTOR_NAME_KEY], page_state["torch_device"]
+            )
+
+    def initObjectDetectController(self):
+        if CLASS_PROMT_KEY not in ss:
+            ss[CLASS_PROMT_KEY] = DEFAULT_OBJECT_PROMPT
+
+    def __init__(self, page_state):
+        self.page_state = page_state
+        # page_state[self.name][DETECTOR_NAME_KEY] = GroundingSAMEngine.name
+
+    def _run_detection(
+        self, text_prompt, input_img, output_file, box_threshold, text_threshold
+    ):
+        detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
+        detector.generate_masked_images(
+            input_img, text_prompt, output_file, box_threshold, text_threshold
+        )
+
+    def run_detection(self):
+        match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]
+        query_idx: QueryIdx = match[0]
+        db_idx: DatabaseIdx = match[1]
+
+        query_img_orig = self.page_state.query_frames[query_idx]
+        database_img_aligned = self.page_state.db_frames[db_idx]
+
+        self._run_detection(
+            text_prompt=ss[CLASS_PROMT_KEY],
+            input_img=query_img_orig,
+            output_file=QUERY_ANNOTATE_IMG,
+            box_threshold=ss[SLIDER_BOX_TH_KEY],
+            text_threshold=ss[SLIDER_TXT_TH_KEY],
+        )
+
+        self._run_detection(
+            text_prompt=ss[CLASS_PROMT_KEY],
+            input_img=database_img_aligned,
+            output_file=DB_ANNOTATE_IMG,
+            box_threshold=ss[SLIDER_BOX_TH_KEY],
+            text_threshold=ss[SLIDER_TXT_TH_KEY],
+        )
+
+        self.page_state.annotated_frame = {
+            "query": QUERY_ANNOTATE_IMG,
+            "db": DB_ANNOTATE_IMG,
+            "idx": self.page_state[PlaybackController.name][SLIDER_KEY],
+        }
+
+    def render_prompt(self):
+        c1, c2 = st.columns([100, 1])
+
+        with c1:
+            with stylable_container(
+                key="class_prompt_list",
+                css_styles="""{
+                    display: block;
+                    padding: 0.5em 0.5em 0em; /*top right&left bottom*/
+                    width: calc(101% - 133px);
+                    }
+                """,
+            ):
+                with st.container():
+                    st_tags(
+                        label=" ",
+                        text="Detection Prompt: Press enter to add more class",
+                        value=ss[CLASS_PROMT_KEY],
+                        suggestions=[],
+                        maxtags=10,
+                        key=CLASS_PROMT_KEY,
+                    )
+
+        with c2:
+            with stylable_container(
+                key="object_annotate_botton",
+                css_styles="""{
+                        display: block;
+                        position: absolute;
+                        width: 133px !important;
+                        right: 0px;
+                        
+                        & div {
+                            width: 133px !important;
+                            height: auto; 
+                        }
+                        
+                        & iframe {
+                            width: 133px !important;
+                            height: 57px;
+                        }                    
+                    }
+                    """,
+            ):
+                with elements("object_annotation_controller"):
+                    mui.Button(
+                        children="Detect",
+                        variant="contained",
+                        startIcon=mui.icon.Search(),
+                        onClick=self.run_detection,
+                        size="large",
+                        sx={
+                            "bgcolor": "grey.800",
+                            "borderRadius": "0.5rem",
+                            "width": "117.14px",
+                        },
+                    )
+
+    def change_model(self):
+        self.page_state[self.name][DETECTOR_NAME_KEY] = ss[SELECT_MODEL_KEY]
+        self.page_state[self.name][DETECTOR_KEY] = getDetectionEngine(
+            self.page_state[self.name][DETECTOR_NAME_KEY],
+            self.page_state[self.name]["torch_device"],
+        )
+
+    def render(self):
+        self.render_prompt()
+        # pass
+
+        cc1, cc2, cc3 = st.columns([1, 3, 3])
+        with cc1:
+            st.selectbox(
+                label="Choose Detection Model",
+                options=[key for key in detector_dict.keys()],
+                key=SELECT_MODEL_KEY,
+                index=self.select_dict[self.page_state[self.name][DETECTOR_NAME_KEY]],
+                on_change=self.change_model,
+            )
+        with cc2:
+            st.slider(
+                value=self.page_state[ObjectAnnotationController.name][SLIDER_BOX_TH_KEY],
+                label="Box Threshold",
+                min_value=0.0,
+                max_value=1.0,
+                step=0.01,
+                format=f"%0.2f",
+                key=SLIDER_BOX_TH_KEY,
+            )
+        with cc3:
+            st.slider(
+                value=self.page_state[ObjectAnnotationController.name][SLIDER_TXT_TH_KEY],
+                label="Text Threshold",
+                min_value=0.0,
+                max_value=1.0,
+                step=0.01,
+                format=f"%0.2f",
+                key=SLIDER_TXT_TH_KEY,
+            )

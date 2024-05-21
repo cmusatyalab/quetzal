@@ -140,10 +140,18 @@ class Stage:
 
 class Pipeline:
     """
-    Orchestrates a sequence of processing stages, encapsulating them within a pipeline architecture powered by thread pools. This setup enables efficient task flow management through queues, facilitating a structured approach to complex data processing operations.
+    Orchestrates a sequence of processing stages, encapsulating them within a 
+    pipeline architecture powered by thread pools. This setup enables efficient 
+    task flow management through queues, facilitating a structured approach to 
+    complex data processing operations.
 
     Workflow Overview:
-    Submissions enter through the `submit` method and are placed in the input queue. These submissions then traverse through each stage of the pipeline. Each stage operates in separate threads, consuming outputs from its predecessor and supplying its processed results to the next stage. The final outputs are collected in the Output Queue, accessible via the `get_result` method.
+    Submissions enter through the `submit` method and are placed in the input 
+    queue. These submissions then traverse through each stage of the pipeline. 
+    Each stage operates in separate threads, consuming outputs from its 
+    predecessor and supplying its processed results to the next stage. 
+    The final outputs are collected in the Output Queue, accessible via the 
+    `get_result` method.
 
     Pipeline Structure:
     - Input (via `submit` method)
@@ -154,7 +162,8 @@ class Pipeline:
     - Output Queue
     - Results retrieval (via `get_result` method)
 
-    Each stage runs in parallel threads, allowing for concurrent processing and efficient throughput from input to final results.
+    Each stage runs in parallel threads, allowing for concurrent processing 
+    and efficient throughput from input to final results.
     """
     
     def __init__(

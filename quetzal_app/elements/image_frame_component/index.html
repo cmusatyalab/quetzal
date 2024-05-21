@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <link href="https://unpkg.com/image-compare-viewer/dist/image-compare-viewer.min.css" rel="stylesheet">
     <style>
         body {
             margin: 0px;
-            /* padding: 8px; */
-            display: block;
+            display: flex;
+            flex-direction: row;
             font-family: sans-serif;
+            justify-content: space-between;
         }
 
         .content {
@@ -16,6 +18,7 @@
             flex-wrap: wrap;
             justify-content: space-between;
             padding: 1rem;
+
         }
 
         .title {
@@ -26,7 +29,8 @@
             padding: 0.5rem;
         }
 
-        .caption, .label{
+        .caption,
+        .label {
             margin: 0;
         }
 
@@ -44,16 +48,32 @@
         } */
     </style>
     <style id="custom-style"></style>
+    <style id="custom-style0"></style>
+    <style id="custom-style1"></style>
 </head>
 
 <body id="card-body">
-    <div class="title", id="label-container"> 
-        <p class="label"></p>
+    <div id="card-body0">
+        <div class="title" id="label-container0">
+            <p class="label"></p>
+        </div>
+        <div class="card0" id="frame-card0">
+            <div id="image-compare0"></div>
+            <div class="content" , id="caption-container0">
+                <p class="caption"></p>
+            </div>
+        </div>
     </div>
-    <div class="card" id="frame-card">
-        <div id="image-compare"></div>
-        <div class="content", id="caption-container">
-            <p class="caption"></p>
+
+    <div id="card-body1">
+        <div class="title" id="label-container1">
+            <p class="label"></p>
+        </div>
+        <div class="card1" id="frame-card1">
+            <div id="image-compare1"></div>
+            <div class="content" id="caption-container1">
+                <p class="caption"></p>
+            </div>
         </div>
     </div>
 </body>
@@ -125,97 +145,103 @@
             bgColor = "#424242";
             textColor = "#FFFFFF";
         }
-        
-        // Append Label
-        const labelContainer = document.getElementById('label-container');
-        if (props.label === "") {
-            labelContainer.remove()
-        } else {
-            labelContainer.innerHTML = '';  // Clear existing captions
-            const labelDiv = document.createElement('div');
-            const labelParagraph = document.createElement('p');
-            labelParagraph.className = 'label';
-            labelParagraph.innerText = props.label;
-            labelDiv.appendChild(labelParagraph);
-            labelContainer.appendChild(labelDiv);
-        }
-        
-        // Update Image
-        const imageContainer = document.getElementById("image-compare");
-        if (props.image_urls.length === 1) {
-            imageContainer.innerHTML = 
-            `<img src="${props.image_urls[0]}" id="image-content"
-                alt="" 
-                style="
-                    width: 100%; 
-                    border-top-right-radius: ${props.image_border_radius}; 
+
+        // iterate and set the two elements
+        for (let i = 0; i < props.labels.length; i++) {
+            // Append Label
+            const card = document.getElementById(`card-body${i}`)
+            const labelContainer = document.getElementById(`label-container${i}`);
+            if (props.labels[i] === "") {
+                labelContainer.remove()
+            } else {
+                labelContainer.innerHTML = '';  // Clear existing captions
+                const labelDiv = document.createElement('div');
+                const labelParagraph = document.createElement('p');
+                labelParagraph.className = 'label';
+                labelParagraph.innerText = props.labels[i];
+                labelDiv.appendChild(labelParagraph);
+                labelContainer.appendChild(labelDiv);
+            }
+
+            // Update Image
+            const imageContainer = document.getElementById(`image-compare${i}`);
+            if (props.image_urls[i].length === 1) {
+                imageContainer.innerHTML =
+                    `<img src="${props.image_urls[i][0]}" id=image-content${i}"
+                    alt="" 
+                    style="
+                        width: 100%; 
+                        border-top-right-radius: ${props.image_border_radius}; 
+                        border-top-left-radius: ${props.image_border_radius};
+                        margin-bottom: -4px;
+                    "
+                />`;
+            } else if (props.image_urls[i].length === 2) {
+                imageContainer.innerHTML = `
+                    <img src="${props.image_urls[i][0]}" alt="" />
+                    <img src="${props.image_urls[i][1]}" alt="" />
+                `;
+                const options = {
+                    startingPoint: props.starting_point,
+                    controlColor: bgColor,
+                };
+                new ImageCompare(imageContainer, options).mount();
+            } else {
+                imageContainer.innerHTML = ""
+            }
+
+            // Append Captions
+            const captionsContainer = document.getElementById(`caption-container${i}`);
+            if (props.captions[i].length === 0) {
+                captionsContainer.remove() // This hides the container
+                bottomRadius = props.image_border_radius;
+                props.border_width = "0px";
+            } else {
+                captionsContainer.innerHTML = '';  // Clear existing captions
+                props.captions[i].forEach(captionText => {
+                    const captionDiv = document.createElement('div');
+                    const captionParagraph = document.createElement('p');
+                    captionParagraph.className = 'caption';
+                    captionParagraph.innerText = captionText;
+                    captionDiv.appendChild(captionParagraph);
+                    captionsContainer.appendChild(captionDiv);
+                });
+            }
+
+            // Set custom styles
+            const customStyle = document.getElementById(`custom-style${i}`);
+
+            customStyle.innerHTML = `
+                #card-body${i} {
+                    padding: ${props.padding};
+                    font-family: ${props.font_family};
+                }
+                #image-compare${i} {
+                    border-top-right-radius: ${props.image_border_radius};
                     border-top-left-radius: ${props.image_border_radius};
-                    margin-bottom: -4px;
-                "
-            />`;
-        } else if (props.image_urls.length === 2) {
-            imageContainer.innerHTML = `
-                <img src="${props.image_urls[0]}" alt="" />
-                <img src="${props.image_urls[1]}" alt="" />
+                    border-bottom-left-radius: ${bottomRadius};
+                    border-bottom-right-radius: ${bottomRadius};
+                    width: 100%;
+                }
+                #image-content${i}{
+                    border-top-right-radius: ${props.image_border_radius};
+                    border-top-left-radius: ${props.image_border_radius};
+                    border-bottom-left-radius: ${bottomRadius};
+                    border-bottom-right-radius: ${bottomRadius};
+                    width: 100%;
+                }
             `;
-            const options = { 
-                startingPoint: props.starting_point, 
-                controlColor: bgColor,
-            };
-            new ImageCompare(imageContainer, options).mount();
-        } else {
-            imageContainer.innerHTML = ""
         }
 
-        // Append Captions
-        const captionsContainer = document.getElementById('caption-container');
-        if (props.captions.length === 0) {
-            captionsContainer.remove() // This hides the container
-            bottomRadius = props.image_border_radius;
-            props.border_width = "0px";
-        } else {
-            captionsContainer.innerHTML = '';  // Clear existing captions
-            props.captions.forEach(captionText => {
-                const captionDiv = document.createElement('div');
-                const captionParagraph = document.createElement('p');
-                captionParagraph.className = 'caption';
-                captionParagraph.innerText = captionText;
-                captionDiv.appendChild(captionParagraph);
-                captionsContainer.appendChild(captionDiv);
-            });
-        }
-
-        // Set custom styles
-        const customStyle = document.getElementById('custom-style');
-        customStyle.innerHTML = `
-            body {
-                padding: ${props.padding};
-                font-family: ${props.font_family};
-            }
-            
-            .card {
-                border-radius: ${props.card_border_radius};
-                border-width: ${props.border_width};
-                background-color: ${bgColor};
-                color: ${textColor};
-            }
-
-            #image-compare {
-                border-top-right-radius: ${props.image_border_radius};
-                border-top-left-radius: ${props.image_border_radius};
-                border-bottom-left-radius: ${bottomRadius};
-                border-bottom-right-radius: ${bottomRadius};
-                width: 100%;
-            }
-
-            #image-content{
-                border-top-right-radius: ${props.image_border_radius};
-                border-top-left-radius: ${props.image_border_radius};
-                border-bottom-left-radius: ${bottomRadius};
-                border-bottom-right-radius: ${bottomRadius};
-                width: 100%;
-            }
-        `;
+        const customStyleShared = document.getElementById(`custom-style`);
+        customStyleShared.innerHTML = `
+                .card {
+                    border-radius: ${props.card_border_radius};
+                    border-width: ${props.border_width};
+                    background-color: ${bgColor};
+                    color: ${textColor};
+                }
+            `;
 
     }
 
