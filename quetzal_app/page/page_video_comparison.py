@@ -3,6 +3,8 @@ import os
 from streamlit import session_state as ss
 
 from streamlit_elements import elements, mui
+from streamlit_image_annotation import detection
+from glob import glob
 from quetzal_app.elements.mui_components import MuiToggleButton
 
 from quetzal.dtos.video import QueryVideo, DatabaseVideo
@@ -17,6 +19,7 @@ from quetzal_app.page.video_comparison_controller import (
     PLAY_IDX_KEY,
 )
 from pathlib import Path
+import base64
 
 from quetzal_app.elements.image_frame_component import image_frame
 
@@ -222,32 +225,61 @@ class FrameDisplay:
     def __init__(self, page_state):
         self.page_state = page_state
 
-    def display_frame(self, labels, images, frame_lens, idxs, fps):
-            total_times, curr_times = [], []
-            for i in range(len(frame_lens)):
-                curr_total_time, curr_show_hours = format_time(
-                    frame_lens[i] / fps[i], show_hours=False, final_time=True
+    def display_frame(self, labels, images, image_urls, frame_lens, idxs, fps):
+        match self.page_state.controller:
+            case ObjectAnnotationController.name:
+                self.display_annotation_frame(image_urls)
+            case _:
+                total_times, curr_times = [], []
+                for i in range(len(frame_lens)):
+                    curr_total_time, curr_show_hours = format_time(
+                        frame_lens[i] / fps[i], show_hours=False, final_time=True
+                    )
+                    curr_time, _ = format_time(idxs[i] / fps[i], curr_show_hours)
+
+                    total_times.append(curr_total_time)
+                    curr_times.append(curr_time)
+
+                captions = []
+                for j in range(len(idxs)):
+                    captions.append([FRAME_IDX_TXT.format(idxs[j], frame_lens[j]),
+                                    PLAYBACK_TIME_TXT.format(curr_times[j], total_times[j])])
+                    
+                # keys = ["image_comparison" + str(fps[k]) for k in range(len(fps))]            
+                image_frame(
+                    image_urls=images,
+                    captions= captions,
+                    labels=labels,
+                    starting_point=0,
+                    dark_mode=False,
+                    key="image_comparison" + str(fps[0]) + str(fps[1])
                 )
-                curr_time, _ = format_time(idxs[i] / fps[i], curr_show_hours)
+    def display_annotation_frame(self, image_urls):
+        label_list = ['deer', 'human', 'dog', 'penguin', 'framingo', 'teddy bear']
+        [query_img, database_img] = image_urls
 
-                total_times.append(curr_total_time)
-                curr_times.append(curr_time)
+        result_dict = {}
+        result_dict[query_img] = {'bboxes': [[0,0,100,100],[10,20,50,150]],'labels':[0,3]}
+        result_dict[database_img] = {'bboxes': [[0,0,100,100],[10,20,50,150]],'labels':[0,3]}
+        st.session_state['result_dict'] = result_dict.copy()
+        
+        labels_dict = {}
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            labels_dict[query_img] = detection(image_path=query_img, 
+                                bboxes=st.session_state['result_dict'][query_img]['bboxes'], 
+                                labels=st.session_state['result_dict'][query_img]['labels'], 
+                                label_list=label_list, use_space=True, key=query_img)
+        with c2:
+            labels_dict[database_img] = detection(image_path=database_img, 
+                                bboxes=st.session_state['result_dict'][database_img]['bboxes'], 
+                                labels=st.session_state['result_dict'][database_img]['labels'], 
+                                label_list=label_list, use_space=True, key=database_img)
 
-            captions = []
-            for j in range(len(idxs)):
-                captions.append([FRAME_IDX_TXT.format(idxs[j], frame_lens[j]),
-                                PLAYBACK_TIME_TXT.format(curr_times[j], total_times[j])])
-                
-            # keys = ["image_comparison" + str(fps[k]) for k in range(len(fps))]
-
-            image_frame(
-                image_urls=images,
-                captions= captions,
-                labels=labels,
-                starting_point=0,
-                dark_mode=False,
-                key="image_comparison" + str(fps[0]) + str(fps[1])
-            )
+        # if new_labels is not None:
+        #     st.session_state['result_dict'][target_image_path]['bboxes'] = [v['bbox'] for v in new_labels]
+        #     st.session_state['result_dict'][target_image_path]['labels'] = [v['label_id'] for v in new_labels]
+        # st.json(st.session_state['result_dict'])
 
     def render(self):
         match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]
@@ -273,23 +305,26 @@ class FrameDisplay:
             case _:
                 query_img = self.page_state.query_frames[query_idx]
                 database_img = self.page_state.db_frames[db_idx]
-
         query_img_base64 = f"data:image/jpeg;base64,{get_base64(query_img)}"
         db_img_base64 = f"data:image/jpeg;base64,{get_base64(database_img)}"
+        image_urls = [query_img, database_img]
 
         labels = ["Query Frame: " + query.name,"Aligned Database Frame: " + database.name]
         images = [[query_img_base64], [query_img_base64, db_img_base64]]
         frame_lens = [len(self.page_state.query_frames), len(self.page_state.db_frames)]
         idxs = [query_idx, db_idx]
         fps = [QueryVideo.FPS, DatabaseVideo.FPS]
+    
+        self.display_frame(
+            labels=labels, 
+            images=images, 
+            image_urls=image_urls,
+            frame_lens=frame_lens, 
+            idxs=idxs, 
+            fps=fps)
+            
 
-        with st.empty():
-            self.display_frame(
-                labels=labels, 
-                images=images, 
-                frame_lens=frame_lens, 
-                idxs=idxs, 
-                fps=fps)
+        
 
 
 class ControllerOptions:
@@ -344,7 +379,7 @@ class ControllerOptions:
                 ObjectDetectController.name, "CenterFocusStrong", "Object Detection"
             ),
             MuiToggleButton(
-                ObjectAnnotationController.name, "CenterFocusStrong", "Object Annotation"
+                ObjectAnnotationController.name, "Create", "Object Annotation"
             ),
         ]
 

@@ -157,6 +157,8 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         
         Returns:
             np.ndarray: The annotated image with detected and segmented objects based on captions.
+            np.ndarray: A list of the detected and segmented objects based on captions.
+            np.ndarray: A list of labels corresponding to the detected objects.
         """
         caption = " . ".join(caption)
 
@@ -186,7 +188,7 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         )
 
         cv2.imwrite(save_file_path, annotated_image)
-        return annotated_image
+        return annotated_image, detections, labels
 
 
 if __name__ == "__main__":

@@ -260,6 +260,7 @@ pip_install streamlit
 pip_install streamlit-extras
 pip_install streamlit-elements==0.1.*
 pip_install streamlit-tags
+pip_install streamlit-image-annotation
 pip_install stqdm
 
 echo_info "----- Installing streamlit-float packages -----"
