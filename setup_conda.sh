@@ -256,7 +256,7 @@ pip_install torchviz=='0.0.2'
 pip_install onedrivedownloader
 pip_install utm
 pip_install bcrypt
-pip_install streamlit
+pip_install streamlit==1.33.0
 pip_install streamlit-extras
 pip_install streamlit-elements==0.1.*
 pip_install streamlit-tags

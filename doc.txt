@@ -1,0 +1,346 @@
+root_datasets_dir/
+|
+├──user_name1/
+|   |
+|   ├── project_name1/
+|   |   ├── metadata.txt
+|   |   |
+|   |   ├── video_name1.mp4
+|   |   ├── video_name1.txt
+|   |   |
+|   |   ├── video_name2.mp4
+|   |   ├── video_name2.txt
+|   |   ├── ...
+|   |   |
+|   |   ├── database/
+|   |   |   ├── video_name1/
+|   |   |   |   ├── frames_{fps}_{resolution}/
+|   |   |   |   |   ├── frame_%05d.jpg
+|   |   |   |   |   └── ...
+|   |   |   |   └── ...
+|   |   |   └── video_name2/
+|   |   |       ├── frames_{fps}_{resolution}/
+|   |   |       |   ├── frame_%05d.jpg
+|   |   |       |   └── ...
+|   |   |       └── ...
+|   |   |
+|   |   ├── query/
+|   |   |   ├── video_name2/
+|   |   |   |   ├── frames_{fps}_{resolution}/
+|   |   |   |   |   ├── frame_%05d.jpg
+|   |   |   |   |   └── ...
+|   |   |   |   └── ...
+|   |   |   └── ...
+|   |   |
+|   |   ├── subproject_name/
+|   |   |   ├──video_name1.mp4
+|   |   |   └── ...
+|   |   └── ...
+|   |
+|   |
+|   └── project_name2/
+|
+├──user_name2/
+└── ...
+
+
+
+
+
+
+
+root_datasets_dir/
+|
+├──user_name1/
+|   |
+|   ├── project_name1/
+|   |   ├── video_name1.mp4
+|   |   ├── video_name2.mp4
+|   |   ├── ...
+|   |   |
+|   |   ├── subproject_name/
+|   |   |   ├──video_name1.mp4
+|   |   |   └── ...
+|   |   └── ...
+|   |
+|   |
+|   └── project_name2/
+|
+├──user_name2/
+└── ...
+
+metadata_directory/
+
+├── user_name1.info.txt
+├── user_name1.meta.txt
+├── user_name1/
+|   |
+|   ├── project_name1.info.txt
+|   ├── project_name1.meta.txt
+|   ├── project_name1/
+|   |   ├── video_name1.mp4.info.txt
+|   |   ├── video_name1.mp4.meta.txt
+|   |   |
+|   |   ├── video_name2.mp4.info.txt
+|   |   ├── video_name2.mp4.meta.txt
+|   |   |
+|   |   ├── ...
+|   |   |
+|   |   ├── database/
+|   |   |   ├── video_name1/
+|   |   |   |   ├── frames_{fps}_{resolution}/
+|   |   |   |   |   ├── frame_%05d.jpg
+|   |   |   |   |   └── ...
+|   |   |   |   └── ...
+|   |   |   └── video_name2/
+|   |   |       ├── frames_{fps}_{resolution}/
+|   |   |       |   ├── frame_%05d.jpg
+|   |   |       |   └── ...
+|   |   |       └── ...
+|   |   |
+|   |   ├── query/
+|   |   |   ├── video_name2/
+|   |   |   |   ├── frames_{fps}_{resolution}/
+|   |   |   |   |   ├── frame_%05d.jpg
+|   |   |   |   |   └── ...
+|   |   |   |   └── ...
+|   |   |   └── ...
+|   |   |
+|   |   ├── subproject_name.info.txt
+|   |   ├── subproject_name.meta.txt
+|   |   ├── subproject_name/
+|   |   |   ├──video_name1.mp4.info.txt
+|   |   |   ├──video_name1.mp4.meta.txt
+|   |   |   └── ...
+|   |   └── ...
+|   |
+|   |
+|   └── project_name2/
+|
+├── user_name1.info.txt
+├── user_name1.meta.txt
+├── user_name2/
+└── ...
+
+class Permission(Enum):
+    READ_ONLY = "read_only"
+    POST_ONLY = "post_only"
+    FULL_WRITE = "full_write"
+    
+class Visibility(Enum):
+    SHARED = "shared"
+    PRIVATE = "private"
+    
+class FileType(Enum):
+    FILE = "file"
+    DIRECTORY = "directory"
+    
+class AnalysisProgress(Enum):
+    FULL = "full"
+    HALF = "half"
+    NONE = "none"
+
+class Owner(Enum):
+    CREATED_BY = "created_by"
+
+Dataset_directory:
+above shows the directory structure of the current database
+in root_datasets_dir, there are directory names with user names. under each user_name directories, there are associated project directories owned by each users
+in each project directory, there can be video_files and/or sub_project_directories. The sub_project_directories follow the structure recurssively.
+
+
+Metadata Directory:
+There is also metadata_directory which contains metadata and analyzed data for each associated project/videos
+each project directory has "project_name.txt" which contains text describtion for the project.
+"project_name_meta.txt" contains states of associated project. There are Permission, Visibility, Onwer, and FileType are relavent state for the director/project
+
+for each video_file in the project dierectory has associated "video_name.txt", which contains text describtion for the video.
+"video_name_meta.txt" contains states of associated video file. There are Permission, Visibility, Onwer, FileType and AnalysisProgress are relavent state for the video_files
+
+each project directory also has "database" and "query" directory, which contains processed data for selective video files associated to that project (videos from the sub_projects are not included here)
+if "video" has associated directory under "database" directory of the project, then the AnalysisProgress of the video is "full".
+if "video" has associated directory under only "query" directory but not in "database" directory, then the AnalysisProgress of the video is "half".
+if "video" has no associated directory under "database" directory nor "query" directory, then the AnalysisProgress of the video is "None".
+
+Visibility and Permission state tells if certain project/video is shared and accessible by other users.
+if Visibility of a project/video is "private", Permission of the project/video can be "full_write".
+if Visibility of a project/video is "shared", Permission of the proejct/video can be "full_write", "post_only", or "read_only".
+
+Whenever file/project_dir is modified in the Dataset_directory (file moved/deleted/renamed), associated files/directories inside the metadata_directory must be adjusted accordingly
+
+Following is example of "video_metadata.txt"
+
+FileType: file
+Visibility: shared
+Permission: post_only
+AnalysisProgress: none
+
+Following is example of "project.txt" description
+
+Route Location: default
+Last Update (MM/DD/YYYY): default
+Last Edit by: default
+Description: default
+
+Following is example of "video.txt" description
+Uploader: default
+Recorded Date (MM/DD/YYYY): default
+Time-of-day: default
+Weather Condition: default
+Description: default
+
+
+
+Based on the informatoin above, please complete the following code
+
+from enum import Enum
+import os
+import logging
+from typing import Any, Literal
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+debug = lambda *args: logger.debug(" ".join([str(arg) for arg in args]))
+
+EXAMPLE_INFO = """Route: army-demo
+Recorded Date (MM/DD/YYYY): 10/5/2023
+Uploader: Admin
+Weather Condition: Sunny, Green
+Description: Recorded by Mihir and Thom"""
+
+
+class Permission(Enum):
+    READ_ONLY = "read_only"
+    POST_ONLY = "post_only"
+    FULL_WRITE = "full_write"
+    
+class Visibility(Enum):
+    SHARED = "shared"
+    PRIVATE = "private"
+    
+class FileType(Enum):
+    FILE = "file"
+    DIRECTORY = "directory"
+    
+class AnalysisProgress(Enum):
+    FULL = "full"
+    HALF = "half"
+    NONE = "none"
+
+class Action(Enum):
+    NEW_DIR = "new_dir"
+    UPLOAD_FILE = "upload_file"
+    RENAME = "rename"
+    SHARE = "share"
+    DELETE = "delete"
+    DOWNLOAD = "download"
+    ANALYZE = "analyze"
+    EDIT = "edit"
+    COPY = "copy"
+    MOVE = "move"
+    
+class QuetzalFile():
+    
+    def _newDirectory(self, dir_name):
+        assert self.permission != Permission.READ_ONLY
+        
+        debug(f"\n\n\t{self.getName()} called on New dir {dir_name}\n")
+        pass
+    
+    def _upload(self, *temp):
+        assert self.permission != Permission.READ_ONLY
+        
+        debug(f"\n\n\t{self.getName()} called on upload {temp}\n")
+        pass
+    
+    def _rename(self, new_file_name):
+        assert self.permission == Permission.FULL_WRITE
+        
+        debug(f"\n\n\t{self.getName()} called on rename {new_file_name}\n")
+        pass
+    
+    def _share(self, shared: Visibility, permission: Permission):
+        assert self.permission == Permission.FULL_WRITE
+        
+        debug(f"\n\n\t{self.getName()} called on share {shared}:{permission}\n")
+        pass
+    
+    def _delete(self):
+        assert self.permission == Permission.FULL_WRITE
+        
+        debug(f"\n\n\t{self.getName()} called on delete\n")
+        pass
+    
+    # def _download(self):
+        
+    #     debug(f"\n\t{self.getName()} called on download\n")
+    #     pass
+    
+    def _analyze(self, option: AnalysisProgress):
+        assert self.permission != Permission.READ_ONLY
+        
+        ## some analysis process (you may skip this)
+        
+        debug(f"\n\t{self.getName()} called on analyze {option}\n")
+        pass
+    
+    def _editDescription(self, value):
+        assert self.permission == Permission.FULL_WRITE
+        
+        debug(f"\n\t{self.getName()} called on editMetaData {value}\n")
+        pass
+    
+    def _copy(self, destination: str):
+        pass
+    
+    def _move(self, destination: str):
+        assert self.permission == Permission.FULL_WRITE
+        
+        pass
+    
+    def getDescription(self):
+        return EXAMPLE_INFO
+        pass
+    
+    def loadMetaData(self):
+        pass
+    
+    _perform = {
+        Action.NEW_DIR: _newDirectory,
+        Action.UPLOAD_FILE: _upload,
+        Action.RENAME: _rename,
+        Action.SHARE: _share,
+        Action.DELETE: _delete,
+        # Action.DOWNLOAD: _download,
+        Action.ANALYZE: _analyze,
+        Action.EDIT: _editDescription,
+        Action.COPY: _copy,
+        Action.MOVE: _move,
+    }
+    
+    # @staticmethod
+    # def init_query_file_state
+    
+    def __init__(
+        self, 
+        path: str, # path to the dir/file from root_dir
+        root_dir: str,
+        metadata_dir: str,
+    ):
+        self.path: str = path
+        self.root_dir = root_dir
+        self.metadat_dir = metadata_dir
+        self.owner, self.type, self.visibility, self.analysis_progress, self.permission = self.loadMetaData()
+        
+    def perform(self, action: Action, input: dict):
+        print(action, input, self)
+        QuetzalFile._perform[action](self, **input)
+        
+    def getName(self) -> str:
+        return str(os.path.basename(self.path))
+    
+    def __format__(self, __format_spec: str) -> str:
+        return "<QueztalFile:" + self.path + ">"
+    
+    def __repr__ (self) -> str:
+        return "<QueztalFile:" + self.path + ">"
