@@ -225,10 +225,11 @@ class FrameDisplay:
     def __init__(self, page_state):
         self.page_state = page_state
 
-    def display_frame(self, labels, images, image_urls, frame_lens, idxs, fps):
+    def display_frame(self, labels, images, image_urls, frame_lens, idxs, fps, 
+                      bboxes_query, labels_query, bboxes_db, labels_db):
         match self.page_state.controller:
             case ObjectAnnotationController.name:
-                self.display_annotation_frame(image_urls)
+                self.display_annotation_frame(image_urls, bboxes_query, labels_query, bboxes_db, labels_db)
             case _:
                 total_times, curr_times = [], []
                 for i in range(len(frame_lens)):
@@ -254,13 +255,21 @@ class FrameDisplay:
                     dark_mode=False,
                     key="image_comparison" + str(fps[0]) + str(fps[1])
                 )
-    def display_annotation_frame(self, image_urls):
-        label_list = ['deer', 'human', 'dog', 'penguin', 'framingo', 'teddy bear']
+    def display_annotation_frame(self, image_urls, bboxes_query, labels_query, bboxes_db, labels_db):
+        label_to_idx = lambda s : label_list.index(s)
+        if len(labels_query) > 0:
+            label_list = list(set(list(labels_query) + list(labels_db))) 
+            labels_query = list(map(label_to_idx, labels_query))
+            labels_db = list(map(label_to_idx, labels_db))
+        else:
+            label_list = ['deer', 'human', 'dog', 'penguin', 'framingo', 'teddy bear']            
+            bboxes_query = bboxes_db = [[0,0,100,100],[10,20,50,150]]
+            labels_query = labels_db = [0,3]
         [query_img, database_img] = image_urls
 
         result_dict = {}
-        result_dict[query_img] = {'bboxes': [[0,0,100,100],[10,20,50,150]],'labels':[0,3]}
-        result_dict[database_img] = {'bboxes': [[0,0,100,100],[10,20,50,150]],'labels':[0,3]}
+        result_dict[query_img] = {'bboxes':list(bboxes_query),'labels':labels_query}
+        result_dict[database_img] = {'bboxes': list(bboxes_db),'labels':labels_db}
         st.session_state['result_dict'] = result_dict.copy()
         
         labels_dict = {}
@@ -276,10 +285,13 @@ class FrameDisplay:
                                 labels=st.session_state['result_dict'][database_img]['labels'], 
                                 label_list=label_list, use_space=True, key=database_img)
 
-        # if new_labels is not None:
-        #     st.session_state['result_dict'][target_image_path]['bboxes'] = [v['bbox'] for v in new_labels]
-        #     st.session_state['result_dict'][target_image_path]['labels'] = [v['label_id'] for v in new_labels]
-        # st.json(st.session_state['result_dict'])
+        if labels_dict[query_img] is not None:
+            st.session_state['result_dict'][query_img]['bboxes'] = [v['bbox'] for v in labels_dict[query_img]]
+            st.session_state['result_dict'][query_img]['labels'] = [v['label_id'] for v in labels_dict[query_img]]
+        elif labels_dict[database_img] is not None:
+            st.session_state['result_dict'][database_img]['bboxes'] = [v['bbox'] for v in labels_dict[database_img]]
+            st.session_state['result_dict'][database_img]['labels'] = [v['label_id'] for v in labels_dict[database_img]]
+        print(st.session_state['result_dict'])
 
     def render(self):
         match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]
@@ -288,6 +300,7 @@ class FrameDisplay:
         query: QueryVideo = self.page_state.query
         database: DatabaseVideo = self.page_state.database
 
+        bboxes_query = labels_query = bboxes_db = labels_db = []
         match self.page_state.controller:
             case PlaybackController.name if self.page_state.warp:
                 query_img = self.page_state.warp_query_frames[query_idx]
@@ -302,9 +315,14 @@ class FrameDisplay:
             ] == ss.slider:
                 query_img = self.page_state.annotated_frame["query"]
                 database_img = self.page_state.annotated_frame["db"]
+                bboxes_query = self.page_state.annotated_frame["bboxes_query"]
+                labels_query = self.page_state.annotated_frame["labels_query"]
+                bboxes_db = self.page_state.annotated_frame["bboxes_db"]
+                labels_db = self.page_state.annotated_frame["labels_db"]
             case _:
                 query_img = self.page_state.query_frames[query_idx]
                 database_img = self.page_state.db_frames[db_idx]
+
         query_img_base64 = f"data:image/jpeg;base64,{get_base64(query_img)}"
         db_img_base64 = f"data:image/jpeg;base64,{get_base64(database_img)}"
         image_urls = [query_img, database_img]
@@ -321,7 +339,11 @@ class FrameDisplay:
             image_urls=image_urls,
             frame_lens=frame_lens, 
             idxs=idxs, 
-            fps=fps)
+            fps=fps,
+            bboxes_query=bboxes_query,
+            labels_query=labels_query,
+            bboxes_db=bboxes_db,
+            labels_db=labels_db)
             
 
         

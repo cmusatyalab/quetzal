@@ -4,7 +4,7 @@
 readonly ARGS="$@"  # Reset using https://stackoverflow.com/a/4827707
 readonly PROGNAME=$(basename $0)
 readonly PROGPATH=$(realpath $(dirname $0))
-export CUDA_HOME=/usr/local/cuda
+export CUDA_HOME=/usr/local/cuda-11.7
 
 echo $CUDA_HOME
 
@@ -290,6 +290,7 @@ echo_info "----- Installing Quetzal -----"
 pip install -e .
 
 conda install -y -c pytorch faiss-gpu==1.7.4
+pip_install faiss-cpu==1.9.0
 # # conda_raw_install -c pytorch faiss-gpu==1.7.2
 # Core packages using pip_install
 if [ $dev_tools == "true" ]; then 

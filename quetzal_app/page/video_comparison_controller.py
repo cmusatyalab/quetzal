@@ -317,15 +317,25 @@ class ObjectDetectController(Controller):
 
     def __init__(self, page_state):
         self.page_state = page_state
+        self.detections_query = None
+        self.labels_query = None
+        self.detections_database = None
+        self.labels_database = None
         # page_state[self.name][DETECTOR_NAME_KEY] = GroundingSAMEngine.name
 
     def _run_detection(
-        self, text_prompt, input_img, output_file, box_threshold, text_threshold
+        self, text_prompt, input_img, output_file, box_threshold, text_threshold, isQuery
     ):
         detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
-        detector.generate_masked_images(
-            input_img, text_prompt, output_file, box_threshold, text_threshold
-        )
+        if isQuery:
+            _, self.detections_query, self.labels_query = detector.generate_masked_images(
+                input_img, text_prompt, output_file, box_threshold, text_threshold
+            )
+
+        else:
+            _, self.detections_database, self.labels_database = detector.generate_masked_images(
+                input_img, text_prompt, output_file, box_threshold, text_threshold
+            )
 
     def run_detection(self):
         match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]
@@ -341,6 +351,7 @@ class ObjectDetectController(Controller):
             output_file=QUERY_ANNOTATE_IMG,
             box_threshold=ss[SLIDER_BOX_TH_KEY],
             text_threshold=ss[SLIDER_TXT_TH_KEY],
+            isQuery=True
         )
 
         self._run_detection(
@@ -349,11 +360,16 @@ class ObjectDetectController(Controller):
             output_file=DB_ANNOTATE_IMG,
             box_threshold=ss[SLIDER_BOX_TH_KEY],
             text_threshold=ss[SLIDER_TXT_TH_KEY],
+            isQuery=False
         )
 
         self.page_state.annotated_frame = {
             "query": QUERY_ANNOTATE_IMG,
             "db": DB_ANNOTATE_IMG,
+            "bboxes_query": self.detections_query,
+            "labels_query": self.labels_query,
+            "bboxes_db": self.detections_database,
+            "labels_db": self.labels_database,
             "idx": self.page_state[PlaybackController.name][SLIDER_KEY],
         }
 
@@ -461,19 +477,12 @@ class ObjectDetectController(Controller):
 class ObjectAnnotationController(Controller):
     name = "object_annotate"
     select_dict = {model.name: num for num, model in enumerate(detector_list)}
-
-    PADDING = 8
-    GAP = 8
-    ICON_SIZE = 48
-    BUTTON_SIZE = ICON_SIZE + 2 * PADDING
-    PLAYER_CONTROLER_W = BUTTON_SIZE * 5 + GAP * (5 - 1) + 2 * PADDING
     
     @staticmethod
     def initState(root_state) -> dict:
         values = {
             SLIDER_BOX_TH_KEY: DEFAULT_BOX_TH,
             SLIDER_TXT_TH_KEY: DEFAULT_TEXT_TH,
-            SLIDER_KEY: DEFAULT_SLIDER_VAL,
             CLASS_PROMPT_KEY: DEFAULT_OBJECT_PROMPT,
             "torch_device": root_state.torch_device,
             DETECTOR_KEY: None,
@@ -486,15 +495,12 @@ class ObjectAnnotationController(Controller):
         page_state[SLIDER_BOX_TH_KEY] = ss[SLIDER_BOX_TH_KEY]
         page_state[SLIDER_TXT_TH_KEY] = ss[SLIDER_TXT_TH_KEY]
         page_state[CLASS_PROMPT_KEY] = ss[CLASS_PROMPT_KEY]
-        page_state[SLIDER_KEY] = ss[SLIDER_KEY]
 
     @staticmethod
     def loadState(page_state):
         ss[SLIDER_BOX_TH_KEY] = page_state[SLIDER_BOX_TH_KEY]
         ss[SLIDER_TXT_TH_KEY] = page_state[SLIDER_TXT_TH_KEY]
         ss[CLASS_PROMPT_KEY] = page_state[CLASS_PROMPT_KEY]
-        ss[SLIDER_KEY] = page_state[SLIDER_KEY]
-
         if page_state[DETECTOR_KEY] is None:
             page_state[DETECTOR_KEY] = getDetectionEngine(
                 page_state[DETECTOR_NAME_KEY], page_state["torch_device"]
@@ -507,54 +513,16 @@ class ObjectAnnotationController(Controller):
     def initObjectAnnotationController(self):
         if CLASS_PROMPT_KEY not in ss:
             ss[CLASS_PROMPT_KEY] = DEFAULT_OBJECT_PROMPT
-        # play back scroller
-        if PLAYBACK_KEY not in ss:
-            ss[PLAYBACK_KEY] = False
-            ss.next_frame = False
-
-        if SLIDER_KEY not in ss:
-            ss[SLIDER_KEY] = self.page_state[self.name][SLIDER_KEY]
-            ss[SLIDER_KEY + "value"] = ss[SLIDER_KEY]
-
-        if ss[PLAYBACK_KEY] and ss.next_frame:
-            self.change_slider(1)
 
     def __init__(self, page_state):
         self.page_state = page_state
         self.detections_query = None
         self.labels_query = None
-        self.detection_database = None
+        self.detections_database = None
         self.labels_database = None
-
-        self.slider_min = 0
-        self.slider_max = len(page_state.query_frames) - 1
         self.initObjectAnnotationController()
 
         # page_state[self.name][DETECTOR_NAME_KEY] = GroundingSAMEngine.name
-    def set_slider(self, val):
-        ss[SLIDER_KEY] = val
-
-        if val < self.slider_min:
-            ss[SLIDER_KEY] = self.slider_min
-
-        elif val >= self.slider_max:
-            ss[SLIDER_KEY] = self.slider_max
-            if ss[PLAYBACK_KEY]:
-                self.toggle_play()
-
-        else:
-            ss[SLIDER_KEY] = val
-
-        ss[SLIDER_KEY + "value"] = ss[SLIDER_KEY]
-
-    def change_slider(self, val=0):
-        self.set_slider(ss[SLIDER_KEY] + val)
-        self.page_state[PLAY_IDX_KEY] = ss[SLIDER_KEY]
-
-    def toggle_play(self):
-        ss[PLAYBACK_KEY] = not ss[PLAYBACK_KEY]
-        if ss[PLAYBACK_KEY]:
-            ss[WAKEUP_TIME] = datetime.datetime.now() + datetime.timedelta(seconds=0.5)
 
     def _run_detection(
         self, text_prompt, input_img, output_file, box_threshold, text_threshold, isQuery
@@ -564,6 +532,7 @@ class ObjectAnnotationController(Controller):
             _, self.detections_query, self.labels_query = detector.generate_masked_images(
                 input_img, text_prompt, output_file, box_threshold, text_threshold
             )
+
         else:
             _, self.detections_database, self.labels_database = detector.generate_masked_images(
                 input_img, text_prompt, output_file, box_threshold, text_threshold
@@ -598,123 +567,15 @@ class ObjectAnnotationController(Controller):
         self.page_state.annotated_frame = {
             "query": QUERY_ANNOTATE_IMG,
             "db": DB_ANNOTATE_IMG,
+            "bboxes_query": self.detections_query,
+            "labels_query": self.labels_query,
+            "bboxes_db": self.detections_database,
+            "labels_db": self.labels_database,
             "idx": self.page_state[PlaybackController.name][SLIDER_KEY],
         }
 
     def save_annotation(self):
         pass
-
-    def render_player(self):
-        PLAYER_CONTROLER_W = self.PLAYER_CONTROLER_W
-        BUTTON_SIZE = self.BUTTON_SIZE
-        PADDING = self.PADDING
-        GAP = self.GAP
-
-        with stylable_container(
-            key="playback_controller",
-            css_styles=f"""{{
-                    display: block;
-                    & div {{
-                        min-width: {PLAYER_CONTROLER_W}px;
-                    }}
-                    & iframe {{
-                        min-width: {PLAYER_CONTROLER_W}px;
-                    }}
-                }}
-                """,
-        ):
-            with elements("playback_controller_element"):
-                with mui.Stack(
-                    spacing=1,
-                    direction="row",
-                    sx={
-                        "my": 0,
-                        "maxHeight": f"calc({BUTTON_SIZE}px - 22.31px + {PADDING}px)",
-                        "minWidth": BUTTON_SIZE * 5 + GAP * (5 - 1),
-                    },
-                    alignItems="start",
-                    justifyContent="center",
-                ):
-                    with mui.IconButton(
-                        onClick=lambda: self.change_slider(-5), sx={"fontSize": 48}
-                    ):
-                        mui.icon.KeyboardDoubleArrowLeft(fontSize="inherit")
-
-                    mui.IconButton(
-                        children=mui.icon.KeyboardArrowLeft(fontSize="inherit"),
-                        onClick=lambda: self.change_slider(-1),
-                        sx={"fontSize": 48},
-                    )
-
-                    with mui.IconButton(onClick=self.toggle_play, sx={"fontSize": 48}):
-                        if ss[PLAYBACK_KEY]:
-                            mui.icon.Pause(fontSize="inherit")
-                        else:
-                            mui.icon.PlayArrow(fontSize="inherit")
-
-                    mui.IconButton(
-                        children=mui.icon.KeyboardArrowRight(fontSize="inherit"),
-                        onClick=lambda: self.change_slider(1),
-                        sx={"fontSize": 48},
-                    )
-
-                    mui.IconButton(
-                        children=mui.icon.KeyboardDoubleArrowRight(fontSize="inherit"),
-                        onClick=lambda: self.change_slider(5),
-                        sx={"fontSize": 48},
-                    )
-
-    def render_slider(self):
-        PLAYER_CONTROLER_W = self.PLAYER_CONTROLER_W
-
-        with stylable_container(
-            key=SLIDER_KEY,
-            css_styles=f"""{{
-                    display: block;
-                    .stSlider {{
-                        position: absolute;
-                        right: calc(45px - 2%) !important;
-                        width: calc(102% - 45px) !important;
-                        max-width: calc(152% - 45px - {PLAYER_CONTROLER_W}px) !important;   
-                        padding-right: 0.5rem;
-                    }}
-                    
-                }}
-                """,
-        ):
-            st.slider(
-                value=self.page_state[PlaybackController.name][SLIDER_KEY],
-                label="Query Frame Index",
-                min_value=self.slider_min,
-                max_value=self.slider_max,
-                step=1,
-                format=f"%d",
-                key=SLIDER_KEY,
-                on_change=self.change_slider,
-            )
-
-    def render_slider_value(self):
-        with stylable_container(
-            key=SLIDER_KEY + "value",
-            css_styles=f"""{{
-                    display: block;
-                    .stNumberInput {{
-                        position: absolute;
-                        right: 0px !important;
-                        width: 45px !important;
-                    }}
-                }}
-                """,
-        ):
-            st.number_input(
-                value=self.page_state[PlaybackController.name][SLIDER_KEY],
-                label=" ",
-                key=SLIDER_KEY + "value",
-                step=1,
-                min_value=self.slider_min,
-                max_value=self.slider_max,
-                on_change=lambda: self.set_slider(ss[SLIDER_KEY + "value"]),
-            )
 
     def render_prompt(self):
         c1, c2 = st.columns([100, 1])
@@ -782,29 +643,6 @@ class ObjectAnnotationController(Controller):
         )
 
     def render(self):
-        cc1, cc2, cc3 = st.columns([25, 50, 1])
-        with cc1:
-            self.render_player()
-        with cc2:
-            self.render_slider()
-        with cc3:
-            self.render_slider_value()
-
-        if ss[PLAYBACK_KEY]:
-            ss.next_frame = False
-            curr_wakeup_time = ss[WAKEUP_TIME]
-
-            sleep_duration = max(
-                0, (curr_wakeup_time - datetime.datetime.now()).total_seconds()
-            )
-            time.sleep(sleep_duration)
-
-            if ss[WAKEUP_TIME] == curr_wakeup_time:  ## no other instance modified it
-                ss[WAKEUP_TIME] += datetime.timedelta(seconds=0.5)
-                ss.next_frame = True
-                # self.change_slider(1)
-                st.rerun()
-
         self.render_prompt()
         # pass
 

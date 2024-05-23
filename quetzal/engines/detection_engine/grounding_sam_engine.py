@@ -188,7 +188,7 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         )
 
         cv2.imwrite(save_file_path, annotated_image)
-        return annotated_image, detections, labels
+        return annotated_image, detections.xyxy, labels
 
 
 if __name__ == "__main__":
