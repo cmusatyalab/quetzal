@@ -7,6 +7,8 @@ from streamlit_image_annotation import detection
 from glob import glob
 from quetzal_app.elements.mui_components import MuiToggleButton
 
+from quetzal.utils.image_tools import xyxy_to_xywh
+
 from quetzal.dtos.video import QueryVideo, DatabaseVideo
 from quetzal.align_frames import QueryIdx, DatabaseIdx, Match
 from quetzal_app.utils.utils import format_time, get_base64
@@ -32,6 +34,10 @@ TITLE = "Quetzal"
 BORDER_RADIUS = "0.8rem"
 FRAME_IDX_TXT = "Frame Index: {}/{}"
 PLAYBACK_TIME_TXT = "Playback Time: {}/{}"
+
+WIDTH_ANNOTATE_DISPLAY = 512
+HEIGHT_ANNOTATE_DISPLAY = 512
+LINE_WIDTH_ANNOTATE_DISPLAY = 2
 
 controller_dict: dict[str, Controller] = {
     PlaybackController.name: PlaybackController,
@@ -261,6 +267,8 @@ class FrameDisplay:
             label_list = list(set(list(labels_query) + list(labels_db))) 
             labels_query = list(map(label_to_idx, labels_query))
             labels_db = list(map(label_to_idx, labels_db))
+            bboxes_query = [xyxy_to_xywh(x, WIDTH_ANNOTATE_DISPLAY, HEIGHT_ANNOTATE_DISPLAY) for x in list(bboxes_query)]
+            bboxes_db = [xyxy_to_xywh(x, WIDTH_ANNOTATE_DISPLAY, HEIGHT_ANNOTATE_DISPLAY) for x in list(bboxes_db)]
         else:
             label_list = ['deer', 'human', 'dog', 'penguin', 'framingo', 'teddy bear']            
             bboxes_query = bboxes_db = [[0,0,100,100],[10,20,50,150]]
@@ -278,12 +286,12 @@ class FrameDisplay:
             labels_dict[query_img] = detection(image_path=query_img, 
                                 bboxes=st.session_state['result_dict'][query_img]['bboxes'], 
                                 labels=st.session_state['result_dict'][query_img]['labels'], 
-                                label_list=label_list, use_space=True, key=query_img)
+                                label_list=label_list, use_space=True, key=query_img, line_width=LINE_WIDTH_ANNOTATE_DISPLAY, width=WIDTH_ANNOTATE_DISPLAY, height=HEIGHT_ANNOTATE_DISPLAY)
         with c2:
             labels_dict[database_img] = detection(image_path=database_img, 
                                 bboxes=st.session_state['result_dict'][database_img]['bboxes'], 
                                 labels=st.session_state['result_dict'][database_img]['labels'], 
-                                label_list=label_list, use_space=True, key=database_img)
+                                label_list=label_list, use_space=True, key=database_img, line_width=LINE_WIDTH_ANNOTATE_DISPLAY, width=WIDTH_ANNOTATE_DISPLAY, height=HEIGHT_ANNOTATE_DISPLAY)
 
         if labels_dict[query_img] is not None:
             st.session_state['result_dict'][query_img]['bboxes'] = [v['bbox'] for v in labels_dict[query_img]]

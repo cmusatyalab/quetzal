@@ -4,6 +4,7 @@ import torch
 import subprocess
 from groundingdino.util.inference import Model
 import supervision as sv
+from quetzal.utils.image_tools import xyxy_to_xywh
 
 from segment_anything import sam_model_registry, SamPredictor
 import numpy as np
@@ -157,7 +158,7 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         
         Returns:
             np.ndarray: The annotated image with detected and segmented objects based on captions.
-            np.ndarray: A list of the detected and segmented objects based on captions.
+            np.ndarray: A list of the xyxy positions of objects based on captions.
             np.ndarray: A list of labels corresponding to the detected objects.
         """
         caption = " . ".join(caption)
@@ -186,7 +187,6 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         annotated_image = self.box_annotator.annotate(
             scene=annotated_image, detections=detections, labels=labels
         )
-
         cv2.imwrite(save_file_path, annotated_image)
         return annotated_image, detections.xyxy, labels
 
