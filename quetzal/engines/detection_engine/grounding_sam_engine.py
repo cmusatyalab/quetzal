@@ -4,7 +4,7 @@ import torch
 import subprocess
 from groundingdino.util.inference import Model
 import supervision as sv
-from quetzal.utils.image_tools import xyxy_to_xywh
+from streamlit_label_kit import absolute_to_relative
 
 from segment_anything import sam_model_registry, SamPredictor
 import numpy as np
@@ -144,6 +144,7 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         save_file_path: str,
         box_threshold: float = BOX_TRESHOLD,
         text_threshold: float = TEXT_TRESHOLD,
+        show_background: bool = True
     ):
         """
         Generates an image with detected objects based on the provided captions masked and annotated. 
@@ -155,6 +156,7 @@ class GroundingSAMEngine(ObjectDetectionEngine):
             save_file_path (str): Path where the annotated image will be saved.
             box_threshold (float, optional): Threshold for object detection bounding boxes. Defaults to BOX_TRESHOLD.
             text_threshold (float, optional): Threshold for textual descriptions. Defaults to TEXT_TRESHOLD.
+            show_background (bool, optional): Show Segmentation and detections on background. Defaults to True for object detection tab
         
         Returns:
             np.ndarray: The annotated image with detected and segmented objects based on captions.
@@ -164,6 +166,8 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         caption = " . ".join(caption)
 
         image = cv2.imread(query_image)
+
+        height, width, _ = image.shape
 
         detections = self.grounding_dino_model.predict_with_caption(
             image=image,
@@ -180,17 +184,23 @@ class GroundingSAMEngine(ObjectDetectionEngine):
             xyxy=detections.xyxy,
         )
 
-        # annotate image with detections
-        annotated_image = self.mask_annotator.annotate(
-            scene=image.copy(), detections=detections
-        )
-        annotated_image = self.box_annotator.annotate(
-            scene=annotated_image, detections=detections, labels=labels
-        )
+        if show_background:
+            # annotate image with detections
+            annotated_image = self.mask_annotator.annotate(
+                scene=image.copy(), detections=detections
+            )
+            annotated_image = self.box_annotator.annotate(
+                scene=annotated_image, detections=detections, labels=labels
+            )
+        else:
+            annotated_image = image.copy()
+
         cv2.imwrite(save_file_path, annotated_image)
-        return annotated_image, detections.xyxy, labels
 
+        xyxy_relative = [absolute_to_relative(bbox, width, height) for bbox in detections.xyxy]
 
+        return annotated_image, xyxy_relative, labels
+    
 if __name__ == "__main__":
     engine = GroundingSAMEngine()
 

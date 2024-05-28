@@ -3,11 +3,9 @@ import os
 from streamlit import session_state as ss
 
 from streamlit_elements import elements, mui
-from streamlit_image_annotation import detection
+from streamlit_label_kit import detection
 from glob import glob
 from quetzal_app.elements.mui_components import MuiToggleButton
-
-from quetzal.utils.image_tools import xyxy_to_xywh
 
 from quetzal.dtos.video import QueryVideo, DatabaseVideo
 from quetzal.align_frames import QueryIdx, DatabaseIdx, Match
@@ -232,10 +230,10 @@ class FrameDisplay:
         self.page_state = page_state
 
     def display_frame(self, labels, images, image_urls, frame_lens, idxs, fps, 
-                      bboxes_query, labels_query, bboxes_db, labels_db):
+                      bboxes_query, labels_query, bboxes_db, labels_db, detection_run):
         match self.page_state.controller:
             case ObjectAnnotationController.name:
-                self.display_annotation_frame(image_urls, bboxes_query, labels_query, bboxes_db, labels_db)
+                self.display_annotation_frame(image_urls, bboxes_query, labels_query, bboxes_db, labels_db, detection_run)
             case _:
                 total_times, curr_times = [], []
                 for i in range(len(frame_lens)):
@@ -261,18 +259,21 @@ class FrameDisplay:
                     dark_mode=False,
                     key="image_comparison" + str(fps[0]) + str(fps[1])
                 )
-    def display_annotation_frame(self, image_urls, bboxes_query, labels_query, bboxes_db, labels_db):
+
+    def display_annotation_frame(self, image_urls, bboxes_query, labels_query, bboxes_db, labels_db, detection_run):
         label_to_idx = lambda s : label_list.index(s)
-        if len(labels_query) > 0:
+
+        if detection_run:
             label_list = list(set(list(labels_query) + list(labels_db))) 
             labels_query = list(map(label_to_idx, labels_query))
             labels_db = list(map(label_to_idx, labels_db))
-            bboxes_query = [xyxy_to_xywh(x, WIDTH_ANNOTATE_DISPLAY, HEIGHT_ANNOTATE_DISPLAY) for x in list(bboxes_query)]
-            bboxes_db = [xyxy_to_xywh(x, WIDTH_ANNOTATE_DISPLAY, HEIGHT_ANNOTATE_DISPLAY) for x in list(bboxes_db)]
+            bboxes_query = [x for x in list(bboxes_query)]
+            bboxes_db = [x for x in list(bboxes_db)]
         else:
             label_list = ['deer', 'human', 'dog', 'penguin', 'framingo', 'teddy bear']            
-            bboxes_query = bboxes_db = [[0,0,100,100],[10,20,50,150]]
+            bboxes_query = bboxes_db = [[0.0, 0.0, 0.2857142857142857, 0.21413276231263384], [0.014285714285714285, 0.042826552462526764, 0.15714285714285714, 0.3640256959314775]]
             labels_query = labels_db = [0,3]
+
         [query_img, database_img] = image_urls
 
         result_dict = {}
@@ -284,22 +285,63 @@ class FrameDisplay:
         c1, c2 = st.columns([1, 1])
         with c1:
             labels_dict[query_img] = detection(image_path=query_img, 
-                                bboxes=st.session_state['result_dict'][query_img]['bboxes'], 
-                                labels=st.session_state['result_dict'][query_img]['labels'], 
-                                label_list=label_list, use_space=True, key=query_img, line_width=LINE_WIDTH_ANNOTATE_DISPLAY, width=WIDTH_ANNOTATE_DISPLAY, height=HEIGHT_ANNOTATE_DISPLAY)
+                                               label_list=label_list, 
+                                               bboxes=bboxes_query,
+                                               bbox_format='REL_XYXY',
+                                               labels=labels_query,
+                                               metaDatas=[],
+                                               image_height=512,
+                                               image_width=512,
+                                               line_width=1.0,
+                                               ui_position='left',
+                                               class_select_position=None,
+                                               item_editor_position=None,
+                                               item_selector_position=None,
+                                               class_select_type='select',
+                                               item_editor=True,
+                                               item_selector=True,
+                                               edit_description=False,
+                                               ui_size='left',
+                                               ui_left_size=None,
+                                               ui_bottom_size=None,
+                                               ui_right_size=None,
+                                               key=None)
+
         with c2:
             labels_dict[database_img] = detection(image_path=database_img, 
-                                bboxes=st.session_state['result_dict'][database_img]['bboxes'], 
-                                labels=st.session_state['result_dict'][database_img]['labels'], 
-                                label_list=label_list, use_space=True, key=database_img, line_width=LINE_WIDTH_ANNOTATE_DISPLAY, width=WIDTH_ANNOTATE_DISPLAY, height=HEIGHT_ANNOTATE_DISPLAY)
+                                               label_list=label_list, 
+                                               bboxes=bboxes_db,
+                                               bbox_format='REL_XYXY',
+                                               labels=labels_db,
+                                               metaDatas=[],
+                                               image_height=512,
+                                               image_width=512,
+                                               line_width=1.0,
+                                               ui_position='left',
+                                               class_select_position=None,
+                                               item_editor_position=None,
+                                               item_selector_position=None,
+                                               class_select_type='select',
+                                               item_editor=True,
+                                               item_selector=True,
+                                               edit_description=False,
+                                               ui_size='left',
+                                               ui_left_size=None,
+                                               ui_bottom_size=None,
+                                               ui_right_size=None,
+                                               key=None)
+        print("query_img: ", labels_dict[query_img])
+        print("database_img: ", labels_dict[database_img])
 
-        if labels_dict[query_img] is not None:
-            st.session_state['result_dict'][query_img]['bboxes'] = [v['bbox'] for v in labels_dict[query_img]]
-            st.session_state['result_dict'][query_img]['labels'] = [v['label_id'] for v in labels_dict[query_img]]
-        elif labels_dict[database_img] is not None:
-            st.session_state['result_dict'][database_img]['bboxes'] = [v['bbox'] for v in labels_dict[database_img]]
-            st.session_state['result_dict'][database_img]['labels'] = [v['label_id'] for v in labels_dict[database_img]]
-        print(st.session_state['result_dict'])
+        # if labels_dict[query_img] is not None:
+        #     st.session_state['result_dict'][query_img]['bboxes'] = [v['bbox'] for v in labels_dict[query_img]]
+        #     st.session_state['result_dict'][query_img]['labels'] = [label_list[v['label_id']] for v in labels_dict[query_img]]
+        
+        # if labels_dict[database_img] is not None:
+        #     st.session_state['result_dict'][database_img]['bboxes'] = [v['bbox'] for v in labels_dict[database_img]]
+        #     st.session_state['result_dict'][database_img]['labels'] = [label_list[v['label_id']] for v in labels_dict[database_img]]
+
+        print("sessions state: ", st.session_state['result_dict'])
 
     def render(self):
         match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]
@@ -309,6 +351,7 @@ class FrameDisplay:
         database: DatabaseVideo = self.page_state.database
 
         bboxes_query = labels_query = bboxes_db = labels_db = []
+        detection_run = False
         match self.page_state.controller:
             case PlaybackController.name if self.page_state.warp:
                 query_img = self.page_state.warp_query_frames[query_idx]
@@ -327,6 +370,7 @@ class FrameDisplay:
                 labels_query = self.page_state.annotated_frame["labels_query"]
                 bboxes_db = self.page_state.annotated_frame["bboxes_db"]
                 labels_db = self.page_state.annotated_frame["labels_db"]
+                detection_run = True
             case _:
                 query_img = self.page_state.query_frames[query_idx]
                 database_img = self.page_state.db_frames[db_idx]
@@ -351,7 +395,8 @@ class FrameDisplay:
             bboxes_query=bboxes_query,
             labels_query=labels_query,
             bboxes_db=bboxes_db,
-            labels_db=labels_db)
+            labels_db=labels_db, 
+            detection_run=detection_run)
             
 
         

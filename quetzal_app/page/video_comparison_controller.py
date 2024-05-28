@@ -10,6 +10,7 @@ from streamlit_elements import elements, mui
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_tags import st_tags
 import torch
+import json
 
 from quetzal.align_frames import DatabaseIdx, Match, QueryIdx
 from quetzal.engines.detection_engine.grounding_sam_engine import GroundingSAMEngine
@@ -530,12 +531,12 @@ class ObjectAnnotationController(Controller):
         detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
         if isQuery:
             _, self.detections_query, self.labels_query = detector.generate_masked_images(
-                input_img, text_prompt, output_file, box_threshold, text_threshold
+                input_img, text_prompt, output_file, box_threshold, text_threshold, False
             )
 
         else:
             _, self.detections_database, self.labels_database = detector.generate_masked_images(
-                input_img, text_prompt, output_file, box_threshold, text_threshold
+                input_img, text_prompt, output_file, box_threshold, text_threshold, False
             )
 
     def run_detection(self):
@@ -575,7 +576,10 @@ class ObjectAnnotationController(Controller):
         }
 
     def save_annotation(self):
-        pass
+        with open('data.json', 'w') as f:
+            json.dump(str(st.session_state['result_dict']), f)
+
+        
 
     def render_prompt(self):
         c1, c2 = st.columns([100, 1])
