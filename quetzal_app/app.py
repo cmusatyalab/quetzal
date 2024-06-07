@@ -1,5 +1,7 @@
 from quetzal_app.page.page_video_comparison import VideoComparisonPage
 from quetzal_app.page.page_video_comparison_real_time import VideoComparisonRealTimePage
+from quetzal_app.page.page_video_comparison_stream import VideoComparisonStreamPage
+
 from quetzal_app.page.page_file_explorer import FileExplorerPage
 from quetzal_app.page.page_state import AppState, PageState, Page
 
@@ -140,7 +142,13 @@ headers = _get_websocket_headers()
 # user = headers.get("X-Forwarded-User", user)
 user = user
 
-page_list: list[Page] = [FileExplorerPage, VideoComparisonPage, VideoComparisonRealTimePage]
+page_list: list[Page] = [
+    FileExplorerPage,
+    VideoComparisonPage, 
+    VideoComparisonRealTimePage,
+    VideoComparisonStreamPage
+]
+
 page_dict: dict[str, Page] = {page.name: page for page in page_list}
 
 if "page_states" not in ss:
@@ -156,6 +164,8 @@ if "page_states" not in ss:
     )
 
     root_state.page = FileExplorerPage.name
+    # root_state.page = VideoComparisonStreamPage.name
+
 
     def build_to_page(page: Page):
         def to_page():

@@ -2866,4 +2866,12 @@ class MuiComparePrompt:
             ):
                 mui.Typography("REALTIME MATCHING", sx=MuiDialogItem.font_style)
                 
+            with mui.Button(
+                startIcon=mui.icon.Podcasts(),
+                sx=outlined_button_style,
+                onClick=self.onClicks[2],
+                disabled=self.disabled,
+            ):
+                mui.Typography("STREAM MATCHING", sx=MuiDialogItem.font_style)
+                
         return self

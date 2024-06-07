@@ -1,0 +1,1 @@
+__pdoc__ = {"quetzal.external": False}

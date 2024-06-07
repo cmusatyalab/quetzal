@@ -66,7 +66,7 @@ def quaternion_to_euler(w, x, y, z):
     return yaw_z, pitch_y, roll_x  # Return yaw, pitch, roll in radians
 
 
-def calculate_look_at_gps(latitude, longitude, quaternion, elevation, camera_angle_degrees):
+def calculate_look_at_gps(latitude, longitude, quaternion, elevation, camera_angle_degrees) -> tuple[Latitude, Longitude]:
         """
         Calculate the GPS position of the point the camera is looking at on the ground.
         Camera angle is measured from the forward direction (0 degrees forward, 90 degrees down)

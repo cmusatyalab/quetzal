@@ -32,7 +32,7 @@ import time
 import logging
 
 
-PAGE_NAME = "video_comparison_real_time"
+PAGE_NAME = "video_comparison_stream"
 
 LOGO_FILE = os.path.normpath(Path(__file__).parent.joinpath("../quetzal_logo_trans.png"))
 LOGO_FILE = f"data:image/jpeg;base64,{get_base64(LOGO_FILE)}"
@@ -55,6 +55,202 @@ streamlit_session = get_streamlit_session(get_browser_session_id())
 
 def frontend_rerun() -> None:
     streamlit_session._handle_rerun_script_request()
+    
+    
+from datetime import datetime, timezone, timedelta
+import os
+import requests
+from bs4 import BeautifulSoup
+import redis
+import pandas as pd
+import json
+
+def convert_milliseconds_to_datetime(milliseconds):
+        seconds = milliseconds / 1000.0
+        dt = datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(seconds=seconds)
+        return dt
+    
+def connect_redis(host, port, username, password):
+    red = redis.Redis(
+        host=host,
+        port=port,
+        username=username,
+        password=password,
+        decode_responses=True,
+    )   
+    return red
+
+DATA_TYPES = {
+    "latitude": "float",
+    "longitude": "float",
+    "altitude": "float",
+    "bearing": "int",
+    "rssi": "int",
+    "battery": "int",
+    "mag": "int",
+    # "sats": int,
+}
+
+def stream_to_dataframe(results, types=DATA_TYPES ) -> pd.DataFrame:
+    _container = {}
+    for item in results:
+        _container[item[0]] = json.loads(json.dumps(item[1]))
+
+    df = pd.DataFrame.from_dict(_container, orient='index')
+    if types is not None:
+        df = df.astype(types)
+
+    return df
+
+def fetch_and_filter_entries(redis_client, key, min_t, max_t):
+    results = redis_client.xrange(key, min="-", max="+")
+    processed_results = [(int(item[0].split('-')[0]), item[1]) for item in results]
+
+    # Filter entries within the buffer range of target timestamps
+    filtered_results = [
+        entry for entry in processed_results
+        if min_t <= entry[0] and entry[0] <= max_t
+    ]
+    print(len(filtered_results))
+    
+    return filtered_results
+    
+def pair_images_with_data(images, redis_entries):
+    """
+    Pair each image with the closest matching data based on timestamp.
+
+    :param images: List of image info tuples (path, timestamp string, timestamp ms).
+    :param redis_entries: List of filtered Redis entries.
+    :return: List of tuples (image_path, closest_data).
+    """
+    paired_list = []
+    for img_path, _, img_timestamp in images:
+        closest_data = min(redis_entries, key=lambda x: abs(x[0] - img_timestamp))
+        paired_list.append((img_path, closest_data[1]))  # Assuming you want the data part of the entry
+    return paired_list    
+
+class CloudletMonitorThread(threading.Thread):
+
+    def __init__(self, 
+        url, 
+        save_dir, 
+        pipline_executor: Pipeline, 
+        redis_host,
+        redis_port,
+        redis_username,
+        redis_password,
+        redis_key = "telemetry.harpyeagle",
+        poll_interval=1.0, 
+        fps = 2,
+        last_frame_mode = False,
+    ):
+        # Last_frame_mode = only load last frames
+        threading.Thread.__init__(self)
+        self.url = url
+        self.save_dir = save_dir
+        self.fps = fps
+        self.poll_interval = poll_interval
+        self.last_known_state = set()
+        self.reference_time = None
+        self.pipeline_executor = pipline_executor
+        self.stop_event = threading.Event()
+        self.logger = logging.getLogger("CloudletMonitorThread")
+        self.logger.setLevel(logging.DEBUG)
+        self.frame_num = 1
+        self.logger.debug("Initializing with: " + str(url))
+        self.redis = connect_redis(redis_host,redis_port, redis_username, redis_password)
+        self.redis_key = redis_key
+        self.last_frame_mode = last_frame_mode
+
+    def run(self):
+        self.logger.debug("Start Running")
+        ss.CloudletMonitorThreadLife = True
+        while not self.stop_event.is_set():
+            try:
+                if ss.CloudletMonitorThreadLife: # session state disapear when session closes
+                    self.scan_cloudlet()
+                    time.sleep(self.poll_interval)
+                else:
+                    self.logger.debug("Should never reach here")
+                    break
+            except Exception as e:
+                print(e)
+                self.logger.debug("Session Closed")
+                self.pipeline_executor.end()
+                break
+            
+        self.logger.debug("Stopped")
+        
+    def scan_cloudlet(self):
+        delta_t = 1 / self.fps
+        response = requests.get(self.url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        image_links = [a['href'] for a in soup.find_all('a', href=True) if a['href'].endswith(('.jpg', '.png', '.jpeg'))]
+        img_list = []
+        current_state = {image for image in image_links}
+        added = current_state - self.last_known_state        
+        
+        if added:
+            filtered_frames = []
+            added_list = [file for file in added]
+            added_list.sort()
+            
+            if self.last_frame_mode:
+                last_img_link = added_list[-1]
+                img_name = last_img_link.split('/')[-1]
+                timestamp_ms = int(img_name.split('.')[0])
+                timestamp_datetime = convert_milliseconds_to_datetime(timestamp_ms)
+                self.reference_time = timestamp_datetime - timedelta(self.poll_interval + delta_t / 2)
+                
+            for img_link in image_links:
+                if not img_link.startswith('http'):
+                    img_link = self.url + img_link
+                img_name = img_link.split('/')[-1]
+                timestamp_ms = int(img_name.split('.')[0])
+                timestamp_datetime = convert_milliseconds_to_datetime(timestamp_ms)
+                
+                if self.reference_time is None:
+                    self.reference_time = timestamp_datetime  # Set the first frame as the reference
+                    filtered_frames.append((img_link, timestamp_datetime, timestamp_ms))
+                else:
+                    # Calculate the difference from the last reference time in seconds
+                    time_difference = (timestamp_datetime - self.reference_time).total_seconds()
+                    if time_difference >= delta_t:
+                        # Update the reference time and add the frame to the list
+                        self.reference_time += timedelta(seconds=delta_t)
+                        # reference_time = timestamp_datetime
+                        filtered_frames.append((img_link, timestamp_datetime, timestamp_ms))
+            
+            for img_link, timestamp_datetime, timestamp_ms in filtered_frames:
+                img_name = os.path.basename(img_link)
+                img_path = os.path.join(self.save_dir, f"frame{self.frame_num:05}.jpg")
+                time_stemp_str = timestamp_datetime.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] + ' UTC'
+                img_list.append((img_path, time_stemp_str, timestamp_ms))
+
+                # Optional: Download and save the filtered image
+                img_response = requests.get(img_link)
+                with open(img_path, 'wb') as f:
+                    f.write(img_response.content)
+                
+                self.frame_num += 1
+                        
+            print("here1")
+            image_redis_ids  = [value[2] for value in img_list]
+
+            min_id = min(image_redis_ids) # Adding '-0' to format as Redis stream ID
+            max_id = max(image_redis_ids)
+                        
+            # for k in self.redis.keys(self.redis_key):
+            filtered_entries = fetch_and_filter_entries(self.redis, f"{self.redis_key}", min_id, max_id)
+            if filtered_entries:
+                paired_data = pair_images_with_data(img_list, filtered_entries)
+                paired_data = [(img_path, (float(data['latitude']), float(data['longitude']))) for img_path, data in paired_data]
+                self.pipeline_executor.submit(paired_data)
+        
+        self.last_known_state = current_state
+        
+    def stop(self):
+        self.stop_event.set()
 
 class DirectoryMonitorThread(threading.Thread):
 
@@ -99,9 +295,7 @@ class DirectoryMonitorThread(threading.Thread):
         if added:
             added_list = [file for file in added]
             added_list.sort()
-            # added_list = [((file, convert_path(file, 512)), self.gps[i]) for i, file in enumerate(added_list)]
-            added_list = [(file, self.gps[i]) for i, file in enumerate(added_list)]
-
+            added_list = [((file, convert_path(file, 512)), self.gps[i]) for i, file in enumerate(added_list)]
             
             self.pipeline_executor.submit(added_list)
         if removed:
@@ -165,6 +359,8 @@ class MatchUpdateThread(threading.Thread):
 
     def update_matches(self):
         self.page_state.matches = self.matches
+        self.page_state.query_frames = self.query_frames
+        self.page_state.warp_query_frames = self.query_frames
         self.page_state[PLAY_IDX_KEY] = len(self.matches) - 1
         
         # ss[SLIDER_KEY] = len(self.matches) - 1
@@ -175,7 +371,7 @@ class MatchUpdateThread(threading.Thread):
     def stop(self):
         self.stop_event.set()
         
-class VideoComparisonRealTimePage(Page):
+class VideoComparisonStreamPage(Page):
     name = PAGE_NAME
 
     def __init__(self, root_state: PageState, to_page: list[callable]):
@@ -260,20 +456,21 @@ class VideoComparisonRealTimePage(Page):
             self.page_state.update(self.root_state.comparison_matches)
 
         if "first_load" not in ss or ss.first_load:
-            query_video: Video = self.page_state.query
+            # query_video: Video = self.page_state.query
             db_video: Video = self.page_state.database
             db_gps_anafi = AnafiGPS(db_video)
-            query_gps_anfi = AnafiGPS(query_video)
-            query_gps_look_at = query_gps_anfi.get_look_at_gps(camera_angle=45)
+            # query_gps_anfi = AnafiGPS(query_video)
+            # query_gps_look_at = query_gps_anfi.get_look_at_gps(camera_angle=45)
             
-            query_video.resolution = 1024
+            # query_video.resolution = 256
             
             def realtime_align_engine_wrapper():
                 engine: AbstractEngine = RealtimeAlignmentEngine(
                     device=self.root_state.torch_device, 
                     database_video=db_video,
                     database_gps=db_gps_anafi,
-                    query_num=5,
+                    gps_look_at=False,
+                    query_num=5
                 )
                 return engine
             
@@ -286,12 +483,18 @@ class VideoComparisonRealTimePage(Page):
             
             ss.pipeline_thread = pipeline
             
-            monitor_thread = DirectoryMonitorThread(
-                query_video.dataset_dir, 
+            monitor_thread = CloudletMonitorThread(
+                url = "http://cloudlet040.elijah.cs.cmu.edu:8080/raw/harpyeagle/15-Feb-2024-1749/",
+                save_dir = "/home/ubuntu/quetzal/data_test/real_time_temp/cloudlet040",
                 pipline_executor=pipeline,
                 poll_interval=1,
-                gps=query_gps_look_at
+                redis_host="HOST_HERE",
+                redis_port="PORT_HERE",
+                redis_username="USERNAME_HERE",
+                redis_password="PASSWORD_HERE",
+                fps=2,
             )
+            
             add_script_run_ctx(monitor_thread)
             ss.monitor_thread = monitor_thread
             

@@ -22,6 +22,7 @@ import numpy as np
 import pickle
 from pathlib import Path
 from typing import TypeAlias
+import time
 
 logging.basicConfig()
 logger = logging.getLogger("RealtimeAlignment Engine")
@@ -62,6 +63,7 @@ class RealtimeAlignmentEngine(AlignmentEngine, AbstractEngine):
         database_video: Video = None,
         database_gps: AbstractGPS = None,
         camera_angle: int = 45,
+        gps_look_at: bool = True,
         query_num: int = 10,
     ):
         """
@@ -85,8 +87,11 @@ class RealtimeAlignmentEngine(AlignmentEngine, AbstractEngine):
             self.db_frames_512 = database_video.get_frames()
             database_video.resolution = 256
             
-            self.db_gps_look_at: list[GpsPoint] = database_gps.get_look_at_gps(camera_angle=camera_angle)
-            
+            if gps_look_at:
+                self.db_gps_look_at: list[GpsPoint] = database_gps.get_look_at_gps(camera_angle=camera_angle)
+            else:
+                self.db_gps_look_at: list[GpsPoint] = database_gps.get_gps()
+
             self.anyloc_256 = AnyLocEngine(
                 database_video=database_video,
                 query_video=None,
@@ -116,14 +121,104 @@ class RealtimeAlignmentEngine(AlignmentEngine, AbstractEngine):
         return False
     
     
-    def process(self, file_path: list[(FilePath256, FilePath512), AbstractGPS]):
-        """take (file_path, AbstractGps)"""
+    # def process(self, file_path: list[(FilePath256, FilePath512), AbstractGPS]):
+    #     """take (file_path, AbstractGps)"""
         
-        (query_frame, query_frame_512), query_gps_look_at = file_path
+    #     (query_frame, query_frame_512), query_gps_look_at = file_path
         
-        query = self.anyloc_256._get_vlad(query_frame)
+    #     query = self.anyloc_256._get_vlad(query_frame)
             
+    #     db_idx_selected, _= find_frames_within_radius(db_gps=self.db_gps_look_at, query_point=query_gps_look_at, radius=20)
+
+    #     db_256_gps = np.array([self.db_vlad[idx] for idx in db_idx_selected])
+    #     db_index = faiss.IndexFlatIP(db_256_gps.shape[1])
+    #     db_index: faiss.IndexFlatIP = faiss.index_cpu_to_gpu(self.res, 0, db_index)
+    #     db_index.add(db_256_gps)
+        
+    #     _distance, db_idx_from_vlad = db_index.search(query, self.query_num)
+    #     db_idx_from_vlad = [db_idx_selected[idx] for idx in db_idx_from_vlad[0]]
+        
+    #     db_frames_input = [self.db_frames_512[idx] for idx in db_idx_from_vlad]
+        
+    #     blackout_area_list = []
+    #     magnitudes = []
+    #     img_query = cv2.imread(query_frame_512)
+    #     kp_query, des_query = self.orb.detectAndCompute(img_query, None)
+    #     for i, db in enumerate(db_frames_input):
+    #     # Load images
+    #         img_db = cv2.imread(db)
+
+    #         # Detect keypoints and descriptors with ORB
+    #         kp_db, des_db = self.orb.detectAndCompute(img_db, None)
+
+    #         # Match descriptors
+    #         matches = self.bf.match(des_db, des_query)
+    #         matches = sorted(matches, key = lambda x:x.distance)
+    #         points_db = np.float32([kp_db[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
+    #         points_query = np.float32([kp_query[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+            
+    #         # Find homography
+    #         H, _ = cv2.findHomography(points_db, points_query, cv2.RANSAC)
+    #         if H is not None and is_transformation_acceptable(H):
+    #             aligned_img = cv2.warpPerspective(img_db, H, (img_query.shape[1], img_query.shape[0]))
+    #             blackout_area = calculate_blackout_area(aligned_img)
+    #             blackout_area_list.append(blackout_area)
+    #             magnitudes.append((i, blackout_area))
+    #         else:
+    #             blackout_area = self.img_pixels
+    #             blackout_area_list.append(blackout_area)
+    #             magnitudes.append((i, blackout_area))
+
+    #     # Sort by magnitudes
+    #     magnitudes.sort(key=lambda x: x[1])  
+    #     if magnitudes[0][1] == self.img_pixels:
+    #         aligned_db_idx = db_idx_from_vlad[0]
+    #     else:
+    #         aligned_db_idx = db_idx_from_vlad[magnitudes[0][0]]
+        
+    #     ## NEED CHANGE
+    #     query_idx = int(query_frame[-9:-4]) - 1
+    #     self.frame_match.append((query_idx, aligned_db_idx))
+        
+    #     # print("Matched", (self.query_idx, aligned_db_idx))
+    #     return (query_idx, aligned_db_idx)
+    
+    def resize_image_keep_aspect_ratio(self, image_path, max_img_size=512):
+        img = cv2.imread(image_path)
+        h, w = img.shape[:2]
+        
+        if max((h, w)) >= max_img_size:
+            if h == max((h, w)):
+                w = int(w * max_img_size / h)
+                h = max_img_size
+            else:
+                h = int(h * max_img_size / w)
+                w = max_img_size
+
+            resized_img = cv2.resize(img, (w, h), interpolation=cv2.INTER_NEAREST)
+            return resized_img
+        else:
+            return img
+    
+    def process(self, file_path: list[str, AbstractGPS]):
+        """take (file_path, AbstractGps)"""
+        # start_0 = time.time()
+        # print(file_path)
+        query_frame, query_gps_look_at = file_path
+        query = self.anyloc_256._get_vlad(query_frame)
+        
+        # print("Anyloc: ", time.time() - start_0)
+        
+        # print(self.db_gps_look_at)
+        
+        # start = time.time()
+        
         db_idx_selected, _= find_frames_within_radius(db_gps=self.db_gps_look_at, query_point=query_gps_look_at, radius=20)
+        radius = 20
+        while not db_idx_selected:
+            radius += 60
+            db_idx_selected, _= find_frames_within_radius(db_gps=self.db_gps_look_at, query_point=query_gps_look_at, radius=radius)
+
 
         db_256_gps = np.array([self.db_vlad[idx] for idx in db_idx_selected])
         db_index = faiss.IndexFlatIP(db_256_gps.shape[1])
@@ -137,7 +232,14 @@ class RealtimeAlignmentEngine(AlignmentEngine, AbstractEngine):
         
         blackout_area_list = []
         magnitudes = []
-        img_query = cv2.imread(query_frame_512)
+        
+        # print("GPS Search: ", time.time() - start)
+
+        # start = time.time()
+        img_query = self.resize_image_keep_aspect_ratio(query_frame, 512)
+        # print("Resize: ", time.time() - start)
+        
+        # start = time.time()
         kp_query, des_query = self.orb.detectAndCompute(img_query, None)
         for i, db in enumerate(db_frames_input):
         # Load images
@@ -164,6 +266,7 @@ class RealtimeAlignmentEngine(AlignmentEngine, AbstractEngine):
                 blackout_area_list.append(blackout_area)
                 magnitudes.append((i, blackout_area))
 
+        
         # Sort by magnitudes
         magnitudes.sort(key=lambda x: x[1])  
         if magnitudes[0][1] == self.img_pixels:
@@ -171,12 +274,14 @@ class RealtimeAlignmentEngine(AlignmentEngine, AbstractEngine):
         else:
             aligned_db_idx = db_idx_from_vlad[magnitudes[0][0]]
         
+        # print("ORB: ", time.time() - start)
         ## NEED CHANGE
         query_idx = int(query_frame[-9:-4]) - 1
         self.frame_match.append((query_idx, aligned_db_idx))
         
-        # print("Matched", (self.query_idx, aligned_db_idx))
-        return (query_idx, aligned_db_idx)
+        # print("Matched", (query_idx, aligned_db_idx, query_frame))
+        # print("Proccess Time: ", time.time() - start_0)
+        return (query_idx, aligned_db_idx, query_frame)
 
 
     def end(self):

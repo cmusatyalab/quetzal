@@ -306,7 +306,7 @@ class AnyLocEngine(AbstractEngine):
             patch_descs = []
             img_frames = video.get_frames(verbose=False)
 
-            for img_fname in stqdm(
+            for img_frame in stqdm(
                 img_frames, backend=True, mininterval=1,
                 desc=f"Generating VLAD features for the Video {video._path.name}"
             ):

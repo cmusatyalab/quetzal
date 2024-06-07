@@ -133,6 +133,7 @@ class FileExplorerPage(Page):
             page_state=self.page_state,
             to_video_comparison=self.open_video_comparison,
             to_real_time_comparison=self.open_realtime_comparison,
+            to_stream_comparison=self.open_stream_comparison
         )
 
         file_list_content = FileListContent(
@@ -207,6 +208,19 @@ class FileExplorerPage(Page):
             },
         )
         FileActionDialog.buildDialogOpener("main_dialog")(event)
+        
+    def open_stream_comparison(self, event):
+        setEventValue(
+            event,
+            {
+                "file": True,
+                "action": "process",
+                "onRender": lambda: self._align_stream(
+                    torch_device=self.root_state.torch_device
+                ),
+            },
+        )
+        FileActionDialog.buildDialogOpener("main_dialog")(event)
 
     def _align_video(
         self,
@@ -222,8 +236,8 @@ class FileExplorerPage(Page):
         query_frame_list = query_video.get_frames()
         warp_query_frame_list = query_frame_list
         
-        # alignemnt_engine: AlignmentEngine = DTWEngine(torch_device)
-        alignemnt_engine: AlignmentEngine = RealtimeAlignmentEngine(torch_device)
+        alignemnt_engine: AlignmentEngine = DTWEngine(torch_device)
+        # alignemnt_engine: AlignmentEngine = RealtimeAlignmentEngine(torch_device)
         matches, warp_query_frame_list = alignemnt_engine.align_frame_list(database_video, query_video, overlay)
 
         # if not overlay:
@@ -278,13 +292,13 @@ class FileExplorerPage(Page):
         query_frame_list = query_video.get_frames()
         warp_query_frame_list = query_frame_list
         
-        alignemnt_engine: AlignmentEngine = DTWEngine(torch_device)
-        matches, warp_query_frame_list = alignemnt_engine.align_frame_list(database_video, query_video, False)
+        # alignemnt_engine: AlignmentEngine = DTWEngine(torch_device)
+        # matches, warp_query_frame_list = alignemnt_engine.align_frame_list(database_video, query_video, False)
 
         comparison_matches = {
             "query": query_video,
             "database": database_video,
-            "matches": matches,
+            "matches": [[0, 0], [1, 1]],
             "query_frames": query_frame_list,
             "db_frames": db_frame_list,
             "warp_query_frames": warp_query_frame_list,
@@ -292,6 +306,31 @@ class FileExplorerPage(Page):
         self.root_state["comparison_matches"] = comparison_matches
         
         self.to_page[2]()
+        
+    def _align_stream(
+        self,
+        overlay: bool = True,
+        torch_device: torch.device = torch.device("cuda:0"),
+    ):
+        
+        ## Load DTW and VLAD Features ##
+        database_video = DatabaseVideo.from_quetzal_file(self.page_state.database)
+        query_video = QueryVideo.from_quetzal_file(self.page_state.query)
+
+        db_frame_list = database_video.get_frames()
+        query_frame_list = query_video.get_frames()
+
+        comparison_matches = {
+            "query": query_video,
+            "database": database_video,
+            "matches": [[0, 0], [1, 1]],
+            "query_frames": query_frame_list,
+            "db_frames": db_frame_list,
+            "warp_query_frames": [],
+        }
+        self.root_state["comparison_matches"] = comparison_matches
+        
+        self.to_page[3]()
 
 
 class AlertDisplay:
@@ -366,11 +405,13 @@ class MenuContent:
         page_state, 
         to_video_comparison, 
         to_real_time_comparison,
+        to_stream_comparison,
     ):
         self.on_focus_handler: MuiOnFocusHandler = on_focus_handler
         self.page_state = page_state
         self.to_video_comparison = to_video_comparison
         self.to_real_time_comparison = to_real_time_comparison
+        self.to_stream_comparison = to_stream_comparison
 
         self.upload_menu = MuiActionMenu(
             mode=["upload"],
@@ -468,7 +509,7 @@ class MenuContent:
                     database=self.page_state.database,
                     query=self.page_state.query,
                     project=None,
-                    onClicks=[self.to_video_comparison, self.to_real_time_comparison],
+                    onClicks=[self.to_video_comparison, self.to_real_time_comparison, self.to_stream_comparison],
                 ).render()
 
                 ## Action Menu + Handlers

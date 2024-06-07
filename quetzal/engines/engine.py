@@ -2,19 +2,14 @@
 
 from abc import ABC, abstractmethod
 from typing import NewType
+from quetzal.dtos.dtos import QuetzalFile
 
 class AbstractEngine(ABC):
-    # @abstractmethod
-    # def warmup(self):
-    #     '''Initial warm-up if needed
-    #     '''
-    # pass
     name = "Default Name"
 
     @staticmethod
-    def is_video_analyzed(video) -> bool:
+    def is_video_analyzed(video: QuetzalFile) -> bool:
         """Return True if no further real-time analysis required"""
-
         return False
     
 
