@@ -256,7 +256,7 @@ pip_install torchviz=='0.0.2'
 pip_install onedrivedownloader
 pip_install utm
 pip_install bcrypt
-pip_install streamlit
+pip_install streamlit==1.33.0
 pip_install streamlit-extras
 pip_install streamlit-elements==0.1.*
 pip_install streamlit-tags
@@ -289,6 +289,7 @@ echo_info "----- Installing Quetzal -----"
 pip install -e .
 
 conda install -y -c pytorch faiss-gpu==1.7.4
+conda install -7 -c pytorch::faiss-cpu==1.7.4
 # # conda_raw_install -c pytorch faiss-gpu==1.7.2
 # Core packages using pip_install
 if [ $dev_tools == "true" ]; then 
