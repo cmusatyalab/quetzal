@@ -1,6 +1,8 @@
 from quetzal_app.page.page_video_comparison import VideoComparisonPage
 from quetzal_app.page.page_file_explorer import FileExplorerPage
 from quetzal_app.page.page_state import AppState, PageState, Page
+from quetzal.dtos.dtos import FileType, QuetzalFile
+from quetzal.dtos.video import DatabaseVideo, QueryVideo
 
 import streamlit as st
 from streamlit import session_state as ss
@@ -11,6 +13,8 @@ from threading import Lock
 from streamlit.web.server.websocket_headers import _get_websocket_headers
 import os
 from pathlib import Path
+import pickle
+
 
 LOGO_FILE = os.path.normpath(Path(__file__).parent.joinpath("quetzal_logo_trans.png"))
 
@@ -143,6 +147,29 @@ page_dict: dict[str, Page] = {page.name: page for page in page_list}
 
 if "page_states" not in ss:
     app_state = AppState()
+    
+    # for development
+    with open('query.pkl', 'rb') as f:
+        q = pickle.load(f)
+        query_video = QueryVideo.from_quetzal_file(QuetzalFile(path=q, root_dir=dataset_root, metadata_dir=meta_data_root, user=user))
+        f.close()
+    with open('db.pkl', 'rb') as f:
+        db = pickle.load(f)
+        database_video = DatabaseVideo.from_quetzal_file(QuetzalFile(path=db, root_dir=dataset_root, metadata_dir=meta_data_root, user=user))
+        f.close()
+    with open('matches.pkl', 'rb') as f:
+        matches = pickle.load(f)
+        f.close()
+    with open('warp_query_frame_list.pkl', 'rb') as f:
+        warp_query_frame_list = pickle.load(f)
+        f.close()
+    with open('query_frame_list.pkl', 'rb') as f:
+        query_frame_list = pickle.load(f)
+        f.close()
+    with open('db_frame_list.pkl', 'rb') as f:
+        db_frame_list = pickle.load(f)
+        f.close()
+    
     root_state = PageState(
         root_dir=dataset_root,
         metadata_dir=meta_data_root,
@@ -152,8 +179,17 @@ if "page_states" not in ss:
         user=user,
         comparison_matches=None,
     )
+    root_state["comparison_matches"] = {
+        "query": query_video,
+        "database": database_video,
+        "matches": matches,
+        "query_frames": query_frame_list,
+        "db_frames": db_frame_list,
+        "warp_query_frames": warp_query_frame_list,
+    }
 
-    root_state.page = FileExplorerPage.name
+    root_state.page = VideoComparisonPage.name
+    # root_state.page = FileExplorerPage.name
 
     def build_to_page(page: Page):
         def to_page():
@@ -170,7 +206,8 @@ if "page_states" not in ss:
     for key, page in page_dict.items():
         page_object = page(root_state=root_state, to_page=to_page)
         ss.pages[key] = page_object
-        app_state[key] = page_object.page_state
+        app_state[key] = page_object.page_state # unpack pickle here
+
 
     ss.page_states = app_state
     ss.lock = Lock()

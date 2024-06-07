@@ -4,7 +4,7 @@ import torch
 import subprocess
 from groundingdino.util.inference import Model
 import supervision as sv
-from streamlit_label_kit import absolute_to_relative
+from streamlit_label_kit import absolute_to_relative, relative_to_absolute
 
 from segment_anything import sam_model_registry, SamPredictor
 import numpy as np
@@ -200,6 +200,59 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         xyxy_relative = [absolute_to_relative(bbox, width, height) for bbox in detections.xyxy]
 
         return annotated_image, xyxy_relative, labels
+    def generate_segmented_images(self, query_image: str, save_file_path: str, xyxy: np.ndarray):
+        """
+        Generates segmented image given bounding boxes
+
+        Args:
+            query_image (str): Path to the input image.
+            save_file_path (str): Path where the annotated image will be saved.
+            xyxy (np.ndarray): Array of bounding boxes in relative format (xyxy)
+        
+        Returns:
+            np.ndarray: The annotated image with detected and segmented objects based on captions.
+            np.ndarray: Segment Mask
+        """
+        image = cv2.imread(query_image)
+        height, width, _ = image.shape
+
+
+        mask = self._segment(
+            sam_predictor=self.sam_predictor,
+            image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
+            xyxy=np.array([relative_to_absolute(v, width, height) for v in xyxy])
+        )
+        
+        mask = np.logical_or.reduce(mask).astype(int)
+        mask_image = (mask * 255).astype(np.uint8) 
+
+        cv2.imwrite(save_file_path, mask_image)
+        color_mask = np.zeros_like(image)
+        color_mask[mask > 0.5] = [255, 255, 255] # Choose any color you like
+        masked_image = cv2.addWeighted(image, 0.4, color_mask, 0.6, 0)
+        cv2.imwrite(save_file_path, cv2.cvtColor(masked_image, cv2.COLOR_RGB2BGR))
+        return image, mask
+    def save_segmented_masks(self, query_mask: str, db_mask: str, save_file_path: str):
+        """
+        Generates a mask image for change detection dataset
+
+        Args:
+            query_mask (nd.array): Segmented query mask.
+            db_mask (nd.array): Segmented database mask.
+            save_file_path (str): Path where the annotated image will be saved.
+        
+        Returns:
+            np.ndarray: Dataset image
+        """
+
+        combine_mask = np.logical_or(query_mask, db_mask).astype(np.uint8)
+        mask_image = (combine_mask * 255).astype(np.uint8)
+        cv2.imwrite(save_file_path, mask_image)
+
+        return mask_image
+
+
+
     
 if __name__ == "__main__":
     engine = GroundingSAMEngine()

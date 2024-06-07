@@ -20,6 +20,7 @@ from quetzal_app.page.video_comparison_controller import (
 )
 from pathlib import Path
 import base64
+import pickle
 
 from quetzal_app.elements.image_frame_component import image_frame
 
@@ -78,7 +79,7 @@ class VideoComparisonPage(Page):
                 PLAY_IDX_KEY: 0,
             }
         )
-
+        
         return self.page_state
 
     def open_file_explorer(self):
@@ -262,8 +263,12 @@ class FrameDisplay:
 
     def display_annotation_frame(self, image_urls, bboxes_query, labels_query, bboxes_db, labels_db, detection_run):
         label_to_idx = lambda s : label_list.index(s)
+        label_to_query = lambda s : s + "_query"
+        label_to_db = lambda s : s +"_db"
 
         if detection_run:
+            labels_query = list(map(label_to_query, labels_query))
+            labels_db = list(map(label_to_db, labels_db))
             label_list = list(set(list(labels_query) + list(labels_db))) 
             labels_query = list(map(label_to_idx, labels_query))
             labels_db = list(map(label_to_idx, labels_db))
@@ -271,7 +276,7 @@ class FrameDisplay:
             bboxes_db = [x for x in list(bboxes_db)]
         else:
             label_list = ['deer', 'human', 'dog', 'penguin', 'framingo', 'teddy bear']            
-            bboxes_query = bboxes_db = [[0.0, 0.0, 0.2857142857142857, 0.21413276231263384], [0.014285714285714285, 0.042826552462526764, 0.15714285714285714, 0.3640256959314775]]
+            bboxes_query = bboxes_db = [(0.0, 0.0, 0.2857142857142857, 0.21413276231263384), (0.014285714285714285, 0.042826552462526764, 0.15714285714285714, 0.3640256959314775)]
             labels_query = labels_db = [0,3]
 
         [query_img, database_img] = image_urls
@@ -279,16 +284,40 @@ class FrameDisplay:
         result_dict = {}
         result_dict[query_img] = {'bboxes':list(bboxes_query),'labels':labels_query}
         result_dict[database_img] = {'bboxes': list(bboxes_db),'labels':labels_db}
-        st.session_state['result_dict'] = result_dict.copy()
-        
-        labels_dict = {}
+        st.session_state['result'] = result_dict.copy()
+
+
+        # # sync up frames
+        # combined_bboxes = []
+        # combined_labels = []
+
+        # for i in range(len(bboxes_query)):
+        #     if(bboxes_query[i] not in combined_bboxes):
+        #         combined_bboxes.append(bboxes_query[i])
+        #         combined_labels.append(labels_query[i])
+
+        # for i in range(len(bboxes_db)):
+        #     if(bboxes_db[i] not in combined_bboxes):
+        #         combined_bboxes.append(bboxes_db[i])
+        #         combined_labels.append(labels_db[i])
+
+        # result_dict = {}
+        # result_dict[query_img] = {'bboxes':list(combined_bboxes),'labels':combined_labels}
+        # result_dict[database_img] = {'bboxes': list(combined_bboxes),'labels':combined_labels}
+        # st.session_state['result'] = result_dict.copy()
+
+        # map images on each side for bounding box
+        # choose only the bounding box origin for segmentation
+
         c1, c2 = st.columns([1, 1])
+        combined_bboxes= st.session_state["result"][query_img]["bboxes"] + st.session_state["result"][database_img]["bboxes"]
+        combined_labels = st.session_state["result"][query_img]["labels"] + st.session_state["result"][database_img]["labels"]
         with c1:
-            labels_dict[query_img] = detection(image_path=query_img, 
+            st.session_state.out = detection(image_path=query_img, 
                                                label_list=label_list, 
-                                               bboxes=bboxes_query,
+                                               bboxes=combined_bboxes,
                                                bbox_format='REL_XYXY',
-                                               labels=labels_query,
+                                               labels=combined_labels,
                                                metaDatas=[],
                                                image_height=512,
                                                image_width=512,
@@ -306,13 +335,24 @@ class FrameDisplay:
                                                ui_bottom_size=None,
                                                ui_right_size=None,
                                                key=None)
+            print("query: ", st.session_state.out['bbox'])
+            if st.session_state.out['bbox'] != None:
+                # separate changes to boxes in query and database image
+                # given the label of bbox, check if suffix is "_query" or "_db" and sort accordingly
+                result_query = []
+                for box in st.session_state.out['bbox']:
+                    if box not in st.session_state['result'][database_img]['bboxes']:
+                        result_query.append(box)
+                    
+                st.session_state['result'][query_img]['bboxes'] = result_query
+                # st.session_state["result"][query_img]["labels"] = st.session_state.out['labels']
 
         with c2:
-            labels_dict[database_img] = detection(image_path=database_img, 
+            st.session_state.out = detection(image_path=database_img, 
                                                label_list=label_list, 
-                                               bboxes=bboxes_db,
+                                               bboxes=combined_bboxes,
                                                bbox_format='REL_XYXY',
-                                               labels=labels_db,
+                                               labels=combined_labels,
                                                metaDatas=[],
                                                image_height=512,
                                                image_width=512,
@@ -330,18 +370,23 @@ class FrameDisplay:
                                                ui_bottom_size=None,
                                                ui_right_size=None,
                                                key=None)
-        print("query_img: ", labels_dict[query_img])
-        print("database_img: ", labels_dict[database_img])
+            
+            print("database: ", st.session_state.out['bbox'])
 
-        # if labels_dict[query_img] is not None:
-        #     st.session_state['result_dict'][query_img]['bboxes'] = [v['bbox'] for v in labels_dict[query_img]]
-        #     st.session_state['result_dict'][query_img]['labels'] = [label_list[v['label_id']] for v in labels_dict[query_img]]
-        
-        # if labels_dict[database_img] is not None:
-        #     st.session_state['result_dict'][database_img]['bboxes'] = [v['bbox'] for v in labels_dict[database_img]]
-        #     st.session_state['result_dict'][database_img]['labels'] = [label_list[v['label_id']] for v in labels_dict[database_img]]
+            if st.session_state.out['bbox'] != None:
+                    result_db = []
+                    for box in st.session_state.out['bbox']:
+                        if box not in st.session_state['result'][query_img]['bboxes']:
+                            result_db.append(box)
+                    st.session_state['result'][database_img]['bboxes'] = result_db
+                # st.session_state["result"][database_img]["labels"] = st.session_state.out['labels']
 
-        print("sessions state: ", st.session_state['result_dict'])
+
+
+
+
+
+
 
     def render(self):
         match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]
@@ -371,6 +416,12 @@ class FrameDisplay:
                 bboxes_db = self.page_state.annotated_frame["bboxes_db"]
                 labels_db = self.page_state.annotated_frame["labels_db"]
                 detection_run = True
+            case ObjectDetectController.name if self.page_state.warp:
+                query_img = self.page_state.warp_query_frames[query_idx]
+                database_img = self.page_state.db_frames[db_idx]
+            case ObjectAnnotationController.name if self.page_state.warp:
+                query_img = self.page_state.warp_query_frames[query_idx]
+                database_img = self.page_state.db_frames[db_idx]
             case _:
                 query_img = self.page_state.query_frames[query_idx]
                 database_img = self.page_state.db_frames[db_idx]

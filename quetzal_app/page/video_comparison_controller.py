@@ -11,10 +11,12 @@ from streamlit_extras.stylable_container import stylable_container
 from streamlit_tags import st_tags
 import torch
 import json
+import cv2
 
 from quetzal.align_frames import DatabaseIdx, Match, QueryIdx
 from quetzal.engines.detection_engine.grounding_sam_engine import GroundingSAMEngine
 from quetzal.engines.engine import ObjectDetectionEngine
+
 
 DEFAULT_BOX_TH = 0.25
 DEFAULT_TEXT_TH = 0.25
@@ -36,7 +38,6 @@ QUERY_ANNOTATE_IMG = str(
     Path(__file__).parent.joinpath("../tmp/quetzal_annotated_query.jpg")
 )
 DB_ANNOTATE_IMG = str(Path(__file__).parent.joinpath("../tmp/quetzal_annotated_db.jpg"))
-
 
 ## List of Object Detector to Use
 DetectorName = NewType("DetectorName", str)
@@ -543,8 +544,10 @@ class ObjectAnnotationController(Controller):
         match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]
         query_idx: QueryIdx = match[0]
         db_idx: DatabaseIdx = match[1]
-
-        query_img_orig = self.page_state.query_frames[query_idx]
+        if self.page_state.warp:
+            query_img_orig = self.page_state.warp_query_frames[query_idx]
+        else:
+            query_img_orig = self.page_state.query_frames[query_idx]
         database_img_aligned = self.page_state.db_frames[db_idx]
 
         self._run_detection(
@@ -575,9 +578,63 @@ class ObjectAnnotationController(Controller):
             "idx": self.page_state[PlaybackController.name][SLIDER_KEY],
         }
 
+    def _segment_annotation(self, input_img, output_file, xyxy, isQuery):
+        detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
+        if isQuery:
+            self.annotated_image_query, self.mask_query = detector.generate_segmented_images(
+                input_img, output_file, xyxy
+            )
+
+        else:
+            self.annotated_image_db, self.mask_db = detector.generate_segmented_images(
+                input_img, output_file, xyxy
+            )
+
+    def segment_annotation(self):
+            match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]
+            query_idx: QueryIdx = match[0]
+            db_idx: DatabaseIdx = match[1]
+            if self.page_state.warp:
+                query_img_orig = self.page_state.warp_query_frames[query_idx]
+            else:
+                query_img_orig = self.page_state.query_frames[query_idx]
+            database_img_aligned = self.page_state.db_frames[db_idx]
+
+            xyxy_query = st.session_state['result'][QUERY_ANNOTATE_IMG]['bboxes']
+            xyxy_db = st.session_state['result'][DB_ANNOTATE_IMG]['bboxes']
+
+            self._segment_annotation(
+                input_img=query_img_orig,
+                output_file=QUERY_ANNOTATE_IMG,
+                xyxy=xyxy_query,
+                isQuery=True,
+            )
+
+            self._segment_annotation(
+                input_img=database_img_aligned,
+                output_file=DB_ANNOTATE_IMG,
+                xyxy=xyxy_db,
+                isQuery=False,
+            )
+
+            self.page_state.annotated_frame = {
+                "query": QUERY_ANNOTATE_IMG,
+                "db": DB_ANNOTATE_IMG,
+                "bboxes_query": xyxy_query,
+                "labels_query": self.page_state.annotated_frame['labels_query'],
+                "bboxes_db": xyxy_db,
+                "labels_db": self.page_state.annotated_frame['labels_db'],
+                "mask_query": self.mask_query,
+                "mask_db" : self.mask_db,
+                "idx": self.page_state[PlaybackController.name][SLIDER_KEY],
+            }
+
     def save_annotation(self):
-        with open('data.json', 'w') as f:
-            json.dump(str(st.session_state['result_dict']), f)
+        detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
+        # Procedure: compare boxes and cancel out significant overlaps
+        detector.save_segmented_masks(self.page_state.annotated_frame["mask_query"], self.page_state.annotated_frame["mask_db"], DB_ANNOTATE_IMG)
+        detector.save_segmented_masks(self.page_state.annotated_frame["mask_query"], self.page_state.annotated_frame["mask_db"], QUERY_ANNOTATE_IMG)
+    
 
         
 
@@ -650,7 +707,7 @@ class ObjectAnnotationController(Controller):
         self.render_prompt()
         # pass
 
-        cc1, cc2, cc3, cc4 = st.columns([1, 2, 2, 1])
+        cc1, cc2, cc3, cc4, cc5 = st.columns([1, 2, 2, 1, 1])
         with cc1:
             st.selectbox(
                 label="Choose Detection Model",
@@ -679,8 +736,21 @@ class ObjectAnnotationController(Controller):
                 format=f"%0.2f",
                 key=SLIDER_TXT_TH_KEY,
             )
-        
         with cc4:
+            with elements("segment_button"):
+                mui.Button(
+                    children="Segment",
+                    variant="contained",
+                    startIcon=mui.icon.ContentCut(),
+                    onClick=self.segment_annotation,
+                    size="large",
+                    sx={
+                        "bgcolor": "grey.800",
+                        "borderRadius": "0.5rem",
+                        "width": "117.14px",
+                    },
+                )
+        with cc5:
             with elements("save_button"):
                 mui.Button(
                     children="Save",

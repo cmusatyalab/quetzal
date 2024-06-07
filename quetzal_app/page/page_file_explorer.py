@@ -6,6 +6,7 @@ from streamlit import session_state as ss
 from streamlit_elements import elements, mui
 from streamlit_extras.stylable_container import stylable_container
 import torch
+import pickle, shelve, json
 
 from quetzal_app.elements.mui_components import (
     ELEMENT_BOTTOM_MARGIN,
@@ -196,7 +197,7 @@ class FileExplorerPage(Page):
         overlay: bool = True,
         torch_device: torch.device = torch.device("cuda:0"),
     ):
-        ## Load DTW and VLAD Features ##
+        
         database_video = DatabaseVideo.from_quetzal_file(self.page_state.database)
         query_video = QueryVideo.from_quetzal_file(self.page_state.query)
 
@@ -217,6 +218,26 @@ class FileExplorerPage(Page):
                 torch_device=torch_device,
             )
 
+        with open('query.pkl', 'wb') as f:                      
+            pickle.dump(str(self.page_state.query._path), f)
+            f.close()
+        with open('db.pkl', 'wb') as f:
+            pickle.dump(str(self.page_state.database._path), f)           
+            f.close()
+        with open('matches.pkl', 'wb') as f:
+            pickle.dump(matches, f)
+            f.close()
+        with open('warp_query_frame_list.pkl', 'wb') as f:
+            pickle.dump(warp_query_frame_list, f)
+            f.close()
+        with open('query_frame_list.pkl', 'wb') as f:
+            pickle.dump(query_frame_list, f)
+            f.close()
+        with open('db_frame_list.pkl', 'wb') as f:
+            pickle.dump(db_frame_list, f)
+            f.close()
+
+
         self.root_state["comparison_matches"] = {
             "query": query_video,
             "database": database_video,
@@ -225,6 +246,8 @@ class FileExplorerPage(Page):
             "db_frames": db_frame_list,
             "warp_query_frames": warp_query_frame_list,
         }
+        
+
 
         self.to_page[1]()
 
@@ -356,7 +379,7 @@ class MenuContent:
                     direction="row",
                     alignItems="center",
                     justifyContent="start",
-                    sx={"hegiht": 55, "pb": "3px"}
+                    sx={"height": 55, "pb": "3px"}
                 ):
                     mui.Avatar(
                         alt="Quetzal",
