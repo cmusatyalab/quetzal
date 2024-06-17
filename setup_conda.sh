@@ -289,6 +289,12 @@ pip_install supervision==0.6.0
 echo_info "----- Installing Quetzal -----"
 pip install -e .
 
+sudo apt install exiftool
+pip install haversine
+pip install Rtree
+pip install staticmap
+pip install redis
+
 conda install -y -c pytorch faiss-gpu==1.7.4
 pip_install faiss-cpu==1.9.0
 # # conda_raw_install -c pytorch faiss-gpu==1.7.2

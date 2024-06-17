@@ -2815,12 +2815,12 @@ class MuiComparePrompt:
         project: QuetzalFile = None,
         query: QuetzalFile = None,
         database: QuetzalFile = None,
-        onClick: QuetzalFile = None,
+        onClicks: QuetzalFile = None,
     ):
         self.project = project.name if project else "Not Selected"
         self.query = query.name if query else "Not Selected"
         self.database = database.name if database else "Not Selected"
-        self.onClick = onClick
+        self.onClicks = onClicks
         self.disabled = not (database and query)
 
     def render(self):
@@ -2853,9 +2853,25 @@ class MuiComparePrompt:
             with mui.Button(
                 startIcon=mui.icon.Compare(),
                 sx=outlined_button_style,
-                onClick=self.onClick,
+                onClick=self.onClicks[0],
                 disabled=self.disabled,
             ):
                 mui.Typography("RUN COMPARISON", sx=MuiDialogItem.font_style)
 
+            with mui.Button(
+                startIcon=mui.icon.CastConnected(),
+                sx=outlined_button_style,
+                onClick=self.onClicks[1],
+                disabled=self.disabled,
+            ):
+                mui.Typography("REALTIME MATCHING", sx=MuiDialogItem.font_style)
+                
+            with mui.Button(
+                startIcon=mui.icon.Podcasts(),
+                sx=outlined_button_style,
+                onClick=self.onClicks[2],
+                disabled=self.disabled,
+            ):
+                mui.Typography("STREAM MATCHING", sx=MuiDialogItem.font_style)
+                
         return self

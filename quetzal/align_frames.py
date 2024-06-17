@@ -21,6 +21,7 @@ logging.basicConfig()
 logger = logging.getLogger("generate_aligned_images")
 logger.setLevel(logging.DEBUG)
 from stqdm import stqdm
+from tqdm import tqdm
 
 import argparse
 
@@ -158,6 +159,9 @@ def align_frame_pairs(
     for query_idx, db_idx in stqdm(
         matches, desc="Generating Overlay frames", backend=True
     ):
+    # for query_idx, db_idx in stqdm(
+    #     matches, desc="Generating Overlay frames",
+    # ):
         query_frame = query_frame_list[query_idx]
         db_frame = db_frame_list[db_idx]
         aligned_frame_list.append(engine.process((query_frame, db_frame))[0])

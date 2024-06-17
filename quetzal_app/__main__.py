@@ -45,6 +45,7 @@ def main():
         server_port=args.port,
         server_headless=True,
         server_fileWatcherType="none",
+        runner_fastReruns=True,
     )
     
     st_config_file= Path(__file__).parent.joinpath(".streamlit/config.toml")
@@ -53,7 +54,6 @@ def main():
         
     bootstrap.load_config_options(flag_options=config)
     bootstrap.run(str(entrypoint), False, input_arg, config)
-
 
 if __name__ == "__main__":
     main()

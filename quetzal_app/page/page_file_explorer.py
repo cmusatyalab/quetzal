@@ -5,6 +5,9 @@ import streamlit as st
 from streamlit import session_state as ss
 from streamlit_elements import elements, mui
 from streamlit_extras.stylable_container import stylable_container
+from quetzal.engines.align_engine.dtw_engine import DTWEngine
+from quetzal.engines.align_engine.realtime_engine import RealtimeAlignmentEngine
+from quetzal.engines.engine import AlignmentEngine
 import torch
 import pickle, shelve, json
 
@@ -130,6 +133,8 @@ class FileExplorerPage(Page):
             on_focus_handler=on_focus_handler,
             page_state=self.page_state,
             to_video_comparison=self.open_video_comparison,
+            to_real_time_comparison=self.open_realtime_comparison,
+            to_stream_comparison=self.open_stream_comparison
         )
 
         file_list_content = FileListContent(
@@ -191,6 +196,32 @@ class FileExplorerPage(Page):
             },
         )
         FileActionDialog.buildDialogOpener("main_dialog")(event)
+        
+    def open_realtime_comparison(self, event):
+        setEventValue(
+            event,
+            {
+                "file": True,
+                "action": "process",
+                "onRender": lambda: self._align_realtime(
+                    torch_device=self.root_state.torch_device
+                ),
+            },
+        )
+        FileActionDialog.buildDialogOpener("main_dialog")(event)
+        
+    def open_stream_comparison(self, event):
+        setEventValue(
+            event,
+            {
+                "file": True,
+                "action": "process",
+                "onRender": lambda: self._align_stream(
+                    torch_device=self.root_state.torch_device
+                ),
+            },
+        )
+        FileActionDialog.buildDialogOpener("main_dialog")(event)
 
     def _align_video(
         self,
@@ -198,26 +229,43 @@ class FileExplorerPage(Page):
         torch_device: torch.device = torch.device("cuda:0"),
     ):
         
+        ## Load DTW and VLAD Features ##
         database_video = DatabaseVideo.from_quetzal_file(self.page_state.database)
         query_video = QueryVideo.from_quetzal_file(self.page_state.query)
 
         db_frame_list = database_video.get_frames()
         query_frame_list = query_video.get_frames()
         warp_query_frame_list = query_frame_list
+        
+        alignemnt_engine: AlignmentEngine = DTWEngine(torch_device)
+        # alignemnt_engine: AlignmentEngine = RealtimeAlignmentEngine(torch_device)
+        matches, warp_query_frame_list = alignemnt_engine.align_frame_list(database_video, query_video, overlay)
 
-        if not overlay:
-            matches = align_video_frames(
-                database_video=database_video,
-                query_video=query_video,
-                torch_device=torch_device,
-            )
-        else:
-            matches, warp_query_frame_list = align_frame_pairs(
-                database_video=database_video,
-                query_video=query_video,
-                torch_device=torch_device,
-            )
-
+        # if not overlay:
+        #     matches = align_video_frames(
+        #         database_video=database_video,
+        #         query_video=query_video,
+        #         torch_device=torch_device,
+        #     )
+        # else:
+        #     matches, warp_query_frame_list = align_frame_pairs(
+        #         database_video=database_video,
+        #         query_video=query_video,
+        #         torch_device=torch_device,
+        #     )
+        
+        comparison_matches = {
+            "query": query_video,
+            "database": database_video,
+            "matches": matches,
+            "query_frames": query_frame_list,
+            "db_frames": db_frame_list,
+            "warp_query_frames": warp_query_frame_list,
+        }
+        self.root_state["comparison_matches"] = comparison_matches
+        
+        # for development
+        
         with open('query.pkl', 'wb') as f:                      
             pickle.dump(str(self.page_state.query._path), f)
             f.close()
@@ -236,20 +284,62 @@ class FileExplorerPage(Page):
         with open('db_frame_list.pkl', 'wb') as f:
             pickle.dump(db_frame_list, f)
             f.close()
+        
+        self.to_page[1]()
+        
+    def _align_realtime(
+        self,
+        overlay: bool = True,
+        torch_device: torch.device = torch.device("cuda:0"),
+    ):
+        
+        ## Load DTW and VLAD Features ##
+        database_video = DatabaseVideo.from_quetzal_file(self.page_state.database)
+        query_video = QueryVideo.from_quetzal_file(self.page_state.query)
 
+        db_frame_list = database_video.get_frames()
+        query_frame_list = query_video.get_frames()
+        warp_query_frame_list = query_frame_list
+        
+        # alignemnt_engine: AlignmentEngine = DTWEngine(torch_device)
+        # matches, warp_query_frame_list = alignemnt_engine.align_frame_list(database_video, query_video, False)
 
-        self.root_state["comparison_matches"] = {
+        comparison_matches = {
             "query": query_video,
             "database": database_video,
-            "matches": matches,
+            "matches": [[0, 0], [1, 1]],
             "query_frames": query_frame_list,
             "db_frames": db_frame_list,
             "warp_query_frames": warp_query_frame_list,
         }
+        self.root_state["comparison_matches"] = comparison_matches
         
+        self.to_page[2]()
+        
+    def _align_stream(
+        self,
+        overlay: bool = True,
+        torch_device: torch.device = torch.device("cuda:0"),
+    ):
+        
+        ## Load DTW and VLAD Features ##
+        database_video = DatabaseVideo.from_quetzal_file(self.page_state.database)
+        query_video = QueryVideo.from_quetzal_file(self.page_state.query)
 
+        db_frame_list = database_video.get_frames()
+        query_frame_list = query_video.get_frames()
 
-        self.to_page[1]()
+        comparison_matches = {
+            "query": query_video,
+            "database": database_video,
+            "matches": [[0, 0], [1, 1]],
+            "query_frames": query_frame_list,
+            "db_frames": db_frame_list,
+            "warp_query_frames": [],
+        }
+        self.root_state["comparison_matches"] = comparison_matches
+        
+        self.to_page[3]()
 
 
 class AlertDisplay:
@@ -318,10 +408,19 @@ class AlertDisplay:
 
 class MenuContent:
 
-    def __init__(self, on_focus_handler, page_state, to_video_comparison):
+    def __init__(
+        self, 
+        on_focus_handler, 
+        page_state, 
+        to_video_comparison, 
+        to_real_time_comparison,
+        to_stream_comparison,
+    ):
         self.on_focus_handler: MuiOnFocusHandler = on_focus_handler
         self.page_state = page_state
         self.to_video_comparison = to_video_comparison
+        self.to_real_time_comparison = to_real_time_comparison
+        self.to_stream_comparison = to_stream_comparison
 
         self.upload_menu = MuiActionMenu(
             mode=["upload"],
@@ -419,7 +518,7 @@ class MenuContent:
                     database=self.page_state.database,
                     query=self.page_state.query,
                     project=None,
-                    onClick=self.to_video_comparison,
+                    onClicks=[self.to_video_comparison, self.to_real_time_comparison, self.to_stream_comparison],
                 ).render()
 
                 ## Action Menu + Handlers

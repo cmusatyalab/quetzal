@@ -233,7 +233,7 @@ class QuetzalFile:
         self._home = Path(home)
         self._parent = parent
 
-        assert self._user != "example"
+        # assert self._user != "example"
 
         if not (self.full_path).exists():
             if self._path == Path(self._user.id):

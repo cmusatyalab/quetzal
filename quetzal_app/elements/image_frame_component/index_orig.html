@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://unpkg.com/image-compare-viewer/dist/image-compare-viewer.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0px;
+            /* padding: 8px; */
+            display: block;
+            font-family: sans-serif;
+        }
+
+        .content {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            padding: 1rem;
+        }
+
+        .title {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 0.5rem;
+        }
+
+        .caption, .label{
+            margin: 0;
+        }
+
+        .card {
+            background: transparent;
+            border-style: solid;
+            /* border-width: 1px; */
+            border-color: #e0e0e0;
+            /* border-radius: 0.7rem; */
+        }
+
+        /* #image-compare {
+            border-top-right-radius: 0.65rem;
+            border-top-left-radius: 0.65rem;
+        } */
+    </style>
+    <style id="custom-style"></style>
+</head>
+
+<body id="card-body">
+    <div class="title", id="label-container"> 
+        <p class="label"></p>
+    </div>
+    <div class="card" id="frame-card">
+        <div id="image-compare"></div>
+        <div class="content", id="caption-container">
+            <p class="caption"></p>
+        </div>
+    </div>
+</body>
+
+<script src="https://unpkg.com/image-compare-viewer/dist/image-compare-viewer.min.js"></script>
+<script type="text/javascript">
+    // ----------------------------------------------------
+    // These functions should be used as is to perform required Streamlit 
+    // component lifecycle actions:
+    //
+    // 1. Signal Streamlit client that component is ready
+    // 2. Signal Streamlit client to set visible height of the component
+    //    (this is optional, in case Streamlit doesn't correctly auto-set it)
+    // 3. Pass values from component to Streamlit client
+    //
+
+    // Helper function to send type and data messages to Streamlit client
+    const SET_COMPONENT_VALUE = "streamlit:setComponentValue"
+    const RENDER = "streamlit:render"
+    const COMPONENT_READY = "streamlit:componentReady"
+    const SET_FRAME_HEIGHT = "streamlit:setFrameHeight"
+
+    function _sendMessage(type, data) {
+        var outboundData = Object.assign({
+            isStreamlitMessage: true,
+            type: type,
+        }, data)
+
+        window.parent.postMessage(outboundData, "*")
+    }
+
+    function initialize(pipeline) {
+        window.addEventListener("message", (event) => {
+            if (event.data.type == RENDER) {
+                // The event.data.args dict holds any JSON-serializable value
+                // sent from the Streamlit client. It is already deserialized.
+                pipeline.forEach(handler => {
+                    handler(event.data.args)
+                })
+            }
+        })
+
+        _sendMessage(COMPONENT_READY, { apiVersion: 1 });
+
+        window.addEventListener('load', adjustSize);
+        window.addEventListener('resize', adjustSize);
+    }
+
+    function adjustSize() {
+        var container = document.getElementById("card-body");
+        var rect = container.getBoundingClientRect();
+        setFrameHeight(rect.height);
+    }
+
+    function setFrameHeight(height) {
+        _sendMessage(SET_FRAME_HEIGHT, { height: height })
+    }
+
+    function notifyHost(data) {
+        _sendMessage(SET_COMPONENT_VALUE, data)
+    }
+
+    function initializeProps_Handler(props) {
+        var bottomRadius = "0rem";
+        var bgColor = "#FFFFFF";
+        var textColor = "#212121"
+
+        if (props.dark_mode) {
+            bgColor = "#424242";
+            textColor = "#FFFFFF";
+        }
+        
+        // Append Label
+        const labelContainer = document.getElementById('label-container');
+        if (props.label === "") {
+            labelContainer.remove()
+        } else {
+            labelContainer.innerHTML = '';  // Clear existing captions
+            const labelDiv = document.createElement('div');
+            const labelParagraph = document.createElement('p');
+            labelParagraph.className = 'label';
+            labelParagraph.innerText = props.label;
+            labelDiv.appendChild(labelParagraph);
+            labelContainer.appendChild(labelDiv);
+        }
+        
+        // Update Image
+        const imageContainer = document.getElementById("image-compare");
+        if (props.image_urls.length === 1) {
+            imageContainer.innerHTML = 
+            `<img src="${props.image_urls[0]}" id="image-content"
+                alt="" 
+                style="
+                    width: 100%; 
+                    border-top-right-radius: ${props.image_border_radius}; 
+                    border-top-left-radius: ${props.image_border_radius};
+                    margin-bottom: -4px;
+                "
+            />`;
+        } else if (props.image_urls.length === 2) {
+            imageContainer.innerHTML = `
+                <img src="${props.image_urls[0]}" alt="" />
+                <img src="${props.image_urls[1]}" alt="" />
+            `;
+            const options = { 
+                startingPoint: props.starting_point, 
+                controlColor: bgColor,
+            };
+            new ImageCompare(imageContainer, options).mount();
+        } else {
+            imageContainer.innerHTML = ""
+        }
+
+        // Append Captions
+        const captionsContainer = document.getElementById('caption-container');
+        if (props.captions.length === 0) {
+            captionsContainer.remove() // This hides the container
+            bottomRadius = props.image_border_radius;
+            props.border_width = "0px";
+        } else {
+            captionsContainer.innerHTML = '';  // Clear existing captions
+            props.captions.forEach(captionText => {
+                const captionDiv = document.createElement('div');
+                const captionParagraph = document.createElement('p');
+                captionParagraph.className = 'caption';
+                captionParagraph.innerText = captionText;
+                captionDiv.appendChild(captionParagraph);
+                captionsContainer.appendChild(captionDiv);
+            });
+        }
+
+        // Set custom styles
+        const customStyle = document.getElementById('custom-style');
+        customStyle.innerHTML = `
+            body {
+                padding: ${props.padding};
+                font-family: ${props.font_family};
+            }
+            
+            .card {
+                border-radius: ${props.card_border_radius};
+                border-width: ${props.border_width};
+                background-color: ${bgColor};
+                color: ${textColor};
+            }
+
+            #image-compare {
+                border-top-right-radius: ${props.image_border_radius};
+                border-top-left-radius: ${props.image_border_radius};
+                border-bottom-left-radius: ${bottomRadius};
+                border-bottom-right-radius: ${bottomRadius};
+                width: 100%;
+            }
+
+            #image-content{
+                border-top-right-radius: ${props.image_border_radius};
+                border-top-left-radius: ${props.image_border_radius};
+                border-bottom-left-radius: ${bottomRadius};
+                border-bottom-right-radius: ${bottomRadius};
+                width: 100%;
+            }
+        `;
+
+    }
+
+    function log_Handler(props) {
+        console.log("Received from Streamlit: " + JSON.stringify(props))
+    }
+
+    let pipeline = [initializeProps_Handler, log_Handler];
+    initialize(pipeline);
+</script>
+
+</html>

@@ -25,6 +25,7 @@ class AbstractEngine(ABC):
 
         return False
     
+    
 
     @abstractmethod
     def process(self, file_path: Any) -> Any:
@@ -42,6 +43,10 @@ class AbstractEngine(ABC):
         """Abstract method to save the current state or results of processing."""
         pass
 
+QueryFrame = NewType("QueryFrame", str)
+DataBaseFrame = NewType("DataBaseFrame", str)
+FrameMatch = NewType("FrameMatch", list[tuple[QueryFrame, DataBaseFrame]])
+WarpedFrame = NewType("WarpedFrame", list[str])
 QueryFrame = NewType("QueryFrame", str)
 DataBaseFrame = NewType("DataBaseFrame", str)
 FrameMatch = NewType("FrameMatch", list[tuple[QueryFrame, DataBaseFrame]])

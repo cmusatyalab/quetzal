@@ -46,7 +46,49 @@ class LoFTREngine(AbstractEngine):
         """Return True if no further real-time analysis required"""
         
         pass
-            
+    
+    def _get_transformation_matrix(self, query_image, databse_image):
+        img0_raw = cv2.imread(query_image)
+        img1_raw = cv2.imread(databse_image)
+        orig_w, orig_h = img0_raw.shape[1], img0_raw.shape[0]
+
+
+        img0 = cv2.cvtColor(img0_raw, cv2.COLOR_BGR2GRAY)
+        img0 = cv2.resize(img0, (img0.shape[1]//8*8, img0.shape[0]//8*8))  # input size shuold be divisible by 8
+        img0 = torch.from_numpy(img0)[None][None].to(self.device) / 255.
+
+        img1 = cv2.cvtColor(img1_raw, cv2.COLOR_BGR2GRAY)
+        img1 = cv2.resize(img1, (img1.shape[1]//8*8, img1.shape[0]//8*8))
+        img1 = torch.from_numpy(img1)[None][None].to(self.device) / 255.
+
+        resized = False
+        if (img0.shape[1] != orig_w or img0.shape[0] != orig_h):
+            resized = True
+            img0_raw = cv2.resize(img0_raw, (img0_raw.shape[1]//8*8, img0_raw.shape[0]//8*8))  # input size shuold be divisible by 8
+
+        batch = {'image0': img0, 'image1': img1}
+        # Inference with LoFTR and get prediction
+        
+        with torch.no_grad():
+            data = self.model(batch)
+            mkpts0 = data["keypoints0"].cpu().numpy()
+            mkpts1 = data["keypoints1"].cpu().numpy()
+                    
+        H, _ = cv2.findHomography(mkpts0, mkpts1, method=cv2.RANSAC)
+        
+        return H
+    
+    def _generate_aligned_from_H(self, query_image, H, save_file_path):
+        
+        img0_raw = cv2.imread(query_image)
+        orig_w, orig_h = img0_raw.shape[1], img0_raw.shape[0]
+        
+        aligned_img = cv2.warpPerspective(img0_raw, H, (img0_raw.shape[1], img0_raw.shape[0]))
+        
+        # Save the image
+        cv2.imwrite(save_file_path, aligned_img)
+
+
     def _generate_aligned_images(
         self, query_image: FilePath, database_image: FilePath, save_file_path: FilePath
     ):
@@ -87,7 +129,7 @@ class LoFTREngine(AbstractEngine):
             data = self.model(batch)
             mkpts0 = data["keypoints0"].cpu().numpy()
             mkpts1 = data["keypoints1"].cpu().numpy()
-        
+                    
         H, _ = cv2.findHomography(mkpts0, mkpts1, method=cv2.RANSAC)
         aligned_img = cv2.warpPerspective(img0_raw, H, (img0_raw.shape[1], img0_raw.shape[0]))
 
@@ -96,7 +138,7 @@ class LoFTREngine(AbstractEngine):
         
         # Save the image
         cv2.imwrite(save_file_path, aligned_img)
-
+            
     @lru_cache(maxsize=None)
     def process(self, file_path: tuple[FilePath, FilePath]):
         """Process list of files in file_path

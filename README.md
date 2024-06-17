@@ -80,6 +80,11 @@ To run the Quetzal app on a GPU server, use the following command:
 python3 -m quetzal_app -l "127.0.0.1" -p PORT_NUM --dataset-root /data/root --metadata-root /meta_data/root --cuda --cuda-device 0 -u USER_NAME
 ```
 
+RUN THIS IN quetzal_dev directory
+```bash
+python3 -m quetzal_app -p 7861 --dataset ../data_test/home/root --metadata-root ../data_test/meta_data/root --cuda -u example
+```
+
 ### CPU Only:
 
 For systems without a GPU, execute the following command:

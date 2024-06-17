@@ -112,7 +112,7 @@ class PlaybackController(Controller):
     def __init__(self, page_state):
         self.page_state = page_state
         self.slider_min = 0
-        self.slider_max = len(page_state.query_frames) - 1
+        self.slider_max = len(page_state.matches) - 1
         self.initPlayBackController()
 
     def set_slider(self, val):
@@ -522,6 +522,8 @@ class ObjectAnnotationController(Controller):
         self.labels_query = None
         self.detections_database = None
         self.labels_database = None
+        self.mask_query = None
+        self.mask_db = None
         self.initObjectAnnotationController()
 
         # page_state[self.name][DETECTOR_NAME_KEY] = GroundingSAMEngine.name
@@ -575,19 +577,25 @@ class ObjectAnnotationController(Controller):
             "labels_query": self.labels_query,
             "bboxes_db": self.detections_database,
             "labels_db": self.labels_database,
+            "mask_query": [],
+            "mask_db" : [],
             "idx": self.page_state[PlaybackController.name][SLIDER_KEY],
         }
+
+        self.page_state.is_segment = False
+
+
 
     def _segment_annotation(self, input_img, output_file, xyxy, isQuery):
         detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
         if isQuery:
             self.annotated_image_query, self.mask_query = detector.generate_segmented_images(
-                input_img, output_file, xyxy
+                input_img, output_file, xyxy, st.session_state.image_size[1], st.session_state.image_size[0]
             )
 
         else:
             self.annotated_image_db, self.mask_db = detector.generate_segmented_images(
-                input_img, output_file, xyxy
+                input_img, output_file, xyxy, st.session_state.image_size[1], st.session_state.image_size[0]
             )
 
     def segment_annotation(self):
@@ -598,11 +606,19 @@ class ObjectAnnotationController(Controller):
                 query_img_orig = self.page_state.warp_query_frames[query_idx]
             else:
                 query_img_orig = self.page_state.query_frames[query_idx]
+
             database_img_aligned = self.page_state.db_frames[db_idx]
 
-            xyxy_query = st.session_state['result'][QUERY_ANNOTATE_IMG]['bboxes']
-            xyxy_db = st.session_state['result'][DB_ANNOTATE_IMG]['bboxes']
+            is_query = lambda x : x["label_names"][-1:] == 'q' 
+            is_db = lambda x : x["label_names"][-2:] == 'db'
 
+            xyxy_query = list(filter(is_query, st.session_state.result))
+            xyxy_db = list(filter(is_db, st.session_state.result))
+
+            
+            xyxy_query = [item['bboxes'] for item in xyxy_query]
+            xyxy_db = [item['bboxes'] for item in xyxy_db]
+            
             self._segment_annotation(
                 input_img=query_img_orig,
                 output_file=QUERY_ANNOTATE_IMG,
@@ -629,11 +645,15 @@ class ObjectAnnotationController(Controller):
                 "idx": self.page_state[PlaybackController.name][SLIDER_KEY],
             }
 
+            self.page_state.is_segment = True
+
     def save_annotation(self):
         detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
         # Procedure: compare boxes and cancel out significant overlaps
-        detector.save_segmented_masks(self.page_state.annotated_frame["mask_query"], self.page_state.annotated_frame["mask_db"], DB_ANNOTATE_IMG)
-        detector.save_segmented_masks(self.page_state.annotated_frame["mask_query"], self.page_state.annotated_frame["mask_db"], QUERY_ANNOTATE_IMG)
+        detector.save_segmented_masks(self.page_state.seg_query_out, self.page_state.seg_db_out, DB_ANNOTATE_IMG)
+        detector.save_segmented_masks(self.page_state.seg_query_out, self.page_state.seg_db_out, QUERY_ANNOTATE_IMG)
+        
+
     
 
         

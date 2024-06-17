@@ -1,8 +1,13 @@
 from quetzal_app.page.page_video_comparison import VideoComparisonPage
+from quetzal_app.page.page_video_comparison_real_time import VideoComparisonRealTimePage
+from quetzal_app.page.page_video_comparison_stream import VideoComparisonStreamPage
+
 from quetzal_app.page.page_file_explorer import FileExplorerPage
 from quetzal_app.page.page_state import AppState, PageState, Page
-from quetzal.dtos.dtos import FileType, QuetzalFile
-from quetzal.dtos.video import DatabaseVideo, QueryVideo
+
+from quetzal.dtos.video import QueryVideo, DatabaseVideo, QuetzalFile
+import pickle
+
 
 import streamlit as st
 from streamlit import session_state as ss
@@ -13,8 +18,6 @@ from threading import Lock
 from streamlit.web.server.websocket_headers import _get_websocket_headers
 import os
 from pathlib import Path
-import pickle
-
 
 LOGO_FILE = os.path.normpath(Path(__file__).parent.joinpath("quetzal_logo_trans.png"))
 
@@ -140,14 +143,21 @@ def parse_args():
 
 dataset_root, meta_data_root, cuda_device, torch_device, user = parse_args()
 headers = _get_websocket_headers()
-user = headers.get("X-Forwarded-User", user)
+# user = headers.get("X-Forwarded-User", user)
+user = user
 
-page_list: list[Page] = [FileExplorerPage, VideoComparisonPage]
+page_list: list[Page] = [
+    FileExplorerPage,
+    VideoComparisonPage, 
+    VideoComparisonRealTimePage,
+    VideoComparisonStreamPage
+]
+
 page_dict: dict[str, Page] = {page.name: page for page in page_list}
 
 if "page_states" not in ss:
     app_state = AppState()
-    
+
     # for development
     with open('query.pkl', 'rb') as f:
         q = pickle.load(f)
@@ -179,6 +189,7 @@ if "page_states" not in ss:
         user=user,
         comparison_matches=None,
     )
+
     root_state["comparison_matches"] = {
         "query": query_video,
         "database": database_video,
@@ -188,8 +199,10 @@ if "page_states" not in ss:
         "warp_query_frames": warp_query_frame_list,
     }
 
-    root_state.page = VideoComparisonPage.name
     # root_state.page = FileExplorerPage.name
+    # root_state.page = VideoComparisonStreamPage.name
+    root_state.page = VideoComparisonPage.name
+
 
     def build_to_page(page: Page):
         def to_page():
@@ -206,10 +219,36 @@ if "page_states" not in ss:
     for key, page in page_dict.items():
         page_object = page(root_state=root_state, to_page=to_page)
         ss.pages[key] = page_object
-        app_state[key] = page_object.page_state # unpack pickle here
-
+        app_state[key] = page_object.page_state
 
     ss.page_states = app_state
     ss.lock = Lock()
+
+
+# import pickle
+# from quetzal.dtos.video import DatabaseVideo, QueryVideo
+# with open("../test_matches.pkl", 'rb') as f:
+#     comparison_matches = pickle.load(f)
+
+# database_video = DatabaseVideo(
+#     path = comparison_matches["database"],
+#     root_dir=dataset_root,
+#     metadata_dir=meta_data_root,
+#     user=user,
+# )
+
+# query_video = QueryVideo(
+#     path = comparison_matches["query"],
+#     root_dir=dataset_root,
+#     metadata_dir=meta_data_root,
+#     user=user,
+# )
+
+# comparison_matches["database"] = database_video
+# comparison_matches["query"] = query_video
+
+# ss.page_states.root["comparison_matches"] = comparison_matches
+
+
 
 ss.pages[ss.page_states.root.page].render()
