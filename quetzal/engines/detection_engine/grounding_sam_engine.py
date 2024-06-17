@@ -10,10 +10,13 @@ from segment_anything import sam_model_registry, SamPredictor
 import numpy as np
 from segment_anything import SamPredictor
 
+import skimage.transform
 import cv2
 
 import logging
 from quetzal.engines.engine import ObjectDetectionEngine
+
+import time
 
 logging.basicConfig()
 logger = logging.getLogger("GroundingSAM Engine")
@@ -169,6 +172,8 @@ class GroundingSAMEngine(ObjectDetectionEngine):
 
         height, width, _ = image.shape
 
+        start = time.time()
+
         detections = self.grounding_dino_model.predict_with_caption(
             image=image,
             caption=caption,
@@ -177,7 +182,7 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         )
         
         end = time.time()
-        print(end - start)
+        # print(end - start)
         
         labels = detections[1]
         detections = detections[0]
@@ -204,7 +209,7 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         xyxy_relative = [absolute_to_relative(bbox, width, height) for bbox in detections.xyxy]
 
         return annotated_image, xyxy_relative, labels
-    def generate_segmented_images(self, query_image: str, save_file_path: str, xyxy: np.ndarray):
+    def generate_segmented_images(self, query_image: str, save_file_path: str, xyxy: np.ndarray, output_width: int, output_height: int):
         """
         Generates segmented image given bounding boxes
 
@@ -212,6 +217,8 @@ class GroundingSAMEngine(ObjectDetectionEngine):
             query_image (str): Path to the input image.
             save_file_path (str): Path where the annotated image will be saved.
             xyxy (np.ndarray): Array of bounding boxes in relative format (xyxy)
+            output_width (int): Width of output mask 
+            output_height (int): Height of output mask 
         
         Returns:
             np.ndarray: The annotated image with detected and segmented objects based on captions.
@@ -220,22 +227,32 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         image = cv2.imread(query_image)
         height, width, _ = image.shape
 
+        if (len(xyxy) > 0):
 
-        mask = self._segment(
-            sam_predictor=self.sam_predictor,
-            image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
-            xyxy=np.array([relative_to_absolute(v, width, height) for v in xyxy])
-        )
-        
-        mask = np.logical_or.reduce(mask).astype(int)
-        mask_image = (mask * 255).astype(np.uint8) 
+            mask = self._segment(
+                sam_predictor=self.sam_predictor,
+                image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
+                xyxy=np.array([relative_to_absolute(v, width, height) for v in xyxy])
+            )
 
-        cv2.imwrite(save_file_path, mask_image)
-        color_mask = np.zeros_like(image)
-        color_mask[mask > 0.5] = [255, 255, 255] # Choose any color you like
-        masked_image = cv2.addWeighted(image, 0.4, color_mask, 0.6, 0)
-        cv2.imwrite(save_file_path, cv2.cvtColor(masked_image, cv2.COLOR_RGB2BGR))
+            # scaled_mask = []
+            # for m in mask:
+            #     scaled_mask.append(skimage.transform.resize(m, (output_height, output_width), order=0, preserve_range=True, anti_aliasing=False))
+            # mask = np.array(scaled_mask)
+            # mask = np.logical_or.reduce(mask).astype(int)
+  
+            # mask_image = (mask * 255).astype(np.uint8)
+        else:
+            mask = np.zeros((height, width))
+            # mask_image = (mask * 255).astype(np.uint8)
+            
+        # cv2.imwrite(save_file_path, mask_image)
+        # color_mask = np.zeros_like(image)
+        # color_mask[mask > 0.5] = [255, 255, 255] # Choose any color you like
+        # masked_image = cv2.addWeighted(image, 0.4, color_mask, 0.6, 0)
+        # cv2.imwrite(save_file_path, cv2.cvtColor(masked_image, cv2.COLOR_RGB2BGR))
         return image, mask
+    
     def save_segmented_masks(self, query_mask: str, db_mask: str, save_file_path: str):
         """
         Generates a mask image for change detection dataset

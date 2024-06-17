@@ -218,6 +218,7 @@ class AnafiGPS(AbstractGPS):
         """
         video_path  = self.video._abs_path
         frames_dir = self.video.dataset_dir
+        print(frames_dir)
 
         # Step 1: Extract exiftool output
         command = ["exiftool", "-ee", "-GPSLatitude", "-GPSLongitude", "-DroneQuaternion", "-Elevation", video_path]
@@ -230,6 +231,7 @@ class AnafiGPS(AbstractGPS):
         
         # Step 3: Obtain GPS value (UTM Easting, UTM Northing) for each img_frames
         num_frames = len(img_frames)
+
 
         # Align the GPS index to the extracted frame's index
         step = int(len(gps_frames) / len(img_frames) + 0.5)

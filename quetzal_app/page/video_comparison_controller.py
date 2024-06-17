@@ -588,14 +588,15 @@ class ObjectAnnotationController(Controller):
 
     def _segment_annotation(self, input_img, output_file, xyxy, isQuery):
         detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
+        print(st.session_state.image_size)
         if isQuery:
             self.annotated_image_query, self.mask_query = detector.generate_segmented_images(
-                input_img, output_file, xyxy, st.session_state.image_size[1], st.session_state.image_size[0]
+                input_img, output_file, xyxy, st.session_state.image_size[0], st.session_state.image_size[1]
             )
 
         else:
             self.annotated_image_db, self.mask_db = detector.generate_segmented_images(
-                input_img, output_file, xyxy, st.session_state.image_size[1], st.session_state.image_size[0]
+                input_img, output_file, xyxy, st.session_state.image_size[0], st.session_state.image_size[1]
             )
 
     def segment_annotation(self):
