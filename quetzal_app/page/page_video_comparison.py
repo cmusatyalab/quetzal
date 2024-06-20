@@ -287,15 +287,13 @@ class FrameDisplay:
             st.session_state.result = []
                 
         if "result_query_out" not in st.session_state:
-            st.session_state.result_query_out = {"key": "0", "bbox": []}
+            st.session_state.result_query_out = {"key": 0, "bbox": []}
             
         if "result_db_out" not in st.session_state:
-            st.session_state.result_db_out = {"key": "0", "bbox": []}
+            st.session_state.result_db_out = {"key": 0, "bbox": []}
         
         if "image_size" not in st.session_state:
             st.session_state.image_size = [512, 512]
-
-        
         
         [query_img, database_img] = image_urls 
         bboxes = list(bboxes_query)+list(bboxes_db)
@@ -304,12 +302,12 @@ class FrameDisplay:
             bbox_ids = [str(uuid.uuid4()) for _ in bboxes]
             label_to_idx = lambda s : label_list.index(s)
             labels = list(map(label_to_idx, list(labels_query)+list(labels_db)))
-            # st.session_state.result = [{"bboxes": bboxes[i], "bbox_ids": bbox_ids[i], "labels":labels[i], "label_names": label_list[labels[i]]} for i in range(len(bboxes))]
+            st.session_state.result = [{"bboxes": bboxes[i], "bbox_ids": bbox_ids[i], "labels":labels[i], "label_names": label_list[labels[i]]} for i in range(len(bboxes))]
 
             # meta_data = [item['meta_data'] for item in data]
             # info_dict = [item['info_dict'] for item in data]
         else:
-            data = st.session_state.result or []
+            data = st.session_state.result
             bboxes = [item['bboxes'] for item in data]
             bbox_ids = [item['bbox_ids'] for item in data]
             labels = [item['labels'] for item in data]
@@ -336,7 +334,7 @@ class FrameDisplay:
                 bbox_show_label=True,
                 key="detection_dup1",
             )
-        
+
         with c2:
             test_out2 = detection(
                 image_path=database_img,
@@ -357,8 +355,7 @@ class FrameDisplay:
                 key="detection_dup2",
             )
 
-        st.session_state.image_size = test_out1["image_size"]
-        
+        st.session_state.image_size = test_out1["resized_image_size"]
         
         if (test_out1["key"] != st.session_state.result_query_out["key"] or test_out2["key"] != st.session_state.result_db_out["key"]):
             if test_out1["key"] != st.session_state.result_query_out["key"]:
@@ -393,31 +390,25 @@ class FrameDisplay:
             st.session_state.seg_result = []
 
         if "seg_query_out" not in st.session_state:
-            st.session_state.seg_query_out = {"key": "0", "mask": []}
+            st.session_state.seg_query_out = {"key": 0, "mask": []}
 
         if "seg_db_out" not in st.session_state:
-            st.session_state.seg_db_out = {"key": "0", "mask": []}
-        
-        if "image_size" not in st.session_state:
-            st.session_state.image_size = [512, 512]
+            st.session_state.seg_db_out = {"key": 0, "mask": []}
 
         [query_img, database_img] = image_urls 
-        # print(np.concatenate((mask_query, mask_db), axis=0))
 
         masks = np.concatenate((mask_query, mask_db), axis=0).tolist()
-        # masks = np.stack((mask_query, mask_db)).tolist()
 
         if len(masks) > 0:
             mask_ids = [str(uuid.uuid4()) for _ in masks]
             label_to_idx = lambda s : label_list.index(s)
             labels = list(map(label_to_idx, list(labels_query)+list(labels_db)))
-
-            # st.session_state.seg_result = [{"masks": masks[i], "mask_ids": mask_ids[i], "labels":labels[i], "label_names": label_list[labels[i]]} for i in range(len(masks))]
+            st.session_state.seg_result = [{"masks": masks[i], "mask_ids": mask_ids[i], "labels":labels[i], "label_names": label_list[labels[i]]} for i in range(len(masks))]
 
             # meta_data = [item['meta_data'] for item in data]
             # info_dict = [item['info_dict'] for item in data]
         else:
-            data = st.session_state.seg_result or []
+            data = st.session_state.seg_result
             masks = [item['masks'] for item in data]
             mask_ids = [item['mask_ids'] for item in data]
             labels = [item['labels'] for item in data]
@@ -440,8 +431,6 @@ class FrameDisplay:
                 # auto_segmentation=True,
                 key="seg_dup1",
             )
-            # seg_out1
-
         with c2:
             seg_out2 = segmentation(
                 image_path=database_img,
@@ -458,8 +447,6 @@ class FrameDisplay:
                 # auto_segmentation=True,
                 key="seg_dup2",
             )
-            
-        st.session_state.image_size = seg_out1["image_size"]
 
         if (seg_out1["key"] != st.session_state.seg_query_out["key"] or seg_out2["key"] != st.session_state.seg_db_out["key"]):
 
@@ -475,6 +462,7 @@ class FrameDisplay:
                 st.session_state.seg_result = st.session_state.seg_query_out["mask"]
 
             st.rerun()
+        
 
     def render(self):
         match: Match = self.page_state.matches[self.page_state[PLAY_IDX_KEY]]

@@ -235,10 +235,11 @@ class GroundingSAMEngine(ObjectDetectionEngine):
                 xyxy=np.array([relative_to_absolute(v, width, height) for v in xyxy])
             )
 
-            # scaled_mask = []
-            # for m in mask:
-            #     scaled_mask.append(skimage.transform.resize(m, (output_height, output_width), order=0, preserve_range=True, anti_aliasing=False))
-            # mask = np.array(scaled_mask)
+            scaled_mask = []
+            # scale image to fit annotation window
+            for m in mask:
+                scaled_mask.append(skimage.transform.resize(m, (output_height, output_width), order=0, preserve_range=True, anti_aliasing=False))
+            mask = np.array(scaled_mask)
             # mask = np.logical_or.reduce(mask).astype(int)
   
             # mask_image = (mask * 255).astype(np.uint8)
@@ -265,14 +266,16 @@ class GroundingSAMEngine(ObjectDetectionEngine):
         Returns:
             np.ndarray: Dataset image
         """
-
+        # flatten masks to 2D
+        query_mask = np.logical_or.reduce(query_mask).astype(bool)
+        db_mask = np.logical_or.reduce(db_mask).astype(bool)
+        
+        # combine two masks and save as gray scale image
         combine_mask = np.logical_or(query_mask, db_mask).astype(np.uint8)
         mask_image = (combine_mask * 255).astype(np.uint8)
         cv2.imwrite(save_file_path, mask_image)
 
         return mask_image
-
-
 
     
 if __name__ == "__main__":
