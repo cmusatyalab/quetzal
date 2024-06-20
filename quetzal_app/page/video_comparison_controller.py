@@ -524,6 +524,8 @@ class ObjectAnnotationController(Controller):
         self.labels_database = None
         self.mask_query = None
         self.mask_db = None
+        self.is_query = lambda x : x["label_names"][-1:] == 'q' 
+        self.is_db = lambda x : x["label_names"][-2:] == 'db'
         self.initObjectAnnotationController()
 
         # page_state[self.name][DETECTOR_NAME_KEY] = GroundingSAMEngine.name
@@ -588,7 +590,6 @@ class ObjectAnnotationController(Controller):
 
     def _segment_annotation(self, input_img, output_file, xyxy, isQuery):
         detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
-        print(st.session_state.image_size)
         if isQuery:
             self.annotated_image_query, self.mask_query = detector.generate_segmented_images(
                 input_img, output_file, xyxy, st.session_state.image_size[0], st.session_state.image_size[1]
@@ -610,11 +611,8 @@ class ObjectAnnotationController(Controller):
 
             database_img_aligned = self.page_state.db_frames[db_idx]
 
-            is_query = lambda x : x["label_names"][-1:] == 'q' 
-            is_db = lambda x : x["label_names"][-2:] == 'db'
-
-            xyxy_query = list(filter(is_query, st.session_state.result))
-            xyxy_db = list(filter(is_db, st.session_state.result))
+            xyxy_query = list(filter(self.is_query, st.session_state.result))
+            xyxy_db = list(filter(self.is_db, st.session_state.result))
 
             
             xyxy_query = [item['bboxes'] for item in xyxy_query]
@@ -650,9 +648,15 @@ class ObjectAnnotationController(Controller):
 
     def save_annotation(self):
         detector: ObjectDetectionEngine = self.page_state[self.name][DETECTOR_KEY]
+
+        mask_query = list(filter(self.is_query, st.session_state.seg_result))
+        mask_db = list(filter(self.is_db, st.session_state.seg_result))
+
+        mask_query = [item['masks'] for item in mask_query]
+        mask_db = [item['masks'] for item in mask_db]
         # Procedure: compare boxes and cancel out significant overlaps
-        detector.save_segmented_masks(self.page_state.seg_query_out, self.page_state.seg_db_out, DB_ANNOTATE_IMG)
-        detector.save_segmented_masks(self.page_state.seg_query_out, self.page_state.seg_db_out, QUERY_ANNOTATE_IMG)
+        detector.save_segmented_masks(mask_query, mask_db, DB_ANNOTATE_IMG)
+        detector.save_segmented_masks(mask_query, mask_db, QUERY_ANNOTATE_IMG)
         
 
     
